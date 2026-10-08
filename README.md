@@ -44,4 +44,4 @@ Sistema web de gestión para un consultorio odontológico (secretaria y dentista
 
 Si hay cambios en la base, se modifica `database/ficha_dental.sql` y se hace commit.
 
-Detalle de tablas y relaciones: [ficha técnica](docs/ficha_tecnica_bd.md).
+Detalle de tablas y relaciones: [ficha técnica]([https://l1nk.dev/rva5de4]).
