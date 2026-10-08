@@ -23,7 +23,7 @@ Sistema web de gestión para un consultorio odontológico (secretaria y dentista
 
 ## Base de datos
 
-1. Desde el cliente de MySQL, ejecutar:
+1. Desde el cliente de MySQL, ejecutar (usar `/` en la ruta):
 
    ```sql
    SOURCE C:/ruta/al/repo/database/ficha_dental.sql;
@@ -32,7 +32,7 @@ Sistema web de gestión para un consultorio odontológico (secretaria y dentista
 
    El segundo script es opcional (datos de ejemplo).
 
-2. Crear el archivo local `appsettings.Development.json` con tu usuario y contraseña de MySQL:
+2. Crear el archivo local `appsettings.Development.json` con tu usuario y contraseña de MySQL (ya está en `.gitignore`, no se sube):
 
    ```json
    {
@@ -44,4 +44,6 @@ Sistema web de gestión para un consultorio odontológico (secretaria y dentista
 
 Si hay cambios en la base, se modifica `database/ficha_dental.sql` y se hace commit.
 
-Detalle de tablas y relaciones: [ficha técnica]([https://l1nk.dev/rva5de4]).
+## Documentación
+
+Ficha técnica de la base de datos y manuales de usuario: https://l1nk.dev/rva5de4
