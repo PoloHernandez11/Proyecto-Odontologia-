@@ -1,0 +1,252 @@
+.agenda__barra {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.agenda {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  gap: 1rem;
+  align-items: start;
+}
+
+@media (max-width: 1100px) {
+  .agenda {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.agenda__principal {
+  overflow-x: auto;
+}
+
+.leyenda {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+/* ---------- Línea de tiempo ---------- */
+.linea {
+  min-width: 520px;
+}
+
+.linea__cabeceras,
+.linea__cuerpo {
+  display: grid;
+  gap: 0 6px;
+}
+
+.linea__cabeceras {
+  margin-bottom: 0.5rem;
+}
+
+.linea__dia {
+  flex-direction: column;
+  gap: 0;
+  padding: 0.35rem;
+  border-color: var(--borde);
+  font-size: 0.8rem;
+  color: var(--texto-suave);
+}
+
+.linea__dia b {
+  font-size: 1.05rem;
+  color: var(--texto);
+}
+
+.linea__dia small {
+  font-size: 0.7rem;
+}
+
+.linea__dia--hoy {
+  border-color: var(--primario);
+  background: var(--primario-claro);
+}
+
+.linea__horas {
+  position: relative;
+}
+
+.linea__horas span {
+  position: absolute;
+  right: 0.4rem;
+  transform: translateY(-50%);
+  font-size: 0.72rem;
+  color: var(--texto-tenue);
+  font-variant-numeric: tabular-nums;
+}
+
+.linea__columna {
+  position: relative;
+  border-left: 1px solid var(--borde);
+  cursor: copy;
+}
+
+.linea__guia {
+  position: absolute;
+  left: 0;
+  right: 0;
+  border-top: 1px dashed #eaecf0;
+  pointer-events: none;
+}
+
+.linea__bloqueo {
+  position: absolute;
+  left: 2px;
+  right: 2px;
+  display: grid;
+  place-items: center;
+  border-radius: 6px;
+  background: repeating-linear-gradient(135deg, #f2f4f7 0 6px, #e9ecf1 6px 12px);
+  color: var(--texto-tenue);
+  font-size: 0.72rem;
+  pointer-events: none;
+  text-align: center;
+}
+
+.bloque {
+  position: absolute;
+  left: 4px;
+  right: 4px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: flex-start;
+  gap: 0;
+  padding: 0.2rem 0.45rem;
+  overflow: hidden;
+  border: 0;
+  border-left: 3px solid currentColor;
+  border-radius: 6px;
+  font-size: 0.78rem;
+  line-height: 1.25;
+  text-align: left;
+  cursor: pointer;
+  z-index: 1;
+}
+
+.bloque:hover {
+  filter: brightness(0.97);
+}
+
+.bloque__hora {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.bloque__paciente,
+.bloque__motivo {
+  max-width: 100%;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: var(--texto);
+}
+
+.bloque__motivo {
+  color: var(--texto-suave);
+}
+
+.bloque--pendiente { background: var(--aviso-fondo); color: var(--aviso); }
+.bloque--confirmado { background: var(--info-fondo); color: var(--info); }
+.bloque--ensala { background: #f4ebff; color: #6941c6; }
+.bloque--atendido { background: var(--ok-fondo); color: var(--ok); }
+.bloque--ausente { background: var(--error-fondo); color: var(--error); opacity: 0.75; }
+.bloque--cancelado { background: #f2f4f7; color: #98a2b3; opacity: 0.7; text-decoration: line-through; }
+
+.bloque--urgencia {
+  left: 45%;
+  box-shadow: inset 0 0 0 1px var(--error);
+}
+
+.bloque--activo {
+  box-shadow: 0 0 0 2px var(--primario);
+  z-index: 2;
+}
+
+.linea--compacta .bloque {
+  font-size: 0.7rem;
+  padding: 0.1rem 0.3rem;
+}
+
+/* ---------- Mes ---------- */
+.mes {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 4px;
+  min-width: 560px;
+}
+
+.mes__cabecera {
+  padding: 0.25rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: var(--texto-tenue);
+}
+
+.mes__dia {
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: flex-start;
+  gap: 2px;
+  min-height: 96px;
+  padding: 0.35rem;
+  border-color: var(--borde);
+  font-size: 0.74rem;
+  font-weight: 400;
+  text-align: left;
+}
+
+.mes__dia--fuera {
+  opacity: 0.45;
+}
+
+.mes__dia--hoy {
+  border-color: var(--primario);
+  box-shadow: inset 0 0 0 1px var(--primario);
+}
+
+.mes__numero {
+  font-weight: 700;
+  font-size: 0.85rem;
+}
+
+.mes__cantidad {
+  color: var(--primario);
+  font-weight: 600;
+}
+
+.mes__turno {
+  padding: 1px 4px;
+  border-radius: 4px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/* ---------- Detalle ---------- */
+.detalle-turno {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.detalle-turno dl {
+  display: grid;
+  grid-template-columns: 6.5rem 1fr;
+  gap: 0.35rem 0.6rem;
+  margin: 0;
+  font-size: 0.87rem;
+}
+
+.detalle-turno dt {
+  color: var(--texto-suave);
+}
+
+.detalle-turno dd {
+  margin: 0;
+}

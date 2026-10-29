@@ -1,0 +1,21 @@
+# Compilados y dependencias
+**/bin/
+**/obj/
+**/node_modules/
+frontend/dist/
+.vs/
+.vscode/
+.idea/
+
+# Secretos y configuración local (no se versionan)
+backend/OdontoApp.Api/appsettings.Development.json
+backend/OdontoApp.Api/appsettings.Production.json
+frontend/.env.local
+
+# Salidas del instalador y paquetes
+instalador/aplicacion/
+*.zip
+
+# Sistema
+.DS_Store
+Thumbs.db

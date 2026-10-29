@@ -1,0 +1,48 @@
+/* "En sala": tarjeta destacada en teal oscuro, como en el prototipo */
+.en-sala {
+  display: grid;
+  gap: 0.75rem;
+  border: 0;
+  background: var(--primario);
+  color: #fff;
+}
+
+.en-sala .persona__nombre,
+.en-sala .persona__detalle {
+  color: #fff;
+}
+
+.en-sala .persona__detalle {
+  opacity: 0.8;
+}
+
+.en-sala .avatar {
+  background: rgba(255, 255, 255, 0.16);
+  color: #fff;
+}
+
+.en-sala .alerta {
+  background: rgba(255, 255, 255, 0.14);
+  color: #fff;
+}
+
+.en-sala .primario {
+  background: #fff;
+  color: var(--primario);
+}
+
+.en-sala__etiqueta {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: #bad0d5;
+}
+
+.en-sala__fila {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+}

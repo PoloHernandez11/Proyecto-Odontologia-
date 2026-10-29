@@ -1,0 +1,118 @@
+/* Usuarios del consultorio e invitaciones (Perfil y configuración). */
+
+.equipo__acciones {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+/* Interruptor on/off, como en el prototipo */
+.interruptor {
+  position: relative;
+  width: 40px;
+  height: 22px;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: var(--borde-fuerte);
+  cursor: pointer;
+  transition: background 0.15s ease;
+  flex-shrink: 0;
+}
+
+.interruptor::after {
+  content: '';
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 2px rgba(16, 24, 40, 0.2);
+  transition: transform 0.15s ease;
+}
+
+.interruptor--on {
+  background: var(--primario);
+}
+
+.interruptor--on::after {
+  transform: translateX(18px);
+}
+
+.interruptor:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* Formulario de invitación: correo + botón */
+.equipo__invitar {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.equipo__invitar input {
+  flex: 1 1 220px;
+  min-width: 0;
+}
+
+/* Enlace generado (se muestra una sola vez) */
+.equipo__enlace {
+  margin-top: 0.75rem;
+  padding: 0.75rem;
+  border-radius: 10px;
+  background: var(--primario-claro);
+  color: var(--primario-oscuro);
+  font-size: 0.88rem;
+}
+
+.equipo__enlace p {
+  margin: 0 0 0.5rem;
+}
+
+.equipo__enlace-fila {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.equipo__enlace-fila input {
+  flex: 1;
+  min-width: 0;
+  font-size: 0.82rem;
+}
+
+/* Estados de invitación */
+.chip--ok {
+  background: #e7f6ec;
+  color: #067647;
+}
+
+.chip--aviso {
+  background: #fef3e2;
+  color: #b54708;
+}
+
+.chip--neutro {
+  background: #f2f4f7;
+  color: #475467;
+}
+
+/* Historial de la secretaria (Perfil y configuración) */
+.historial__cabecera {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.75rem;
+}
+
+/* Botón de correo: es un enlace con aspecto de botón */
+.equipo__enlace a.primario,
+.equipo__enlace a.secundario {
+  display: inline-flex;
+  align-items: center;
+  text-decoration: none;
+}

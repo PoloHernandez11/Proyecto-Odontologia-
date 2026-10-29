@@ -1,0 +1,185 @@
+.hc__barra {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+/* ---------- Registro ---------- */
+.registro {
+  background: var(--blanco);
+  border: 1px solid var(--borde);
+  border-radius: var(--radio);
+  box-shadow: var(--sombra);
+  overflow: hidden;
+  break-inside: avoid;
+}
+
+.registro__cabecera {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 0.85rem 1rem;
+  border-bottom: 1px solid var(--borde);
+}
+
+.registro__sello {
+  padding: 0.12rem 0.5rem;
+  border-radius: 4px;
+  color: #fff;
+  font-size: 0.74rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.registro__sello--turno { background: #1d4f91; }
+.registro__sello--registro { background: #b42318; }
+
+.registro__campos {
+  display: grid;
+  grid-template-columns: 13rem minmax(0, 1fr);
+  margin: 0;
+}
+
+.registro__campos dt,
+.registro__campos dd {
+  margin: 0;
+  padding: 0.6rem 1rem;
+  border-bottom: 1px solid #eef0f3;
+}
+
+.registro__campos dt {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--texto-suave);
+  background: #fafbfc;
+}
+
+.registro__campos dd {
+  white-space: pre-wrap;
+}
+
+.registro__practicas-titulo {
+  padding: 0.45rem 1rem;
+  background: #4a78c2;
+  color: #fff;
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-align: center;
+}
+
+.registro__practicas ul {
+  list-style: none;
+  margin: 0;
+  padding: 0.4rem 1rem 0.6rem;
+}
+
+.registro__practicas li {
+  display: flex;
+  gap: 0.5rem;
+  padding: 0.35rem 0;
+  font-size: 0.88rem;
+}
+
+.registro__practicas li svg {
+  margin-top: 3px;
+  color: var(--texto-suave);
+  flex: none;
+}
+
+@media (max-width: 640px) {
+  .registro__campos {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .registro__campos dt {
+    border-bottom: 0;
+    padding-bottom: 0.2rem;
+  }
+}
+
+/* ---------- Formulario de consulta ---------- */
+.consulta__seccion {
+  margin: 1.25rem 0 0.6rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--borde);
+  font-size: 0.92rem;
+}
+
+.consulta__signos {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 0.6rem 0.75rem;
+}
+
+.consulta__diagnosticos {
+  display: grid;
+  gap: 0.6rem;
+}
+
+.consulta__diagnostico {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 0.75rem;
+}
+
+.consulta__caracter {
+  display: flex;
+  gap: 0.75rem;
+  padding-bottom: 0.55rem;
+}
+
+.consulta__piezas {
+  display: grid;
+  gap: 4px;
+  overflow-x: auto;
+  padding-bottom: 0.25rem;
+}
+
+.consulta__fila {
+  display: flex;
+  justify-content: center;
+  min-width: max-content;
+}
+
+.consulta__fila--perm-inf {
+  margin-bottom: 0.4rem;
+}
+
+.consulta__cuadrante {
+  display: flex;
+  gap: 3px;
+  padding: 0 6px;
+}
+
+.consulta__cuadrante--der {
+  border-right: 2px solid var(--texto-tenue);
+}
+
+.consulta__piezas button {
+  width: 2.15rem;
+  padding: 0.3rem 0;
+  font-size: 0.78rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.consulta__piezas button[aria-pressed='true'] {
+  border-color: var(--primario);
+  background: var(--primario);
+  color: #fff;
+}
+
+.consulta__practica {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+  gap: 0.6rem 0.75rem;
+  margin-top: 0.75rem;
+}
+
+@media (max-width: 640px) {
+  .consulta__practica {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

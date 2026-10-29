@@ -1,0 +1,209 @@
+/* Pantallas de acceso (login, alta del odontólogo, aceptación de invitación). Diseño del prototipo "Odontia". */
+
+.login {
+  display: grid;
+  grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+  min-height: 100vh;
+}
+
+/* ---------- Panel de marca (teal) ---------- */
+.login__marca {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 2rem;
+  padding: 2.5rem;
+  background: var(--primario);
+  color: #fff;
+}
+
+.login__logo {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-size: 1.1rem;
+}
+
+.login__logo .marca__logo {
+  background: #fff;
+  color: var(--primario);
+}
+
+.login__hero h1 {
+  font-size: 2rem;
+  line-height: 1.2;
+  max-width: 20ch;
+}
+
+.login__hero p {
+  color: #cfe3e7;
+  max-width: 44ch;
+  line-height: 1.5;
+}
+
+.login__beneficios {
+  list-style: none;
+  margin: 1.5rem 0 0;
+  padding: 0;
+  display: grid;
+  gap: 0.75rem;
+  font-size: 0.92rem;
+}
+
+.login__beneficios li {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.login__beneficios li > span {
+  display: grid;
+  place-items: center;
+  width: 1.9rem;
+  height: 1.9rem;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.login__pie {
+  color: #9cc3cb;
+}
+
+/* ---------- Panel del formulario ---------- */
+.login__panel {
+  display: grid;
+  place-items: center;
+  padding: 2rem;
+  background: var(--fondo);
+}
+
+.login__form {
+  width: min(400px, 100%);
+  display: grid;
+  gap: 1rem;
+  padding: 2rem;
+  border-radius: 14px;
+  box-shadow: 0 12px 32px rgba(14, 90, 107, 0.12);
+}
+
+.login__form .subtitulo {
+  margin: 0.25rem 0 0;
+  color: var(--texto-suave);
+}
+
+.login__perfiles {
+  width: 100%;
+}
+
+.login__perfiles button {
+  flex: 1;
+  justify-content: center;
+}
+
+.login__opciones {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  font-size: 0.88rem;
+}
+
+.login__recordar {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: var(--texto-suave);
+}
+
+.login__aviso {
+  display: flex;
+  gap: 0.5rem;
+  align-items: flex-start;
+  margin: 0;
+  padding: 0.75rem;
+  border-radius: 10px;
+  background: var(--primario-claro);
+  color: var(--primario-oscuro);
+  font-size: 0.85rem;
+  line-height: 1.4;
+}
+
+/* Enlace de texto dentro de formularios */
+.enlace {
+  background: none;
+  border: 0;
+  padding: 0;
+  color: var(--primario);
+  font: inherit;
+  font-weight: 500;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.centrado {
+  text-align: center;
+}
+
+@media (max-width: 860px) {
+  .login {
+    grid-template-columns: 1fr;
+  }
+
+  .login__marca {
+    padding: 1.5rem 1rem;
+    gap: 1.25rem;
+  }
+
+  .login__hero h1 {
+    font-size: 1.5rem;
+  }
+
+  .login__panel {
+    padding: 1rem;
+  }
+
+  .login__form {
+    padding: 1.25rem;
+  }
+}
+
+/* Botón de Google centrado dentro del formulario */
+.login__google {
+  display: flex;
+  justify-content: center;
+  min-height: 44px;
+}
+
+.login__google[aria-busy='true'] {
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+/* Botón "Continuar con Google" */
+.boton-google {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  width: 100%;
+  max-width: 320px;
+  margin: 0 auto;
+  padding: 0.7rem 1rem;
+  border: 1px solid var(--borde-fuerte);
+  border-radius: 8px;
+  background: #fff;
+  color: #344054;
+  font: inherit;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.boton-google:hover:not(:disabled) {
+  background: #f9fafb;
+}
+
+.boton-google:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}

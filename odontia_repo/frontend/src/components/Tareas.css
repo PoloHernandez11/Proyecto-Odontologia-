@@ -1,0 +1,90 @@
+.tareas {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+}
+
+.tareas__grupo h3 {
+  margin: 1rem 0 0.25rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--texto-tenue);
+}
+
+.tarea {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+  padding: 0.55rem 0;
+  border-bottom: 1px solid #eef0f3;
+}
+
+.tarea:last-child {
+  border-bottom: 0;
+}
+
+.tarea input[type='checkbox'] {
+  margin-top: 0.15rem;
+  flex: none;
+}
+
+.tarea__cuerpo {
+  flex: 1;
+  display: grid;
+  gap: 0.25rem;
+  min-width: 0;
+}
+
+.tarea__texto {
+  font-size: 0.9rem;
+}
+
+.tarea--hecha .tarea__texto {
+  color: var(--texto-tenue);
+  text-decoration: line-through;
+}
+
+.tarea__meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.76rem;
+  color: var(--texto-suave);
+}
+
+.prioridad {
+  font-weight: 600;
+}
+
+.prioridad--alta { color: var(--error); }
+.prioridad--media { color: var(--aviso); }
+.prioridad--baja { color: var(--texto-suave); }
+
+.avatar--mini {
+  width: 1.3rem;
+  height: 1.3rem;
+  font-size: 0.6rem;
+  vertical-align: middle;
+}
+
+.tarea-nueva {
+  display: grid;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.tarea-nueva__opciones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.tarea-nueva__opciones select,
+.tarea-nueva__opciones input {
+  padding: 0.3rem 0.5rem;
+  font-size: 0.84rem;
+}

@@ -1,0 +1,565 @@
+/* Sistema visual "Odontia": verde petróleo, tarjetas blancas sobre gris claro. */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+:root {
+  /* Paleta tomada del prototipo "Odontia" (PDF): teal #0e5a6b sobre gris #f4f6f7 */
+  --primario: #0e5a6b;
+  --primario-oscuro: #0a4451;
+  --primario-claro: #eaf2f4;
+  --primario-medio: #bad0d5;
+  --texto: #1d2939;
+  --texto-suave: #667085;
+  --texto-tenue: #98a2b3;
+  --borde: #e4e7ec;
+  --borde-fuerte: #d0d5dd;
+  --fondo: #f4f6f7;
+  --blanco: #fff;
+  --ok: #067647;
+  --ok-fondo: #e7f6ec;
+  --aviso: #b54708;
+  --aviso-fondo: #fef3e2;
+  --error: #b42318;
+  --error-fondo: #fdecea;
+  --info: #175cd3;
+  --info-fondo: #e8f0fe;
+  --radio: 10px;
+  --sombra: 0 1px 2px rgba(16, 24, 40, 0.05);
+  /* compatibilidad con estilos anteriores */
+  --azul: var(--primario);
+  font-family: Inter, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  font-size: 15px;
+  color: var(--texto);
+  background: var(--fondo);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--fondo);
+}
+
+h1,
+h2,
+h3 {
+  margin: 0 0 0.5rem;
+  letter-spacing: -0.01em;
+}
+
+h1 {
+  font-size: 1.45rem;
+}
+
+h2 {
+  font-size: 1.02rem;
+}
+
+h3 {
+  font-size: 0.92rem;
+}
+
+a {
+  color: var(--primario);
+}
+
+button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  padding: 0.5rem 0.9rem;
+  border: 1px solid var(--borde-fuerte);
+  border-radius: 8px;
+  background: var(--blanco);
+  color: var(--texto);
+  font: inherit;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.12s, border-color 0.12s;
+}
+
+button:hover:not(:disabled) {
+  background: #f9fafb;
+}
+
+button.primario {
+  border-color: var(--primario);
+  background: var(--primario);
+  color: #fff;
+}
+
+button.primario:hover:not(:disabled) {
+  background: var(--primario-oscuro);
+}
+
+button.peligro {
+  border-color: #f4c7c3;
+  color: var(--error);
+}
+
+button.chico {
+  padding: 0.25rem 0.6rem;
+  font-size: 0.82rem;
+}
+
+button:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+button.link {
+  border: 0;
+  padding: 0;
+  background: none;
+  color: var(--primario);
+  text-decoration: underline;
+}
+
+button.fantasma {
+  border-color: transparent;
+  background: transparent;
+}
+
+input,
+select,
+textarea {
+  font: inherit;
+  color: var(--texto);
+  padding: 0.5rem 0.65rem;
+  border: 1px solid var(--borde-fuerte);
+  border-radius: 8px;
+  background: #fff;
+  min-width: 0;
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  outline: 2px solid var(--primario-medio);
+  border-color: var(--primario);
+}
+
+input[type='checkbox'],
+input[type='radio'] {
+  accent-color: var(--primario);
+  width: 1rem;
+  height: 1rem;
+}
+
+textarea {
+  resize: vertical;
+}
+
+/* Formularios: <label>Texto <input/></label> */
+.form-grilla {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 0.75rem 1rem;
+}
+
+.form-grilla label,
+.campo {
+  display: grid;
+  gap: 0.3rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--texto-suave);
+}
+
+.form-grilla .ancho-total {
+  grid-column: 1 / -1;
+}
+
+.check,
+.form-grilla label.check {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.88rem;
+  font-weight: 500;
+  color: var(--texto);
+  cursor: pointer;
+}
+
+.acciones {
+  display: flex;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+
+.tarjeta {
+  background: var(--blanco);
+  border: 1px solid var(--borde);
+  border-radius: var(--radio);
+  padding: 1rem 1.1rem;
+  box-shadow: var(--sombra);
+  min-width: 0;
+}
+
+.tarjeta__cabecera {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.tarjeta__cabecera h2 {
+  margin: 0;
+}
+
+.pagina {
+  display: grid;
+  gap: 1rem;
+  min-width: 0;
+}
+
+.pagina__cabecera {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 0.75rem;
+}
+
+.pagina__cabecera h1 {
+  margin: 0;
+}
+
+.subtitulo {
+  margin: 0.2rem 0 0;
+  color: var(--texto-suave);
+  font-size: 0.9rem;
+}
+
+.filtros {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 0.5rem;
+}
+
+.error {
+  color: var(--error);
+  margin: 0.5rem 0 0;
+}
+
+.vacio {
+  color: var(--texto-suave);
+}
+
+.tenue {
+  color: var(--texto-tenue);
+  font-size: 0.85rem;
+}
+
+/* Rejillas de página */
+.columnas {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+  gap: 1rem;
+  align-items: start;
+}
+
+.columnas--mitad {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+@media (max-width: 1180px) {
+  .columnas,
+  .columnas--mitad {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* Tablas */
+.tabla-scroll {
+  overflow-x: auto;
+}
+
+table.tabla {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.88rem;
+}
+
+.tabla th,
+.tabla td {
+  padding: 0.6rem 0.65rem;
+  border-bottom: 1px solid #eef0f3;
+  text-align: left;
+  vertical-align: middle;
+}
+
+.tabla th {
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--texto-suave);
+  background: #f9fafb;
+}
+
+.tabla tr:last-child td {
+  border-bottom: 0;
+}
+
+.tabla .num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.tabla tr.anulado td {
+  color: #9aa0b0;
+  text-decoration: line-through;
+}
+
+.tabla tr.clicable {
+  cursor: pointer;
+}
+
+.tabla tr.clicable:hover td {
+  background: #f9fafb;
+}
+
+/* Indicadores */
+.kpis {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  gap: 0.75rem;
+}
+
+.kpi {
+  background: var(--blanco);
+  border: 1px solid var(--borde);
+  border-radius: var(--radio);
+  padding: 0.9rem 1rem;
+  box-shadow: var(--sombra);
+}
+
+.kpi__titulo {
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--texto-suave);
+}
+
+.kpi__valor {
+  font-size: 1.6rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  margin-top: 0.15rem;
+}
+
+.kpi__detalle {
+  font-size: 0.8rem;
+  color: var(--texto-suave);
+  margin-top: 0.15rem;
+}
+
+.positivo {
+  color: var(--ok);
+}
+
+.negativo {
+  color: var(--error);
+}
+
+/* Avatar con iniciales */
+.avatar {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  width: 2.1rem;
+  height: 2.1rem;
+  border-radius: 50%;
+  background: var(--primario-claro);
+  color: var(--primario);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.avatar--grande {
+  width: 3.2rem;
+  height: 3.2rem;
+  font-size: 1rem;
+}
+
+.persona {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  min-width: 0;
+}
+
+.persona__nombre {
+  font-weight: 600;
+}
+
+.persona__detalle {
+  font-size: 0.8rem;
+  color: var(--texto-suave);
+}
+
+/* Chips de estado */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.12rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.74rem;
+  font-weight: 600;
+  background: #f2f4f7;
+  color: #344054;
+  white-space: nowrap;
+}
+
+.chip::before {
+  content: '';
+  width: 0.4rem;
+  height: 0.4rem;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0.8;
+}
+
+.chip--sin-punto::before {
+  display: none;
+}
+
+.chip--pendiente { background: var(--aviso-fondo); color: var(--aviso); }
+.chip--confirmado { background: var(--info-fondo); color: var(--info); }
+.chip--ensala { background: #f4ebff; color: #6941c6; }
+.chip--atendido,
+.chip--recibido,
+.chip--ingreso,
+.chip--colocado { background: var(--ok-fondo); color: var(--ok); }
+.chip--cancelado { background: #f2f4f7; color: #667085; }
+.chip--ausente,
+.chip--egreso,
+.chip--urgencia { background: var(--error-fondo); color: var(--error); }
+.chip--enviado { background: var(--aviso-fondo); color: var(--aviso); }
+.chip--presuntivo { background: #fdf0d5; color: #93600b; }
+.chip--confirmado-dx { background: var(--ok-fondo); color: var(--ok); }
+
+/* Alertas médicas */
+.alerta {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.18rem 0.6rem;
+  border-radius: 999px;
+  background: var(--error-fondo);
+  color: var(--error);
+  font-size: 0.76rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.alertas {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+/* Pestañas tipo "pastilla" */
+.segmentado {
+  display: inline-flex;
+  padding: 3px;
+  border-radius: 9px;
+  background: #eef0f3;
+  gap: 2px;
+}
+
+.segmentado button {
+  border: 0;
+  background: transparent;
+  padding: 0.35rem 0.85rem;
+  font-size: 0.85rem;
+  color: var(--texto-suave);
+}
+
+.segmentado button[aria-pressed='true'] {
+  background: #fff;
+  color: var(--texto);
+  box-shadow: var(--sombra);
+}
+
+.pildoras {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.pildoras button {
+  padding: 0.3rem 0.8rem;
+  border-radius: 999px;
+  font-size: 0.82rem;
+}
+
+.pildoras button[aria-pressed='true'] {
+  border-color: var(--primario);
+  background: var(--primario);
+  color: #fff;
+}
+
+/* Listas simples dentro de tarjetas */
+.lista {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+}
+
+.lista > li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.6rem 0;
+  border-bottom: 1px solid #eef0f3;
+}
+
+.lista > li:last-child {
+  border-bottom: 0;
+}
+
+dialog::backdrop {
+  background: rgba(16, 24, 40, 0.4);
+}
+
+/* Enlace con aspecto de botón chico (ej: WhatsApp) */
+.chico-enlace {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.25rem 0.6rem;
+  border: 1px solid #b7e4c7;
+  border-radius: 8px;
+  background: #f0faf3;
+  color: #087443;
+  font-size: 0.82rem;
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.hora {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+@media print {
+  .layout__lateral,
+  .layout__barra,
+  .no-imprimir {
+    display: none !important;
+  }
+  .layout {
+    display: block !important;
+  }
+}
