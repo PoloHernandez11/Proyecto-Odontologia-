@@ -1,3 +1,8 @@
+-- Base completa de Odontia: crea la base y sus tablas desde cero.
+-- Ejecutar en una base vacía (si ya existen las tablas, el script falla).
+CREATE DATABASE IF NOT EXISTS `odontoapp` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+USE `odontoapp`;
+
 ALTER DATABASE CHARACTER SET utf8mb4;
 
 
