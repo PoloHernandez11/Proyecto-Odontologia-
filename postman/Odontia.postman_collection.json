@@ -1,0 +1,5738 @@
+{
+  "info": {
+    "name": "Odontia API v1",
+    "description": "Colección generada desde OpenAPI. 1) Ejecutar \"Autenticación y sesiones / POST /auth/login\" (guarda accessToken y csrfToken). 2) El resto usa Bearer {{accessToken}}. 3) Refresh/Logout envían X-CSRF-Token y la cookie odontia_rt (Postman la conserva automáticamente para el dominio).",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{accessToken}}",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:5221/api/v1"
+    },
+    {
+      "key": "accessToken",
+      "value": ""
+    },
+    {
+      "key": "csrfToken",
+      "value": ""
+    },
+    {
+      "key": "consultorioId",
+      "value": ""
+    },
+    {
+      "key": "userId",
+      "value": ""
+    },
+    {
+      "key": "twoFactorChallengeToken",
+      "value": ""
+    },
+    {
+      "key": "professionalUserId",
+      "value": ""
+    },
+    {
+      "key": "memberId",
+      "value": ""
+    },
+    {
+      "key": "id",
+      "value": ""
+    },
+    {
+      "key": "patientId",
+      "value": ""
+    },
+    {
+      "key": "appointmentId",
+      "value": ""
+    },
+    {
+      "key": "taskId",
+      "value": ""
+    },
+    {
+      "key": "budgetId",
+      "value": ""
+    },
+    {
+      "key": "paymentId",
+      "value": ""
+    },
+    {
+      "key": "labWorkId",
+      "value": ""
+    },
+    {
+      "key": "laboratoryId",
+      "value": ""
+    },
+    {
+      "key": "procedureId",
+      "value": ""
+    },
+    {
+      "key": "planId",
+      "value": ""
+    },
+    {
+      "key": "entryId",
+      "value": ""
+    },
+    {
+      "key": "documentId",
+      "value": ""
+    },
+    {
+      "key": "consentId",
+      "value": ""
+    },
+    {
+      "key": "roleId",
+      "value": ""
+    },
+    {
+      "key": "gabineteId",
+      "value": ""
+    },
+    {
+      "key": "healthInsuranceId",
+      "value": ""
+    },
+    {
+      "key": "diagnosisId",
+      "value": ""
+    },
+    {
+      "key": "alertId",
+      "value": ""
+    },
+    {
+      "key": "findingId",
+      "value": ""
+    },
+    {
+      "key": "itemId",
+      "value": ""
+    },
+    {
+      "key": "sessionId",
+      "value": ""
+    },
+    {
+      "key": "token",
+      "value": ""
+    },
+    {
+      "key": "toothCode",
+      "value": ""
+    },
+    {
+      "key": "invitationId",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "Autenticación y sesiones",
+      "item": [
+        {
+          "name": "POST /auth/2fa/disable",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/2fa/disable",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "2fa",
+                "disable"
+              ],
+              "query": []
+            },
+            "description": "Desactiva 2FA (requiere contraseña).\n\nPermiso: Autenticado",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"password\": \"ClaveSegura2026\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": []
+        },
+        {
+          "name": "POST /auth/2fa/enable",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/2fa/enable",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "2fa",
+                "enable"
+              ],
+              "query": []
+            },
+            "description": "Activa 2FA verificando un código. Devuelve códigos de recuperación (se muestran una única vez).\n\nPermiso: Autenticado",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"code\": \"\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": []
+        },
+        {
+          "name": "GET /auth/2fa/setup",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/auth/2fa/setup",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "2fa",
+                "setup"
+              ],
+              "query": []
+            },
+            "description": "Clave y URI otpauth para configurar una app autenticadora.\n\nPermiso: Autenticado"
+          },
+          "event": []
+        },
+        {
+          "name": "POST /auth/change-password",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/change-password",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "change-password"
+              ],
+              "query": []
+            },
+            "description": "Cambio de contraseña del usuario autenticado. Revoca las demás sesiones.\n\nPermiso: Autenticado",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"currentPassword\": \"ClaveSegura2026\",\n  \"newPassword\": \"ClaveSegura2026\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": []
+        },
+        {
+          "name": "POST /auth/confirm-email",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/confirm-email",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "confirm-email"
+              ],
+              "query": []
+            },
+            "description": "Confirma el correo electrónico.\n\nPermiso: Público",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": \"{{userId}}\",\n  \"token\": \"\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": []
+        },
+        {
+          "name": "POST /auth/forgot-password",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/forgot-password",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "forgot-password"
+              ],
+              "query": []
+            },
+            "description": "Solicita el correo de recuperación. Responde siempre igual (protección contra enumeración).\n\nPermiso: Público",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"usuario@ejemplo.com\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": []
+        },
+        {
+          "name": "GET /auth/invitations/{{token}}",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/auth/invitations/{{token}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "invitations",
+                "{{token}}"
+              ],
+              "query": []
+            },
+            "description": "Datos públicos de una invitación (para la pantalla de aceptación).\n\nPermiso: Público",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": []
+        },
+        {
+          "name": "POST /auth/invitations/accept",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/invitations/accept",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "invitations",
+                "accept"
+              ],
+              "query": []
+            },
+            "description": "Acepta una invitación: crea/activa la cuenta y la incorpora al consultorio.\n\nPermiso: Público",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"token\": \"\",\n  \"firstName\": \"\",\n  \"lastName\": \"\",\n  \"password\": \"ClaveSegura2026\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": []
+        },
+        {
+          "name": "POST /auth/login",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ],
+              "query": []
+            },
+            "description": "Inicio de sesión. Si el usuario tiene 2FA, devuelve un desafío para completar en /auth/login/2fa.\n\nPermiso: Público",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"usuario@ejemplo.com\",\n  \"password\": \"ClaveSegura2026\",\n  \"consultorioId\": \"{{consultorioId}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const r = pm.response.json();",
+                  "const s = r.result ?? r;",
+                  "if (s && s.session) {",
+                  "  pm.collectionVariables.set(\"accessToken\", s.session.accessToken);",
+                  "  pm.collectionVariables.set(\"csrfToken\", s.csrfToken);",
+                  "  pm.collectionVariables.set(\"consultorioId\", s.session.activeConsultorioId ?? \"\");",
+                  "  pm.collectionVariables.set(\"userId\", s.session.user.id);",
+                  "}",
+                  "if (r.requiresTwoFactor) pm.collectionVariables.set(\"twoFactorChallengeToken\", r.twoFactorChallengeToken);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /auth/login/2fa",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/login/2fa",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login",
+                "2fa"
+              ],
+              "query": []
+            },
+            "description": "Completa el inicio de sesión con código TOTP o código de recuperación.\n\nPermiso: Público",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"challengeToken\": \"\",\n  \"code\": \"\",\n  \"recoveryCode\": \"\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const r = pm.response.json();",
+                  "const s = r.result ?? r;",
+                  "if (s && s.session) {",
+                  "  pm.collectionVariables.set(\"accessToken\", s.session.accessToken);",
+                  "  pm.collectionVariables.set(\"csrfToken\", s.csrfToken);",
+                  "  pm.collectionVariables.set(\"consultorioId\", s.session.activeConsultorioId ?? \"\");",
+                  "  pm.collectionVariables.set(\"userId\", s.session.user.id);",
+                  "}",
+                  "if (r.requiresTwoFactor) pm.collectionVariables.set(\"twoFactorChallengeToken\", r.twoFactorChallengeToken);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /auth/logout",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-CSRF-Token",
+                "value": "{{csrfToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/logout",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "logout"
+              ],
+              "query": []
+            },
+            "description": "Cierra la sesión actual (revoca la familia de refresh tokens y borra las cookies).\n\nPermiso: Público",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": []
+        },
+        {
+          "name": "GET /auth/me",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/auth/me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "me"
+              ],
+              "query": []
+            },
+            "description": "Usuario autenticado, consultorio activo, permisos efectivos y membresías.\n\nPermiso: Autenticado"
+          },
+          "event": []
+        },
+        {
+          "name": "POST /auth/refresh",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-CSRF-Token",
+                "value": "{{csrfToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/refresh",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "refresh"
+              ],
+              "query": []
+            },
+            "description": "Renueva la sesión (rotación del refresh token de la cookie). Requiere encabezado X-CSRF-Token.\n\nPermiso: Público",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const r = pm.response.json();",
+                  "const s = r.result ?? r;",
+                  "if (s && s.session) {",
+                  "  pm.collectionVariables.set(\"accessToken\", s.session.accessToken);",
+                  "  pm.collectionVariables.set(\"csrfToken\", s.csrfToken);",
+                  "  pm.collectionVariables.set(\"consultorioId\", s.session.activeConsultorioId ?? \"\");",
+                  "  pm.collectionVariables.set(\"userId\", s.session.user.id);",
+                  "}",
+                  "if (r.requiresTwoFactor) pm.collectionVariables.set(\"twoFactorChallengeToken\", r.twoFactorChallengeToken);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /auth/register",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/register",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "register"
+              ],
+              "query": []
+            },
+            "description": "Alta de un nuevo consultorio y su usuario administrador (si el registro público está habilitado).\n\nPermiso: Público",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"usuario@ejemplo.com\",\n  \"password\": \"ClaveSegura2026\",\n  \"firstName\": \"\",\n  \"lastName\": \"\",\n  \"consultorioName\": \"\",\n  \"title\": \"\",\n  \"specialty\": \"\",\n  \"licenseNumber\": \"\",\n  \"timeZoneId\": \"\",\n  \"isProfessional\": false\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": []
+        },
+        {
+          "name": "POST /auth/resend-confirmation",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/resend-confirmation",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "resend-confirmation"
+              ],
+              "query": []
+            },
+            "description": "Reenvía el correo de confirmación (respuesta idéntica exista o no la cuenta).\n\nPermiso: Público",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"usuario@ejemplo.com\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": []
+        },
+        {
+          "name": "POST /auth/reset-password",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/reset-password",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "reset-password"
+              ],
+              "query": []
+            },
+            "description": "Restablece la contraseña con el token recibido por correo. Revoca todas las sesiones.\n\nPermiso: Público",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"usuario@ejemplo.com\",\n  \"token\": \"\",\n  \"newPassword\": \"ClaveSegura2026\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": []
+        },
+        {
+          "name": "GET /auth/sessions",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/auth/sessions",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "sessions"
+              ],
+              "query": []
+            },
+            "description": "Sesiones/dispositivos activos del usuario.\n\nPermiso: Autenticado"
+          },
+          "event": []
+        },
+        {
+          "name": "DELETE /auth/sessions/{{sessionId}}",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/auth/sessions/{{sessionId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "sessions",
+                "{{sessionId}}"
+              ],
+              "query": []
+            },
+            "description": "Revoca una sesión/dispositivo.\n\nPermiso: Autenticado"
+          },
+          "event": []
+        },
+        {
+          "name": "POST /auth/sessions/revoke-others",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/auth/sessions/revoke-others",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "sessions",
+                "revoke-others"
+              ],
+              "query": []
+            },
+            "description": "Revoca todas las sesiones excepto la actual.\n\nPermiso: Autenticado"
+          },
+          "event": []
+        },
+        {
+          "name": "POST /auth/switch-consultorio",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-CSRF-Token",
+                "value": "{{csrfToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/switch-consultorio",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "switch-consultorio"
+              ],
+              "query": []
+            },
+            "description": "Cambia el consultorio activo (emite nuevos tokens para ese consultorio).\n\nPermiso: Autenticado",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"consultorioId\": \"{{consultorioId}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const r = pm.response.json();",
+                  "const s = r.result ?? r;",
+                  "if (s && s.session) {",
+                  "  pm.collectionVariables.set(\"accessToken\", s.session.accessToken);",
+                  "  pm.collectionVariables.set(\"csrfToken\", s.csrfToken);",
+                  "  pm.collectionVariables.set(\"consultorioId\", s.session.activeConsultorioId ?? \"\");",
+                  "  pm.collectionVariables.set(\"userId\", s.session.user.id);",
+                  "}",
+                  "if (r.requiresTwoFactor) pm.collectionVariables.set(\"twoFactorChallengeToken\", r.twoFactorChallengeToken);"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Consultorio",
+      "item": [
+        {
+          "name": "GET /consultorio",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/consultorio",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "consultorio"
+              ],
+              "query": []
+            },
+            "description": "Datos del consultorio activo.\n\nPermiso: consultorio.read"
+          },
+          "event": []
+        },
+        {
+          "name": "PUT /consultorio",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/consultorio",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "consultorio"
+              ],
+              "query": []
+            },
+            "description": "Actualiza nombre, datos de contacto y dirección.\n\nPermiso: consultorio.manage",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"\",\n  \"legalName\": \"\",\n  \"taxId\": \"\",\n  \"phone\": \"\",\n  \"email\": \"usuario@ejemplo.com\",\n  \"website\": \"\",\n  \"addressLine\": \"\",\n  \"city\": \"\",\n  \"province\": \"\",\n  \"postalCode\": \"\",\n  \"country\": \"\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": []
+        },
+        {
+          "name": "GET /consultorio/gabinetes",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/consultorio/gabinetes",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "consultorio",
+                "gabinetes"
+              ],
+              "query": [
+                {
+                  "key": "includeInactive",
+                  "value": "",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "Consultorios físicos / gabinetes.\n\nPermiso: consultorio.read"
+          },
+          "event": []
+        },
+        {
+          "name": "POST /consultorio/gabinetes",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/consultorio/gabinetes",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "consultorio",
+                "gabinetes"
+              ],
+              "query": []
+            },
+            "description": "\n\nPermiso: consultorio.manage",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"\",\n  \"description\": \"\",\n  \"isActive\": false\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code < 300) { const j = pm.response.json(); if (j && j.id) pm.collectionVariables.set(\"gabineteId\", j.id); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "PUT /consultorio/gabinetes/{{id}}",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/consultorio/gabinetes/{{id}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "consultorio",
+                "gabinetes",
+                "{{id}}"
+              ],
+              "query": []
+            },
+            "description": "\n\nPermiso: consultorio.manage",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"\",\n  \"description\": \"\",\n  \"isActive\": false\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": []
+        },
+        {
+          "name": "GET /consultorio/professionals",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/consultorio/professionals",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "consultorio",
+                "professionals"
+              ],
+              "query": []
+            },
+            "description": "Profesionales que atienden (sólo el propio si no tiene acceso a todas las agendas).\n\nPermiso: agenda.read"
+          },
+          "event": []
+        },
+        {
+          "name": "PUT /consultorio/settings",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/consultorio/settings",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "consultorio",
+                "settings"
+              ],
+              "query": []
+            },
+            "description": "Configuración general: zona horaria, duración de turno, intervalo de agenda, recordatorios.\n\nPermiso: consultorio.manage",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"timeZoneId\": \"\",\n  \"defaultAppointmentMinutes\": 0,\n  \"slotIntervalMinutes\": 0,\n  \"reminderHoursBefore\": 0\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": []
+        }
+      ]
+    },
+    {
+      "name": "Usuarios, roles e invitaciones",
+      "item": [
+        {
+          "name": "GET /invitations",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/invitations",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "invitations"
+              ],
+              "query": []
+            },
+            "description": "\n\nPermiso: users.manage"
+          },
+          "event": []
+        },
+        {
+          "name": "POST /invitations",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/invitations",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "invitations"
+              ],
+              "query": []
+            },
+            "description": "Invita por correo a un usuario con los roles indicados.\n\nPermiso: users.manage",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"usuario@ejemplo.com\",\n  \"roleIds\": [\n    \"{{id}}\"\n  ],\n  \"isProfessional\": false\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": []
+        },
+        {
+          "name": "DELETE /invitations/{{id}}",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/invitations/{{id}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "invitations",
+                "{{id}}"
+              ],
+              "query": []
+            },
+            "description": "\n\nPermiso: users.manage"
+          },
+          "event": []
+        },
+        {
+          "name": "GET /permissions",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/permissions",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "permissions"
+              ],
+              "query": []
+            },
+            "description": "Catálogo de permisos granulares.\n\nPermiso: users.read"
+          },
+          "event": []
+        },
+        {
+          "name": "GET /roles",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/roles",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "roles"
+              ],
+              "query": []
+            },
+            "description": "Roles disponibles (de sistema y personalizados del consultorio).\n\nPermiso: users.read"
+          },
+          "event": []
+        },
+        {
+          "name": "POST /roles",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/roles",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "roles"
+              ],
+              "query": []
+            },
+            "description": "\n\nPermiso: roles.manage",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"\",\n  \"description\": \"\",\n  \"permissions\": [\n    \"\"\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code < 300) { const j = pm.response.json(); if (j && j.id) pm.collectionVariables.set(\"roleId\", j.id); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "PUT /roles/{{roleId}}",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/roles/{{roleId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "roles",
+                "{{roleId}}"
+              ],
+              "query": []
+            },
+            "description": "\n\nPermiso: roles.manage",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"\",\n  \"description\": \"\",\n  \"permissions\": [\n    \"\"\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": []
+        },
+        {
+          "name": "DELETE /roles/{{roleId}}",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/roles/{{roleId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "roles",
+                "{{roleId}}"
+              ],
+              "query": []
+            },
+            "description": "\n\nPermiso: roles.manage"
+          },
+          "event": []
+        },
+        {
+          "name": "GET /users",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/users",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users"
+              ],
+              "query": [
+                {
+                  "key": "includeInactive",
+                  "value": "",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "Usuarios (miembros) del consultorio.\n\nPermiso: users.read"
+          },
+          "event": []
+        },
+        {
+          "name": "GET /users/{{memberId}}",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/users/{{memberId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users",
+                "{{memberId}}"
+              ],
+              "query": []
+            },
+            "description": "\n\nPermiso: users.read"
+          },
+          "event": []
+        },
+        {
+          "name": "PUT /users/{{memberId}}",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/users/{{memberId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users",
+                "{{memberId}}"
+              ],
+              "query": []
+            },
+            "description": "Marca como profesional y preferencias de agenda.\n\nPermiso: users.manage",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"isProfessional\": false,\n  \"defaultAppointmentMinutes\": 0,\n  \"agendaColor\": \"\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": []
+        },
+        {
+          "name": "PUT /users/{{memberId}}/active",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/users/{{memberId}}/active",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users",
+                "{{memberId}}",
+                "active"
+              ],
+              "query": []
+            },
+            "description": "Activa o desactiva un usuario en el consultorio (desactivar revoca sus sesiones).\n\nPermiso: users.manage",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"isActive\": false\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": []
+        },
+        {
+          "name": "PUT /users/{{memberId}}/roles",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/users/{{memberId}}/roles",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users",
+                "{{memberId}}",
+                "roles"
+              ],
+              "query": []
+            },
+            "description": "Asigna roles. No se pueden otorgar permisos que el actor no posee ni modificar los propios.\n\nPermiso: users.manage",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"roleIds\": [\n    \"{{id}}\"\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": []
+        }
+      ]
+    },
+    {
+      "name": "Perfil",
+      "item": [
+        {
+          "name": "GET /profile",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/profile",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "profile"
+              ],
+              "query": []
+            },
+            "description": "\n\nPermiso: Autenticado"
+          },
+          "event": []
+        },
+        {
+          "name": "PUT /profile",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/profile",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "profile"
+              ],
+              "query": []
+            },
+            "description": "Datos personales.\n\nPermiso: Autenticado",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstName\": \"\",\n  \"lastName\": \"\",\n  \"title\": \"\",\n  \"phone\": \"\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": []
+        },
+        {
+          "name": "PUT /profile/email",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/profile/email",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "profile",
+                "email"
+              ],
+              "query": []
+            },
+            "description": "Cambio de correo (requiere contraseña y nueva confirmación).\n\nPermiso: Autenticado",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"newEmail\": \"\",\n  \"password\": \"ClaveSegura2026\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": []
+        },
+        {
+          "name": "PUT /profile/notification-settings",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/profile/notification-settings",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "profile",
+                "notification-settings"
+              ],
+              "query": []
+            },
+            "description": "\n\nPermiso: Autenticado",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"emailEnabled\": false,\n  \"inAppEnabled\": false,\n  \"notifyTaskAssigned\": false,\n  \"notifyTaskDue\": false,\n  \"notifyLabUpdates\": false,\n  \"notifyAppointmentChanges\": false,\n  \"dailyAgendaSummary\": false\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": []
+        },
+        {
+          "name": "PUT /profile/professional",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/profile/professional",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "profile",
+                "professional"
+              ],
+              "query": []
+            },
+            "description": "Especialidad, matrícula y duración de turno por defecto.\n\nPermiso: Autenticado",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"specialty\": \"\",\n  \"licenseNumber\": \"\",\n  \"defaultAppointmentMinutes\": 0\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": []
+        }
+      ]
+    },
+    {
+      "name": "Auditoría",
+      "item": [
+        {
+          "name": "GET /audit",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/audit",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "audit"
+              ],
+              "query": [
+                {
+                  "key": "EntityType",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "EntityId",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "UserId",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "FromUtc",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "ToUtc",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "Page",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "PageSize",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "Sort",
+                  "value": "",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "\n\nPermiso: audit.read"
+          },
+          "event": []
+        }
+      ]
+    },
+    {
+      "name": "Pacientes",
+      "item": [
+        {
+          "name": "GET /patients",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/patients",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "patients"
+              ],
+              "query": [
+                {
+                  "key": "Search",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "Status",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "HealthInsuranceId",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "Private",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "Page",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "PageSize",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "Sort",
+                  "value": "",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "Búsqueda paginada por nombre, apellido, DNI o teléfono, con filtros. Orden: name, document, created, status, birthdate.\n\nPermiso: patients.read"
+          },
+          "event": []
+        },
+        {
+          "name": "POST /patients",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/patients",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "patients"
+              ],
+              "query": []
+            },
+            "description": "Alta de paciente (DNI único por consultorio). Antecedentes opcionales: requieren patients.medical.write.\n\nPermiso: patients.write",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"patient\": {\n    \"firstName\": \"\",\n    \"lastName\": \"\",\n    \"documentNumber\": \"\",\n    \"birthDate\": \"2026-10-20\",\n    \"sex\": \"NotSpecified\",\n    \"occupation\": \"\",\n    \"phone\": \"\",\n    \"email\": \"usuario@ejemplo.com\",\n    \"addressLine\": \"\",\n    \"city\": \"\",\n    \"province\": \"\",\n    \"postalCode\": \"\",\n    \"emergencyContactName\": \"\",\n    \"emergencyContactPhone\": \"\",\n    \"emergencyContactRelationship\": \"\",\n    \"healthInsuranceId\": \"{{healthInsuranceId}}\",\n    \"insurancePlan\": \"\",\n    \"affiliateNumber\": \"\",\n    \"administrativeNotes\": \"\"\n  },\n  \"medicalHistory\": {\n    \"diabetes\": false,\n    \"hypertension\": false,\n    \"heartDisease\": false,\n    \"anticoagulated\": false,\n    \"pregnant\": false,\n    \"asthma\": false,\n    \"hepatitis\": false,\n    \"smoker\": false,\n    \"allergies\": \"\",\n    \"currentMedication\": \"\",\n    \"otherConditions\": \"\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code < 300) { const j = pm.response.json(); if (j && j.id) pm.collectionVariables.set(\"patientId\", j.id); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /patients/{{id}}",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/patients/{{id}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "patients",
+                "{{id}}"
+              ],
+              "query": []
+            },
+            "description": "\n\nPermiso: patients.read"
+          },
+          "event": []
+        },
+        {
+          "name": "PUT /patients/{{id}}",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/patients/{{id}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "patients",
+                "{{id}}"
+              ],
+              "query": []
+            },
+            "description": "\n\nPermiso: patients.write",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstName\": \"\",\n  \"lastName\": \"\",\n  \"documentNumber\": \"\",\n  \"birthDate\": \"2026-10-20\",\n  \"sex\": \"NotSpecified\",\n  \"occupation\": \"\",\n  \"phone\": \"\",\n  \"email\": \"usuario@ejemplo.com\",\n  \"addressLine\": \"\",\n  \"city\": \"\",\n  \"province\": \"\",\n  \"postalCode\": \"\",\n  \"emergencyContactName\": \"\",\n  \"emergencyContactPhone\": \"\",\n  \"emergencyContactRelationship\": \"\",\n  \"healthInsuranceId\": \"{{healthInsuranceId}}\",\n  \"insurancePlan\": \"\",\n  \"affiliateNumber\": \"\",\n  \"administrativeNotes\": \"\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": []
+        },
+        {
+          "name": "GET /patients/{{id}}/alerts",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/patients/{{id}}/alerts",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "patients",
+                "{{id}}",
+                "alerts"
+              ],
+              "query": []
+            },
+            "description": "Alertas médicas relevantes. Recepción ve sólo títulos de alertas necesarias para la atención.\n\nPermiso: patients.alerts.read"
+          },
+          "event": []
+        },
+        {
+          "name": "POST /patients/{{id}}/alerts",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/patients/{{id}}/alerts",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "patients",
+                "{{id}}",
+                "alerts"
+              ],
+              "query": []
+            },
+            "description": "\n\nPermiso: patients.medical.write",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"\",\n  \"details\": \"\",\n  \"severity\": \"Info\",\n  \"visibleToReception\": false\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": []
+        },
+        {
+          "name": "PUT /patients/{{id}}/alerts/{{alertId}}",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/patients/{{id}}/alerts/{{alertId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "patients",
+                "{{id}}",
+                "alerts",
+                "{{alertId}}"
+              ],
+              "query": []
+            },
+            "description": "\n\nPermiso: patients.medical.write",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"\",\n  \"details\": \"\",\n  \"severity\": \"Info\",\n  \"visibleToReception\": false\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": []
+        },
+        {
+          "name": "DELETE /patients/{{id}}/alerts/{{alertId}}",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/patients/{{id}}/alerts/{{alertId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "patients",
+                "{{id}}",
+                "alerts",
+                "{{alertId}}"
+              ],
+              "query": []
+            },
+            "description": "\n\nPermiso: patients.medical.write"
+          },
+          "event": []
+        },
+        {
+          "name": "GET /patients/{{id}}/history",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/patients/{{id}}/history",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "patients",
+                "{{id}}",
+                "history"
+              ],
+              "query": []
+            },
+            "description": "Historial administrativo (turnos, pagos, presupuestos, documentos no clínicos).\n\nPermiso: patients.read"
+          },
+          "event": []
+        },
+        {
+          "name": "GET /patients/{{id}}/medical-history",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/patients/{{id}}/medical-history",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "patients",
+                "{{id}}",
+                "medical-history"
+              ],
+              "query": []
+            },
+            "description": "Antecedentes médicos completos (información clínica restringida).\n\nPermiso: patients.medical.read"
+          },
+          "event": []
+        },
+        {
+          "name": "PUT /patients/{{id}}/medical-history",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/patients/{{id}}/medical-history",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "patients",
+                "{{id}}",
+                "medical-history"
+              ],
+              "query": []
+            },
+            "description": "\n\nPermiso: patients.medical.write",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"diabetes\": false,\n  \"hypertension\": false,\n  \"heartDisease\": false,\n  \"anticoagulated\": false,\n  \"pregnant\": false,\n  \"asthma\": false,\n  \"hepatitis\": false,\n  \"smoker\": false,\n  \"allergies\": \"\",\n  \"currentMedication\": \"\",\n  \"otherConditions\": \"\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": []
+        },
+        {
+          "name": "PUT /patients/{{id}}/status",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/patients/{{id}}/status",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "patients",
+                "{{id}}",
+                "status"
+              ],
+              "query": []
+            },
+            "description": "\n\nPermiso: patients.write",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"New\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": []
+        },
+        {
+          "name": "GET /patients/{{id}}/summary",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/patients/{{id}}/summary",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "patients",
+                "{{id}}",
+                "summary"
+              ],
+              "query": []
+            },
+            "description": "Resumen de la ficha (secciones según permisos: cuenta, tratamiento, última evolución, laboratorio).\n\nPermiso: patients.read"
+          },
+          "event": []
+        }
+      ]
+    },
+    {
+      "name": "Obras sociales",
+      "item": [
+        {
+          "name": "GET /health-insurances",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/health-insurances",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "health-insurances"
+              ],
+              "query": [
+                {
+                  "key": "includeInactive",
+                  "value": "",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "\n\nPermiso: patients.read"
+          },
+          "event": []
+        },
+        {
+          "name": "POST /health-insurances",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/health-insurances",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "health-insurances"
+              ],
+              "query": []
+            },
+            "description": "\n\nPermiso: insurances.manage",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"\",\n  \"code\": \"\",\n  \"phone\": \"\",\n  \"notes\": \"\",\n  \"isActive\": false\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code < 300) { const j = pm.response.json(); if (j && j.id) pm.collectionVariables.set(\"healthInsuranceId\", j.id); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "PUT /health-insurances/{{id}}",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/health-insurances/{{id}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "health-insurances",
+                "{{id}}"
+              ],
+              "query": []
+            },
+            "description": "\n\nPermiso: insurances.manage",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"\",\n  \"code\": \"\",\n  \"phone\": \"\",\n  \"notes\": \"\",\n  \"isActive\": false\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": []
+        }
+      ]
+    },
+    {
+      "name": "Agenda",
+      "item": [
+        {
+          "name": "GET /agenda",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/agenda",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "agenda"
+              ],
+              "query": [
+                {
+                  "key": "From",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "To",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "ProfessionalUserId",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "GabineteId",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "IncludeCancelled",
+                  "value": "",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "Agenda de un rango de fechas locales (día o semana; máx. 42 días), por profesional y/o consultorio físico.\n\nPermiso: agenda.read"
+          },
+          "event": []
+        },
+        {
+          "name": "GET /agenda/availability",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/agenda/availability",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "agenda",
+                "availability"
+              ],
+              "query": [
+                {
+                  "key": "Date",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "ProfessionalUserId",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "GabineteId",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "DurationMinutes",
+                  "value": "",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "Horarios disponibles para reservar (la disponibilidad se revalida al confirmar el turno).\n\nPermiso: agenda.read"
+          },
+          "event": []
+        },
+        {
+          "name": "GET /agenda/blocks",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/agenda/blocks",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "agenda",
+                "blocks"
+              ],
+              "query": [
+                {
+                  "key": "from",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "to",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "professionalUserId",
+                  "value": "",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "\n\nPermiso: agenda.read"
+          },
+          "event": []
+        },
+        {
+          "name": "POST /agenda/blocks",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/agenda/blocks",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "agenda",
+                "blocks"
+              ],
+              "query": []
+            },
+            "description": "Crea un bloqueo, día no laborable o excepción de disponibilidad.\n\nPermiso: agenda.manage",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"kind\": \"Blocked\",\n  \"start\": \"2026-10-20T10:30:00-03:00\",\n  \"end\": \"2026-10-20T10:30:00-03:00\",\n  \"professionalUserId\": \"{{professionalUserId}}\",\n  \"gabineteId\": \"{{gabineteId}}\",\n  \"reason\": \"\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": []
+        },
+        {
+          "name": "PUT /agenda/blocks/{{id}}",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/agenda/blocks/{{id}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "agenda",
+                "blocks",
+                "{{id}}"
+              ],
+              "query": []
+            },
+            "description": "\n\nPermiso: agenda.manage",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"kind\": \"Blocked\",\n  \"start\": \"2026-10-20T10:30:00-03:00\",\n  \"end\": \"2026-10-20T10:30:00-03:00\",\n  \"professionalUserId\": \"{{professionalUserId}}\",\n  \"gabineteId\": \"{{gabineteId}}\",\n  \"reason\": \"\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": []
+        },
+        {
+          "name": "DELETE /agenda/blocks/{{id}}",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/agenda/blocks/{{id}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "agenda",
+                "blocks",
+                "{{id}}"
+              ],
+              "query": []
+            },
+            "description": "\n\nPermiso: agenda.manage"
+          },
+          "event": []
+        },
+        {
+          "name": "POST /agenda/blocks/non-working-day",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/agenda/blocks/non-working-day",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "agenda",
+                "blocks",
+                "non-working-day"
+              ],
+              "query": []
+            },
+            "description": "Marca un día completo como no laborable (consultorio o profesional).\n\nPermiso: agenda.manage",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"date\": \"2026-10-20\",\n  \"professionalUserId\": \"{{professionalUserId}}\",\n  \"reason\": \"\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": []
+        },
+        {
+          "name": "GET /agenda/day-summary",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/agenda/day-summary",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "agenda",
+                "day-summary"
+              ],
+              "query": [
+                {
+                  "key": "date",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "professionalUserId",
+                  "value": "",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "Resumen del día: turnos, minutos ocupados y huecos libres.\n\nPermiso: agenda.read"
+          },
+          "event": []
+        },
+        {
+          "name": "GET /agenda/month",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/agenda/month",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "agenda",
+                "month"
+              ],
+              "query": [
+                {
+                  "key": "year",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "month",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "professionalUserId",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "gabineteId",
+                  "value": "",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "Vista mensual: cantidad de turnos por día y primeros turnos.\n\nPermiso: agenda.read"
+          },
+          "event": []
+        },
+        {
+          "name": "GET /agenda/professionals/{{professionalUserId}}/working-hours",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/agenda/professionals/{{professionalUserId}}/working-hours",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "agenda",
+                "professionals",
+                "{{professionalUserId}}",
+                "working-hours"
+              ],
+              "query": []
+            },
+            "description": "\n\nPermiso: agenda.read"
+          },
+          "event": []
+        },
+        {
+          "name": "PUT /agenda/professionals/{{professionalUserId}}/working-hours",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/agenda/professionals/{{professionalUserId}}/working-hours",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "agenda",
+                "professionals",
+                "{{professionalUserId}}",
+                "working-hours"
+              ],
+              "query": []
+            },
+            "description": "Reemplaza el horario laboral semanal del profesional.\n\nPermiso: agenda.manage",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"slots\": [\n    {\n      \"dayOfWeek\": \"Sunday\",\n      \"startTime\": \"09:00\",\n      \"endTime\": \"09:00\",\n      \"gabineteId\": \"{{gabineteId}}\"\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": []
+        }
+      ]
+    },
+    {
+      "name": "Turnos",
+      "item": [
+        {
+          "name": "GET /appointments",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/appointments",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "appointments"
+              ],
+              "query": [
+                {
+                  "key": "From",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "To",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "Status",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "ProfessionalUserId",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "PatientId",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "GabineteId",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "Search",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "Page",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "PageSize",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "Sort",
+                  "value": "",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "Listado paginado con filtros (rango, estado, profesional, paciente, búsqueda). Orden: start, status, patient, created.\n\nPermiso: appointments.read"
+          },
+          "event": []
+        },
+        {
+          "name": "POST /appointments",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/appointments",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "appointments"
+              ],
+              "query": []
+            },
+            "description": "Crea un turno validando disponibilidad y superposición de forma atómica.\n\nPermiso: appointments.write",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"patientId\": \"{{patientId}}\",\n  \"professionalUserId\": \"{{professionalUserId}}\",\n  \"gabineteId\": \"{{gabineteId}}\",\n  \"start\": \"2026-10-20T10:30:00-03:00\",\n  \"durationMinutes\": 0,\n  \"reason\": \"\",\n  \"administrativeNotes\": \"\",\n  \"isOverbooking\": false,\n  \"confirmed\": false\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code < 300) { const j = pm.response.json(); if (j && j.id) pm.collectionVariables.set(\"appointmentId\", j.id); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /appointments/{{id}}",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/appointments/{{id}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "appointments",
+                "{{id}}"
+              ],
+              "query": []
+            },
+            "description": "\n\nPermiso: appointments.read"
+          },
+          "event": []
+        },
+        {
+          "name": "PUT /appointments/{{id}}",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/appointments/{{id}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "appointments",
+                "{{id}}"
+              ],
+              "query": []
+            },
+            "description": "Modifica paciente, motivo y observaciones (requiere la versión vigente para evitar pisar cambios).\n\nPermiso: appointments.write",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"patientId\": \"{{patientId}}\",\n  \"reason\": \"\",\n  \"administrativeNotes\": \"\",\n  \"version\": \"{{id}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": []
+        },
+        {
+          "name": "POST /appointments/{{id}}/attend",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/appointments/{{id}}/attend",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "appointments",
+                "{{id}}",
+                "attend"
+              ],
+              "query": []
+            },
+            "description": "\n\nPermiso: appointments.write"
+          },
+          "event": []
+        },
+        {
+          "name": "POST /appointments/{{id}}/cancel",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/appointments/{{id}}/cancel",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "appointments",
+                "{{id}}",
+                "cancel"
+              ],
+              "query": []
+            },
+            "description": "\n\nPermiso: appointments.write",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": []
+        },
+        {
+          "name": "POST /appointments/{{id}}/check-in",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/appointments/{{id}}/check-in",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "appointments",
+                "{{id}}",
+                "check-in"
+              ],
+              "query": []
+            },
+            "description": "Registra la llegada del paciente.\n\nPermiso: appointments.write"
+          },
+          "event": []
+        },
+        {
+          "name": "POST /appointments/{{id}}/confirm",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/appointments/{{id}}/confirm",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "appointments",
+                "{{id}}",
+                "confirm"
+              ],
+              "query": []
+            },
+            "description": "\n\nPermiso: appointments.write"
+          },
+          "event": []
+        },
+        {
+          "name": "GET /appointments/{{id}}/history",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/appointments/{{id}}/history",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "appointments",
+                "{{id}}",
+                "history"
+              ],
+              "query": []
+            },
+            "description": "\n\nPermiso: appointments.read"
+          },
+          "event": []
+        },
+        {
+          "name": "POST /appointments/{{id}}/mark-pending",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/appointments/{{id}}/mark-pending",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "appointments",
+                "{{id}}",
+                "mark-pending"
+              ],
+              "query": []
+            },
+            "description": "\n\nPermiso: appointments.write"
+          },
+          "event": []
+        },
+        {
+          "name": "POST /appointments/{{id}}/no-show",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/appointments/{{id}}/no-show",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "appointments",
+                "{{id}}",
+                "no-show"
+              ],
+              "query": []
+            },
+            "description": "Registra ausencia (sólo luego del horario del turno).\n\nPermiso: appointments.write"
+          },
+          "event": []
+        },
+        {
+          "name": "POST /appointments/{{id}}/reminder",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/appointments/{{id}}/reminder",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "appointments",
+                "{{id}}",
+                "reminder"
+              ],
+              "query": [
+                {
+                  "key": "channel",
+                  "value": "",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "Envía un recordatorio. El estado devuelto refleja el resultado real del proveedor (NotSentNoProvider si no hay proveedor).\n\nPermiso: messaging.send"
+          },
+          "event": []
+        },
+        {
+          "name": "POST /appointments/{{id}}/reschedule",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/appointments/{{id}}/reschedule",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "appointments",
+                "{{id}}",
+                "reschedule"
+              ],
+              "query": []
+            },
+            "description": "Reprograma (horario, profesional, consultorio físico). El turno vuelve a \"pendiente\".\n\nPermiso: appointments.write",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"start\": \"2026-10-20T10:30:00-03:00\",\n  \"durationMinutes\": 0,\n  \"professionalUserId\": \"{{professionalUserId}}\",\n  \"gabineteId\": \"{{gabineteId}}\",\n  \"isOverbooking\": false,\n  \"reason\": \"\",\n  \"version\": \"{{id}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": []
+        },
+        {
+          "name": "POST /appointments/{{id}}/start",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/appointments/{{id}}/start",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "appointments",
+                "{{id}}",
+                "start"
+              ],
+              "query": []
+            },
+            "description": "Inicia la consulta.\n\nPermiso: appointments.write"
+          },
+          "event": []
+        },
+        {
+          "name": "POST /appointments/{{id}}/status",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/appointments/{{id}}/status",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "appointments",
+                "{{id}}",
+                "status"
+              ],
+              "query": []
+            },
+            "description": "Cambio de estado genérico (máquina de estados controlada).\n\nPermiso: appointments.write",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"Pending\",\n  \"reason\": \"\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": []
+        },
+        {
+          "name": "POST /appointments/{{id}}/waiting-room",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/appointments/{{id}}/waiting-room",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "appointments",
+                "{{id}}",
+                "waiting-room"
+              ],
+              "query": []
+            },
+            "description": "\n\nPermiso: appointments.write"
+          },
+          "event": []
+        },
+        {
+          "name": "GET /appointments/status-counts",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/appointments/status-counts",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "appointments",
+                "status-counts"
+              ],
+              "query": [
+                {
+                  "key": "from",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "to",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "professionalUserId",
+                  "value": "",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "Conteo por estado en un rango (pestañas de \"Gestión de turnos\").\n\nPermiso: appointments.read"
+          },
+          "event": []
+        }
+      ]
+    },
+    {
+      "name": "Tareas",
+      "item": [
+        {
+          "name": "GET /tasks",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/tasks",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "tasks"
+              ],
+              "query": [
+                {
+                  "key": "Status",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "View",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "AssignedToUserId",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "Mine",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "Priority",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "Category",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "PatientId",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "Page",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "PageSize",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "Sort",
+                  "value": "",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "Listado con filtros. view: open | overdue | today | upcoming | completed. Orden: due, priority, created, status.\n\nPermiso: tasks.read"
+          },
+          "event": []
+        },
+        {
+          "name": "POST /tasks",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/tasks",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "tasks"
+              ],
+              "query": []
+            },
+            "description": "\n\nPermiso: tasks.write",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"\",\n  \"description\": \"\",\n  \"priority\": \"Low\",\n  \"category\": \"General\",\n  \"assignedToUserId\": \"{{assignedToUserId}}\",\n  \"dueAt\": \"2026-10-20T10:30:00-03:00\",\n  \"patientId\": \"{{patientId}}\",\n  \"appointmentId\": \"{{appointmentId}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code < 300) { const j = pm.response.json(); if (j && j.id) pm.collectionVariables.set(\"taskId\", j.id); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /tasks/{{id}}",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/tasks/{{id}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "tasks",
+                "{{id}}"
+              ],
+              "query": []
+            },
+            "description": "\n\nPermiso: tasks.read"
+          },
+          "event": []
+        },
+        {
+          "name": "PUT /tasks/{{id}}",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/tasks/{{id}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "tasks",
+                "{{id}}"
+              ],
+              "query": []
+            },
+            "description": "\n\nPermiso: tasks.write",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"\",\n  \"description\": \"\",\n  \"priority\": \"Low\",\n  \"category\": \"General\",\n  \"assignedToUserId\": \"{{assignedToUserId}}\",\n  \"dueAt\": \"2026-10-20T10:30:00-03:00\",\n  \"patientId\": \"{{patientId}}\",\n  \"appointmentId\": \"{{appointmentId}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": []
+        },
+        {
+          "name": "PUT /tasks/{{id}}/assignee",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/tasks/{{id}}/assignee",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "tasks",
+                "{{id}}",
+                "assignee"
+              ],
+              "query": []
+            },
+            "description": "Asigna o reasigna el responsable.\n\nPermiso: tasks.write",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"assignedToUserId\": \"{{assignedToUserId}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": []
+        },
+        {
+          "name": "PUT /tasks/{{id}}/status",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/tasks/{{id}}/status",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "tasks",
+                "{{id}}",
+                "status"
+              ],
+              "query": []
+            },
+            "description": "Cambia el estado (p. ej. Completed).\n\nPermiso: tasks.write",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"Pending\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": []
+        }
+      ]
+    },
+    {
+      "name": "Historia clínica",
+      "item": [
+        {
+          "name": "GET /patients/{{patientId}}/clinical-record",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/patients/{{patientId}}/clinical-record",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "patients",
+                "{{patientId}}",
+                "clinical-record"
+              ],
+              "query": []
+            },
+            "description": "Encabezado de la historia clínica con antecedentes y alertas.\n\nPermiso: clinical.read"
+          },
+          "event": []
+        },
+        {
+          "name": "GET /patients/{{patientId}}/clinical-record/diagnoses",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/patients/{{patientId}}/clinical-record/diagnoses",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "patients",
+                "{{patientId}}",
+                "clinical-record",
+                "diagnoses"
+              ],
+              "query": [
+                {
+                  "key": "status",
+                  "value": "",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "\n\nPermiso: clinical.read"
+          },
+          "event": []
+        },
+        {
+          "name": "POST /patients/{{patientId}}/clinical-record/diagnoses",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/patients/{{patientId}}/clinical-record/diagnoses",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "patients",
+                "{{patientId}}",
+                "clinical-record",
+                "diagnoses"
+              ],
+              "query": []
+            },
+            "description": "\n\nPermiso: clinical.write",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"description\": \"\",\n  \"code\": \"\",\n  \"toothCode\": 0,\n  \"surface\": \"Occlusal\",\n  \"diagnosedAt\": \"2026-10-20T10:30:00-03:00\",\n  \"clinicalEntryId\": \"{{clinicalEntryId}}\",\n  \"notes\": \"\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code < 300) { const j = pm.response.json(); if (j && j.id) pm.collectionVariables.set(\"diagnosisId\", j.id); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "PUT /patients/{{patientId}}/clinical-record/diagnoses/{{diagnosisId}}/status",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/patients/{{patientId}}/clinical-record/diagnoses/{{diagnosisId}}/status",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "patients",
+                "{{patientId}}",
+                "clinical-record",
+                "diagnoses",
+                "{{diagnosisId}}",
+                "status"
+              ],
+              "query": []
+            },
+            "description": "\n\nPermiso: clinical.write",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"Active\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": []
+        },
+        {
+          "name": "GET /patients/{{patientId}}/clinical-record/entries",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/patients/{{patientId}}/clinical-record/entries",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "patients",
+                "{{patientId}}",
+                "clinical-record",
+                "entries"
+              ],
+              "query": [
+                {
+                  "key": "Type",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "ToothCode",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "IncludeVoided",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "Page",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "PageSize",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "Sort",
+                  "value": "",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "Evolución cronológica (más recientes primero). Filtros: type, toothCode, includeVoided.\n\nPermiso: clinical.read"
+          },
+          "event": []
+        },
+        {
+          "name": "POST /patients/{{patientId}}/clinical-record/entries",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/patients/{{patientId}}/clinical-record/entries",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "patients",
+                "{{patientId}}",
+                "clinical-record",
+                "entries"
+              ],
+              "query": []
+            },
+            "description": "Registra una evolución, consulta, observación, procedimiento, receta o estudio. El responsable es el profesional autenticado.\n\nPermiso: clinical.write",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"type\": \"Evolution\",\n  \"occurredAt\": \"2026-10-20T10:30:00-03:00\",\n  \"title\": \"\",\n  \"description\": \"\",\n  \"indications\": \"\",\n  \"teeth\": [\n    0\n  ],\n  \"appointmentId\": \"{{appointmentId}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code < 300) { const j = pm.response.json(); if (j && j.id) pm.collectionVariables.set(\"entryId\", j.id); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /patients/{{patientId}}/clinical-record/entries/{{entryId}}",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/patients/{{patientId}}/clinical-record/entries/{{entryId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "patients",
+                "{{patientId}}",
+                "clinical-record",
+                "entries",
+                "{{entryId}}"
+              ],
+              "query": []
+            },
+            "description": "\n\nPermiso: clinical.read"
+          },
+          "event": []
+        },
+        {
+          "name": "POST /patients/{{patientId}}/clinical-record/entries/{{entryId}}/amendments",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/patients/{{patientId}}/clinical-record/entries/{{entryId}}/amendments",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "patients",
+                "{{patientId}}",
+                "clinical-record",
+                "entries",
+                "{{entryId}}",
+                "amendments"
+              ],
+              "query": []
+            },
+            "description": "Corrige un registro (sólo el autor, con motivo). La versión previa se conserva y se audita.\n\nPermiso: clinical.write",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"\",\n  \"description\": \"\",\n  \"indications\": \"\",\n  \"teeth\": [\n    0\n  ],\n  \"reason\": \"\",\n  \"version\": 0\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": []
+        },
+        {
+          "name": "GET /patients/{{patientId}}/clinical-record/entries/{{entryId}}/revisions",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/patients/{{patientId}}/clinical-record/entries/{{entryId}}/revisions",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "patients",
+                "{{patientId}}",
+                "clinical-record",
+                "entries",
+                "{{entryId}}",
+                "revisions"
+              ],
+              "query": []
+            },
+            "description": "Versiones anteriores del registro.\n\nPermiso: clinical.read"
+          },
+          "event": []
+        },
+        {
+          "name": "POST /patients/{{patientId}}/clinical-record/entries/{{entryId}}/void",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/patients/{{patientId}}/clinical-record/entries/{{entryId}}/void",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "patients",
+                "{{patientId}}",
+                "clinical-record",
+                "entries",
+                "{{entryId}}",
+                "void"
+              ],
+              "query": []
+            },
+            "description": "Anula un registro con motivo (no se elimina).\n\nPermiso: clinical.write",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": []
+        }
+      ]
+    },
+    {
+      "name": "Odontograma · catálogo",
+      "item": [
+        {
+          "name": "GET /odontogram/catalog",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/odontogram/catalog",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "odontogram",
+                "catalog"
+              ],
+              "query": []
+            },
+            "description": "Piezas FDI (permanentes y temporales) con superficies válidas, superficies y condiciones.\n\nPermiso: odontogram.read"
+          },
+          "event": []
+        },
+        {
+          "name": "POST /odontogram/conditions",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/odontogram/conditions",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "odontogram",
+                "conditions"
+              ],
+              "query": []
+            },
+            "description": "\n\nPermiso: catalog.manage",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"code\": \"\",\n  \"name\": \"\",\n  \"scope\": \"Tooth\",\n  \"color\": \"\",\n  \"marksToothAbsent\": false,\n  \"isActive\": false\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": []
+        },
+        {
+          "name": "PUT /odontogram/conditions/{{id}}",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/odontogram/conditions/{{id}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "odontogram",
+                "conditions",
+                "{{id}}"
+              ],
+              "query": []
+            },
+            "description": "\n\nPermiso: catalog.manage",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"code\": \"\",\n  \"name\": \"\",\n  \"scope\": \"Tooth\",\n  \"color\": \"\",\n  \"marksToothAbsent\": false,\n  \"isActive\": false\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": []
+        }
+      ]
+    },
+    {
+      "name": "Odontograma",
+      "item": [
+        {
+          "name": "GET /patients/{{patientId}}/odontogram",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/patients/{{patientId}}/odontogram",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "patients",
+                "{{patientId}}",
+                "odontogram"
+              ],
+              "query": []
+            },
+            "description": "\n\nPermiso: odontogram.read"
+          },
+          "event": []
+        },
+        {
+          "name": "POST /patients/{{patientId}}/odontogram/findings",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/patients/{{patientId}}/odontogram/findings",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "patients",
+                "{{patientId}}",
+                "odontogram",
+                "findings"
+              ],
+              "query": []
+            },
+            "description": "Aplica una o varias condiciones (pieza o superficie; existente o a realizar) en una operación atómica.\n\nPermiso: odontogram.write",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"items\": [\n    {\n      \"toothCode\": 0,\n      \"surface\": \"Occlusal\",\n      \"conditionId\": \"{{conditionId}}\",\n      \"status\": \"Existing\",\n      \"notes\": \"\",\n      \"treatmentPlanItemId\": \"{{treatmentPlanItemId}}\"\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": []
+        },
+        {
+          "name": "POST /patients/{{patientId}}/odontogram/findings/{{findingId}}/remove",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/patients/{{patientId}}/odontogram/findings/{{findingId}}/remove",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "patients",
+                "{{patientId}}",
+                "odontogram",
+                "findings",
+                "{{findingId}}",
+                "remove"
+              ],
+              "query": []
+            },
+            "description": "Retira un hallazgo cargado por error (queda en el historial con motivo).\n\nPermiso: odontogram.write",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": []
+        },
+        {
+          "name": "POST /patients/{{patientId}}/odontogram/findings/{{findingId}}/resolve",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/patients/{{patientId}}/odontogram/findings/{{findingId}}/resolve",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "patients",
+                "{{patientId}}",
+                "odontogram",
+                "findings",
+                "{{findingId}}",
+                "resolve"
+              ],
+              "query": []
+            },
+            "description": "Marca un hallazgo como resuelto.\n\nPermiso: odontogram.write",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": []
+        },
+        {
+          "name": "GET /patients/{{patientId}}/odontogram/history",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/patients/{{patientId}}/odontogram/history",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "patients",
+                "{{patientId}}",
+                "odontogram",
+                "history"
+              ],
+              "query": [
+                {
+                  "key": "ToothCode",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "Page",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "PageSize",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "Sort",
+                  "value": "",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "Historial de modificaciones (filtrable por pieza) con profesional y fecha.\n\nPermiso: odontogram.read"
+          },
+          "event": []
+        },
+        {
+          "name": "POST /patients/{{patientId}}/odontogram/teeth/{{toothCode}}/notes",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/patients/{{patientId}}/odontogram/teeth/{{toothCode}}/notes",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "patients",
+                "{{patientId}}",
+                "odontogram",
+                "teeth",
+                "{{toothCode}}",
+                "notes"
+              ],
+              "query": []
+            },
+            "description": "\n\nPermiso: odontogram.write",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"text\": \"\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": []
+        }
+      ]
+    },
+    {
+      "name": "Prestaciones",
+      "item": [
+        {
+          "name": "GET /procedures",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/procedures",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "procedures"
+              ],
+              "query": [
+                {
+                  "key": "Search",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "IncludeInactive",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "Page",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "PageSize",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "Sort",
+                  "value": "",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "Requiere treatments.read, budgets.read o catalog.manage.\n\nPermiso: Autenticado"
+          },
+          "event": []
+        },
+        {
+          "name": "POST /procedures",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/procedures",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "procedures"
+              ],
+              "query": []
+            },
+            "description": "\n\nPermiso: catalog.manage",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"code\": \"\",\n  \"name\": \"\",\n  \"description\": \"\",\n  \"price\": 0,\n  \"requiresTooth\": false,\n  \"defaultDurationMinutes\": 0,\n  \"isActive\": false\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code < 300) { const j = pm.response.json(); if (j && j.id) pm.collectionVariables.set(\"procedureId\", j.id); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "PUT /procedures/{{id}}",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/procedures/{{id}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "procedures",
+                "{{id}}"
+              ],
+              "query": []
+            },
+            "description": "Actualiza la prestación. Los planes/presupuestos existentes conservan su valor histórico.\n\nPermiso: catalog.manage",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"code\": \"\",\n  \"name\": \"\",\n  \"description\": \"\",\n  \"price\": 0,\n  \"requiresTooth\": false,\n  \"defaultDurationMinutes\": 0,\n  \"isActive\": false\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": []
+        }
+      ]
+    },
+    {
+      "name": "Planes de tratamiento",
+      "item": [
+        {
+          "name": "GET /patients/{{patientId}}/treatment-plans",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/patients/{{patientId}}/treatment-plans",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "patients",
+                "{{patientId}}",
+                "treatment-plans"
+              ],
+              "query": []
+            },
+            "description": "\n\nPermiso: treatments.read"
+          },
+          "event": []
+        },
+        {
+          "name": "POST /patients/{{patientId}}/treatment-plans",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/patients/{{patientId}}/treatment-plans",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "patients",
+                "{{patientId}}",
+                "treatment-plans"
+              ],
+              "query": []
+            },
+            "description": "\n\nPermiso: treatments.write",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"\",\n  \"notes\": \"\",\n  \"startDate\": \"2026-10-20\",\n  \"items\": [\n    {\n      \"procedureId\": \"{{procedureId}}\",\n      \"toothCode\": 0,\n      \"surfaces\": [\n        \"Occlusal\"\n      ],\n      \"professionalUserId\": \"{{professionalUserId}}\",\n      \"diagnosisId\": \"{{diagnosisId}}\",\n      \"notes\": \"\"\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code < 300) { const j = pm.response.json(); if (j && j.id) pm.collectionVariables.set(\"planId\", j.id); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /patients/{{patientId}}/treatment-plans/{{planId}}",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/patients/{{patientId}}/treatment-plans/{{planId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "patients",
+                "{{patientId}}",
+                "treatment-plans",
+                "{{planId}}"
+              ],
+              "query": []
+            },
+            "description": "\n\nPermiso: treatments.read"
+          },
+          "event": []
+        },
+        {
+          "name": "PUT /patients/{{patientId}}/treatment-plans/{{planId}}",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/patients/{{patientId}}/treatment-plans/{{planId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "patients",
+                "{{patientId}}",
+                "treatment-plans",
+                "{{planId}}"
+              ],
+              "query": []
+            },
+            "description": "\n\nPermiso: treatments.write",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"\",\n  \"notes\": \"\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": []
+        },
+        {
+          "name": "POST /patients/{{patientId}}/treatment-plans/{{planId}}/cancel",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/patients/{{patientId}}/treatment-plans/{{planId}}/cancel",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "patients",
+                "{{patientId}}",
+                "treatment-plans",
+                "{{planId}}",
+                "cancel"
+              ],
+              "query": []
+            },
+            "description": "\n\nPermiso: treatments.write",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": []
+        },
+        {
+          "name": "GET /patients/{{patientId}}/treatment-plans/{{planId}}/history",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/patients/{{patientId}}/treatment-plans/{{planId}}/history",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "patients",
+                "{{patientId}}",
+                "treatment-plans",
+                "{{planId}}",
+                "history"
+              ],
+              "query": []
+            },
+            "description": "\n\nPermiso: treatments.read"
+          },
+          "event": []
+        },
+        {
+          "name": "POST /patients/{{patientId}}/treatment-plans/{{planId}}/items",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/patients/{{patientId}}/treatment-plans/{{planId}}/items",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "patients",
+                "{{patientId}}",
+                "treatment-plans",
+                "{{planId}}",
+                "items"
+              ],
+              "query": []
+            },
+            "description": "Agrega una prestación (valor tomado del catálogo vigente).\n\nPermiso: treatments.write",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"procedureId\": \"{{procedureId}}\",\n  \"toothCode\": 0,\n  \"surfaces\": [\n    \"Occlusal\"\n  ],\n  \"professionalUserId\": \"{{professionalUserId}}\",\n  \"diagnosisId\": \"{{diagnosisId}}\",\n  \"notes\": \"\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": []
+        },
+        {
+          "name": "PUT /patients/{{patientId}}/treatment-plans/{{planId}}/items/{{itemId}}/status",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/patients/{{patientId}}/treatment-plans/{{planId}}/items/{{itemId}}/status",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "patients",
+                "{{patientId}}",
+                "treatment-plans",
+                "{{planId}}",
+                "items",
+                "{{itemId}}",
+                "status"
+              ],
+              "query": []
+            },
+            "description": "Cambia el estado de una prestación (Pending, InProgress, Completed, Cancelled); el plan se recalcula.\n\nPermiso: treatments.write",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"Pending\",\n  \"note\": \"\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": []
+        }
+      ]
+    },
+    {
+      "name": "Presupuestos",
+      "item": [
+        {
+          "name": "GET /budgets",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/budgets",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "budgets"
+              ],
+              "query": [
+                {
+                  "key": "Status",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "PatientId",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "Page",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "PageSize",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "Sort",
+                  "value": "",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "\n\nPermiso: budgets.read"
+          },
+          "event": []
+        },
+        {
+          "name": "GET /budgets/{{id}}",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/budgets/{{id}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "budgets",
+                "{{id}}"
+              ],
+              "query": []
+            },
+            "description": "\n\nPermiso: budgets.read"
+          },
+          "event": []
+        },
+        {
+          "name": "PUT /budgets/{{id}}",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/budgets/{{id}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "budgets",
+                "{{id}}"
+              ],
+              "query": []
+            },
+            "description": "Modifica un presupuesto en borrador (reemplaza las líneas).\n\nPermiso: budgets.write",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"treatmentPlanId\": \"{{treatmentPlanId}}\",\n  \"issueDate\": \"2026-10-20\",\n  \"expirationDate\": \"2026-10-20\",\n  \"discountPercent\": 0,\n  \"notes\": \"\",\n  \"items\": [\n    {\n      \"procedureId\": \"{{procedureId}}\",\n      \"description\": \"\",\n      \"toothCode\": 0,\n      \"quantity\": 0,\n      \"unitPrice\": 0,\n      \"discountPercent\": 0,\n      \"treatmentPlanItemId\": \"{{treatmentPlanItemId}}\"\n    }\n  ],\n  \"importPlanItems\": false\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": []
+        },
+        {
+          "name": "POST /budgets/{{id}}/approve",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/budgets/{{id}}/approve",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "budgets",
+                "{{id}}",
+                "approve"
+              ],
+              "query": []
+            },
+            "description": "\n\nPermiso: budgets.approve"
+          },
+          "event": []
+        },
+        {
+          "name": "POST /budgets/{{id}}/cancel",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/budgets/{{id}}/cancel",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "budgets",
+                "{{id}}",
+                "cancel"
+              ],
+              "query": []
+            },
+            "description": "\n\nPermiso: budgets.approve",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": []
+        },
+        {
+          "name": "GET /budgets/{{id}}/history",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/budgets/{{id}}/history",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "budgets",
+                "{{id}}",
+                "history"
+              ],
+              "query": []
+            },
+            "description": "\n\nPermiso: budgets.read"
+          },
+          "event": []
+        },
+        {
+          "name": "POST /budgets/{{id}}/issue",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/budgets/{{id}}/issue",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "budgets",
+                "{{id}}",
+                "issue"
+              ],
+              "query": []
+            },
+            "description": "\n\nPermiso: budgets.write"
+          },
+          "event": []
+        },
+        {
+          "name": "POST /budgets/{{id}}/reject",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/budgets/{{id}}/reject",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "budgets",
+                "{{id}}",
+                "reject"
+              ],
+              "query": []
+            },
+            "description": "\n\nPermiso: budgets.approve",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": []
+        },
+        {
+          "name": "POST /patients/{{patientId}}/budgets",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/patients/{{patientId}}/budgets",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "patients",
+                "{{patientId}}",
+                "budgets"
+              ],
+              "query": []
+            },
+            "description": "Crea un presupuesto en borrador (líneas manuales o importadas del plan de tratamiento).\n\nPermiso: budgets.write",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"treatmentPlanId\": \"{{treatmentPlanId}}\",\n  \"issueDate\": \"2026-10-20\",\n  \"expirationDate\": \"2026-10-20\",\n  \"discountPercent\": 0,\n  \"notes\": \"\",\n  \"items\": [\n    {\n      \"procedureId\": \"{{procedureId}}\",\n      \"description\": \"\",\n      \"toothCode\": 0,\n      \"quantity\": 0,\n      \"unitPrice\": 0,\n      \"discountPercent\": 0,\n      \"treatmentPlanItemId\": \"{{treatmentPlanItemId}}\"\n    }\n  ],\n  \"importPlanItems\": false\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code < 300) { const j = pm.response.json(); if (j && j.id) pm.collectionVariables.set(\"budgetId\", j.id); }"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Pagos y cuenta corriente",
+      "item": [
+        {
+          "name": "GET /patients/{{patientId}}/account",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/patients/{{patientId}}/account",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "patients",
+                "{{patientId}}",
+                "account"
+              ],
+              "query": []
+            },
+            "description": "Cuenta corriente del paciente con movimientos, saldo acumulado y saldos por presupuesto.\n\nPermiso: finance.read"
+          },
+          "event": []
+        },
+        {
+          "name": "GET /payments",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/payments",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "payments"
+              ],
+              "query": [
+                {
+                  "key": "PatientId",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "From",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "To",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "Method",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "IncludeVoided",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "Page",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "PageSize",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "Sort",
+                  "value": "",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "\n\nPermiso: finance.read"
+          },
+          "event": []
+        },
+        {
+          "name": "POST /payments",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/payments",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "payments"
+              ],
+              "query": []
+            },
+            "description": "Registra un pago (opcionalmente imputado a un presupuesto aprobado, sin exceder su saldo).\n\nPermiso: payments.write",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"patientId\": \"{{patientId}}\",\n  \"budgetId\": \"{{budgetId}}\",\n  \"amount\": 0,\n  \"method\": \"Cash\",\n  \"paidAt\": \"2026-10-20T10:30:00-03:00\",\n  \"reference\": \"\",\n  \"notes\": \"\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code < 300) { const j = pm.response.json(); if (j && j.id) pm.collectionVariables.set(\"paymentId\", j.id); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /payments/{{id}}",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/payments/{{id}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "payments",
+                "{{id}}"
+              ],
+              "query": []
+            },
+            "description": "\n\nPermiso: finance.read"
+          },
+          "event": []
+        },
+        {
+          "name": "POST /payments/{{id}}/void",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/payments/{{id}}/void",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "payments",
+                "{{id}}",
+                "void"
+              ],
+              "query": []
+            },
+            "description": "Anulación controlada con motivo: genera contraasiento; el pago no se elimina.\n\nPermiso: payments.void",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": []
+        }
+      ]
+    },
+    {
+      "name": "Laboratorios",
+      "item": [
+        {
+          "name": "GET /laboratories",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/laboratories",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "laboratories"
+              ],
+              "query": [
+                {
+                  "key": "includeInactive",
+                  "value": "",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "Requiere lab.read o laboratories.manage.\n\nPermiso: Autenticado"
+          },
+          "event": []
+        },
+        {
+          "name": "POST /laboratories",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/laboratories",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "laboratories"
+              ],
+              "query": []
+            },
+            "description": "\n\nPermiso: laboratories.manage",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"\",\n  \"contactName\": \"\",\n  \"phone\": \"\",\n  \"email\": \"usuario@ejemplo.com\",\n  \"addressLine\": \"\",\n  \"notes\": \"\",\n  \"isActive\": false\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code < 300) { const j = pm.response.json(); if (j && j.id) pm.collectionVariables.set(\"laboratoryId\", j.id); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "PUT /laboratories/{{id}}",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/laboratories/{{id}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "laboratories",
+                "{{id}}"
+              ],
+              "query": []
+            },
+            "description": "\n\nPermiso: laboratories.manage",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"\",\n  \"contactName\": \"\",\n  \"phone\": \"\",\n  \"email\": \"usuario@ejemplo.com\",\n  \"addressLine\": \"\",\n  \"notes\": \"\",\n  \"isActive\": false\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": []
+        }
+      ]
+    },
+    {
+      "name": "Trabajos de laboratorio",
+      "item": [
+        {
+          "name": "GET /lab-works",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/lab-works",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "lab-works"
+              ],
+              "query": [
+                {
+                  "key": "Status",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "LaboratoryId",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "PatientId",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "View",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "Page",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "PageSize",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "Sort",
+                  "value": "",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "Listado. view: open | overdue | this_week | closed.\n\nPermiso: lab.read"
+          },
+          "event": []
+        },
+        {
+          "name": "POST /lab-works",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/lab-works",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "lab-works"
+              ],
+              "query": []
+            },
+            "description": "\n\nPermiso: lab.write",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"patientId\": \"{{patientId}}\",\n  \"laboratoryId\": \"{{laboratoryId}}\",\n  \"professionalUserId\": \"{{professionalUserId}}\",\n  \"workType\": \"\",\n  \"toothCode\": 0,\n  \"description\": \"\",\n  \"estimatedDeliveryDate\": \"2026-10-20\",\n  \"cost\": 0,\n  \"notes\": \"\",\n  \"treatmentPlanItemId\": \"{{treatmentPlanItemId}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code < 300) { const j = pm.response.json(); if (j && j.id) pm.collectionVariables.set(\"labWorkId\", j.id); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /lab-works/{{id}}",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/lab-works/{{id}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "lab-works",
+                "{{id}}"
+              ],
+              "query": []
+            },
+            "description": "\n\nPermiso: lab.read"
+          },
+          "event": []
+        },
+        {
+          "name": "PUT /lab-works/{{id}}",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/lab-works/{{id}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "lab-works",
+                "{{id}}"
+              ],
+              "query": []
+            },
+            "description": "\n\nPermiso: lab.write",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"patientId\": \"{{patientId}}\",\n  \"laboratoryId\": \"{{laboratoryId}}\",\n  \"professionalUserId\": \"{{professionalUserId}}\",\n  \"workType\": \"\",\n  \"toothCode\": 0,\n  \"description\": \"\",\n  \"estimatedDeliveryDate\": \"2026-10-20\",\n  \"cost\": 0,\n  \"notes\": \"\",\n  \"treatmentPlanItemId\": \"{{treatmentPlanItemId}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": []
+        },
+        {
+          "name": "GET /lab-works/{{id}}/history",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/lab-works/{{id}}/history",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "lab-works",
+                "{{id}}",
+                "history"
+              ],
+              "query": []
+            },
+            "description": "\n\nPermiso: lab.read"
+          },
+          "event": []
+        },
+        {
+          "name": "POST /lab-works/{{id}}/status",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/lab-works/{{id}}/status",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "lab-works",
+                "{{id}}",
+                "status"
+              ],
+              "query": []
+            },
+            "description": "Avance logístico (lab.track o lab.write). Colocado/Cancelado requieren lab.write.\n\nPermiso: Autenticado",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"Pending\",\n  \"date\": \"2026-10-20\",\n  \"note\": \"\",\n  \"newEstimatedDeliveryDate\": \"2026-10-20\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": []
+        },
+        {
+          "name": "GET /lab-works/board",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/lab-works/board",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "lab-works",
+                "board"
+              ],
+              "query": []
+            },
+            "description": "Tablero: conteos por estado, atrasados y entregas de la semana.\n\nPermiso: lab.read"
+          },
+          "event": []
+        }
+      ]
+    },
+    {
+      "name": "Documentos y consentimientos",
+      "item": [
+        {
+          "name": "DELETE /documents/{{id}}",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/documents/{{id}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "documents",
+                "{{id}}"
+              ],
+              "query": [
+                {
+                  "key": "reason",
+                  "value": "",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "Baja lógica con motivo (el archivo se conserva según la política de retención).\n\nPermiso: documents.delete"
+          },
+          "event": []
+        },
+        {
+          "name": "GET /documents/{{id}}/download",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/documents/{{id}}/download",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "documents",
+                "{{id}}",
+                "download"
+              ],
+              "query": []
+            },
+            "description": "Descarga autorizada (se audita). Nunca se expone una URL pública.\n\nPermiso: documents.read"
+          },
+          "event": []
+        },
+        {
+          "name": "GET /patients/{{patientId}}/consents",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/patients/{{patientId}}/consents",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "patients",
+                "{{patientId}}",
+                "consents"
+              ],
+              "query": []
+            },
+            "description": "\n\nPermiso: consents.read"
+          },
+          "event": []
+        },
+        {
+          "name": "POST /patients/{{patientId}}/consents",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/patients/{{patientId}}/consents",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "patients",
+                "{{patientId}}",
+                "consents"
+              ],
+              "query": []
+            },
+            "description": "\n\nPermiso: consents.write",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"\",\n  \"content\": \"\",\n  \"treatmentPlanId\": \"{{treatmentPlanId}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code < 300) { const j = pm.response.json(); if (j && j.id) pm.collectionVariables.set(\"consentId\", j.id); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /patients/{{patientId}}/consents/{{consentId}}/accept",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/patients/{{patientId}}/consents/{{consentId}}/accept",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "patients",
+                "{{patientId}}",
+                "consents",
+                "{{consentId}}",
+                "accept"
+              ],
+              "query": []
+            },
+            "description": "Registra la aceptación en el sistema (constancia interna; NO es una firma digital certificada).\n\nPermiso: consents.write",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"acceptedByName\": \"\",\n  \"acceptedByDocument\": \"\",\n  \"relationship\": \"\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": []
+        },
+        {
+          "name": "POST /patients/{{patientId}}/consents/{{consentId}}/attach-signed",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/patients/{{patientId}}/consents/{{consentId}}/attach-signed",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "patients",
+                "{{patientId}}",
+                "consents",
+                "{{consentId}}",
+                "attach-signed"
+              ],
+              "query": []
+            },
+            "description": "Vincula el consentimiento firmado en papel (documento previamente cargado con categoría ConsentForm).\n\nPermiso: consents.write",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"documentId\": \"{{documentId}}\",\n  \"signedByName\": \"\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": []
+        },
+        {
+          "name": "POST /patients/{{patientId}}/consents/{{consentId}}/reject",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/patients/{{patientId}}/consents/{{consentId}}/reject",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "patients",
+                "{{patientId}}",
+                "consents",
+                "{{consentId}}",
+                "reject"
+              ],
+              "query": []
+            },
+            "description": "\n\nPermiso: consents.write",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"notes\": \"\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": []
+        },
+        {
+          "name": "POST /patients/{{patientId}}/consents/{{consentId}}/revoke",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/patients/{{patientId}}/consents/{{consentId}}/revoke",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "patients",
+                "{{patientId}}",
+                "consents",
+                "{{consentId}}",
+                "revoke"
+              ],
+              "query": []
+            },
+            "description": "\n\nPermiso: consents.write",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"notes\": \"\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": []
+        },
+        {
+          "name": "GET /patients/{{patientId}}/documents",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/patients/{{patientId}}/documents",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "patients",
+                "{{patientId}}",
+                "documents"
+              ],
+              "query": [
+                {
+                  "key": "category",
+                  "value": "",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "Documentos del paciente. Los clínicos sólo se listan con documents.clinical.read.\n\nPermiso: documents.read"
+          },
+          "event": []
+        },
+        {
+          "name": "POST /patients/{{patientId}}/documents",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/patients/{{patientId}}/documents",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "patients",
+                "{{patientId}}",
+                "documents"
+              ],
+              "query": []
+            },
+            "description": "Carga un archivo (PDF, JPG, PNG, DICOM). Se valida extensión, firma binaria real y tamaño máximo.\n\nPermiso: documents.write",
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": []
+                },
+                {
+                  "key": "category",
+                  "value": "Radiograph",
+                  "type": "text"
+                },
+                {
+                  "key": "description",
+                  "value": "",
+                  "type": "text"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code < 300) { const j = pm.response.json(); if (j && j.id) pm.collectionVariables.set(\"documentId\", j.id); }"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Notificaciones y mensajes",
+      "item": [
+        {
+          "name": "GET /messages",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/messages",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "messages"
+              ],
+              "query": [
+                {
+                  "key": "Status",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "Channel",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "Page",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "PageSize",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "Sort",
+                  "value": "",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "Registro de mensajes salientes y su estado real (Sent sólo con confirmación del proveedor).\n\nPermiso: messaging.send"
+          },
+          "event": []
+        },
+        {
+          "name": "POST /messages/reminders",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/messages/reminders",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "messages",
+                "reminders"
+              ],
+              "query": []
+            },
+            "description": "Envía recordatorios para los turnos pendientes/confirmados de una fecha.\n\nPermiso: messaging.send",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"date\": \"2026-10-20\",\n  \"channel\": \"Email\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": []
+        },
+        {
+          "name": "GET /notifications",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/notifications",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "notifications"
+              ],
+              "query": [
+                {
+                  "key": "UnreadOnly",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "Page",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "PageSize",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "Sort",
+                  "value": "",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "\n\nPermiso: Autenticado"
+          },
+          "event": []
+        },
+        {
+          "name": "POST /notifications/{{id}}/read",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/notifications/{{id}}/read",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "notifications",
+                "{{id}}",
+                "read"
+              ],
+              "query": []
+            },
+            "description": "\n\nPermiso: Autenticado"
+          },
+          "event": []
+        },
+        {
+          "name": "POST /notifications/read-all",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/notifications/read-all",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "notifications",
+                "read-all"
+              ],
+              "query": []
+            },
+            "description": "\n\nPermiso: Autenticado"
+          },
+          "event": []
+        },
+        {
+          "name": "GET /notifications/unread-count",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/notifications/unread-count",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "notifications",
+                "unread-count"
+              ],
+              "query": []
+            },
+            "description": "\n\nPermiso: Autenticado"
+          },
+          "event": []
+        }
+      ]
+    },
+    {
+      "name": "Dashboards",
+      "item": [
+        {
+          "name": "GET /dashboard/clinical",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/dashboard/clinical",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "dashboard",
+                "clinical"
+              ],
+              "query": []
+            },
+            "description": "Odontólogo: pacientes del día, próximo turno, tratamientos, laboratorio, alertas y actividad.\n\nPermiso: dashboard.clinical"
+          },
+          "event": []
+        },
+        {
+          "name": "GET /dashboard/reception",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/dashboard/reception",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "dashboard",
+                "reception"
+              ],
+              "query": []
+            },
+            "description": "Recepción: turnos del día, confirmaciones, sala de espera, tareas y entregas de laboratorio. Sin información clínica.\n\nPermiso: dashboard.reception"
+          },
+          "event": []
+        }
+      ]
+    }
+  ]
+}

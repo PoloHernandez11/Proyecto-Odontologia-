@@ -1,0 +1,9 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <RootNamespace>Odontia.Domain</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <!-- Sólo para IdentityUser<Guid> (sin dependencia de EF Core en el dominio). -->
+    <PackageReference Include="Microsoft.Extensions.Identity.Stores" />
+  </ItemGroup>
+</Project>

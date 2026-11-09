@@ -1,0 +1,17 @@
+bin/
+obj/
+*.user
+*.suo
+.vs/
+.vscode/
+.idea/
+TestResults/
+
+# Datos locales: documentos privados, bandeja de correo de desarrollo, claves
+storage/
+*.eml
+keys/
+
+# Secretos
+.env
+appsettings.*.local.json

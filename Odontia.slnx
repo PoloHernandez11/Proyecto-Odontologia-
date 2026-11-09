@@ -1,0 +1,12 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Odontia.Api/Odontia.Api.csproj" />
+    <Project Path="src/Odontia.Application/Odontia.Application.csproj" />
+    <Project Path="src/Odontia.Domain/Odontia.Domain.csproj" />
+    <Project Path="src/Odontia.Infrastructure/Odontia.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Odontia.IntegrationTests/Odontia.IntegrationTests.csproj" />
+    <Project Path="tests/Odontia.UnitTests/Odontia.UnitTests.csproj" />
+  </Folder>
+</Solution>
