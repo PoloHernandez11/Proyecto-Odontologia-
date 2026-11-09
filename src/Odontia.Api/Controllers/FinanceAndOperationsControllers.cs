@@ -164,7 +164,8 @@ public sealed class DocumentsController(IDocumentService service) : ApiControlle
 
     /// <summary>Descarga autorizada (se audita). Nunca se expone una URL pública.</summary>
     [HttpGet("documents/{id:guid}/download"), HasPermission(P.DocumentsRead)]
-    [ProducesResponseType<FileStreamResult>(StatusCodes.Status200OK)]
+    [Produces("application/octet-stream", "application/pdf", "image/jpeg", "image/png", "application/dicom")]
+    [ProducesResponseType(typeof(FileResult), StatusCodes.Status200OK, "application/octet-stream", "application/pdf", "image/jpeg", "image/png", "application/dicom")]
     public async Task<IActionResult> Download(Guid id, CancellationToken ct)
     {
         var d = await service.DownloadAsync(id, ct);
@@ -226,7 +227,7 @@ public sealed class NotificationsController(INotificationService service) : ApiC
     }
 
     [HttpPost("notifications/read-all"), RequireConsultorio]
-    public async Task<object> MarkAllRead(CancellationToken ct) => new { updated = await service.MarkAllReadAsync(ct) };
+    public async Task<UpdatedCountDto> MarkAllRead(CancellationToken ct) => new(await service.MarkAllReadAsync(ct));
 
     /// <summary>Registro de mensajes salientes y su estado real (Sent sólo con confirmación del proveedor).</summary>
     [HttpGet("messages"), HasPermission(P.MessagingSend)]

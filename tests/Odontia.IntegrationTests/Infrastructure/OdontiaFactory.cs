@@ -62,6 +62,7 @@ public class OdontiaFactory : WebApplicationFactory<Program>
             ["RateLimiting:RefreshPermitPerMinute"] = "10000",
             ["Cors:AllowedOrigins:0"] = "https://app.test",
             ["Email:Provider"] = "None",
+            ["Swagger:Enabled"] = "true",
         }));
         builder.ConfigureServices(services =>
         {

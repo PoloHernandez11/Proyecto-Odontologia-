@@ -1,4 +1,6 @@
-# Integración con el frontend React + TypeScript
+# Integración con el frontend (guía general / React)
+
+> Para Angular ver [ANGULAR_INTEGRATION.md](ANGULAR_INTEGRATION.md). Las secciones de errores, convenciones y mapeo de pantallas aplican a cualquier framework.
 
 La API es independiente del frontend. Todo se consume por HTTP/JSON bajo `/api/v1`. El contrato completo está en
 [openapi.v1.json](openapi.v1.json) (se pueden generar tipos TS con `npx openapi-typescript docs/openapi.v1.json -o src/api/schema.d.ts`)

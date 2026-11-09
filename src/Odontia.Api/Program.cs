@@ -28,6 +28,7 @@ builder.Services.AddScoped<ValidationFilter>();
 
 builder.Services.AddControllers(o =>
     {
+        o.ModelBinderProviders.Insert(0, new TolerantDateModelBinderProvider());
         o.Filters.AddService<ValidationFilter>();
         // Política por defecto: todo endpoint requiere autenticación salvo [AllowAnonymous] explícito.
         o.Filters.Add(new Microsoft.AspNetCore.Mvc.Authorization.AuthorizeFilter());
@@ -58,7 +59,7 @@ builder.Services.AddControllers(o =>
         };
     });
 
-builder.Services.AddProblemDetails();
+builder.Services.AddProblemDetails(o => o.CustomizeProblemDetails = OdontiaProblemDetails.Customize);
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 
 builder.Services.AddApiVersioning(o =>
@@ -100,16 +101,22 @@ builder.Services.AddAuthorization();
 builder.Services.AddScoped<IAuthorizationHandler, PermissionAuthorizationHandler>();
 
 // CORS restringido y configurable por entorno (con credenciales para la cookie de refresh).
-var allowedOrigins = config.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? [];
-if (!builder.Environment.IsDevelopment() && allowedOrigins.Any(o => o.Trim() == "*"))
-    throw new InvalidOperationException("Cors:AllowedOrigins no puede contener '*' fuera de desarrollo.");
-builder.Services.AddCors(o => o.AddPolicy("frontend", p => p
-    .WithOrigins(allowedOrigins)
-    .AllowCredentials()
-    .WithHeaders("Authorization", "Content-Type", "X-CSRF-Token", "Accept", "X-Requested-With")
-    .WithMethods("GET", "POST", "PUT", "PATCH", "DELETE")
-    .WithExposedHeaders("api-supported-versions", "Content-Disposition")
-    .SetPreflightMaxAge(TimeSpan.FromMinutes(10))));
+// Se lee de forma diferida (al resolver las opciones) para respetar toda fuente de configuración del host.
+builder.Services.AddCors();
+builder.Services.AddOptions<Microsoft.AspNetCore.Cors.Infrastructure.CorsOptions>()
+    .Configure<IConfiguration, IWebHostEnvironment, IOptions<AuthCookieOptions>>((o, cfg, env, cookies) =>
+    {
+        var allowedOrigins = (cfg.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? []).Where(x => !string.IsNullOrWhiteSpace(x)).ToArray();
+        if (!env.IsDevelopment() && allowedOrigins.Any(x => x.Trim() == "*"))
+            throw new InvalidOperationException("Cors:AllowedOrigins no puede contener '*' fuera de desarrollo.");
+        o.AddPolicy("frontend", p => p
+            .WithOrigins(allowedOrigins)
+            .AllowCredentials()
+            .WithHeaders("Authorization", "Content-Type", cookies.Value.CsrfHeaderName, "Accept", "X-Requested-With")
+            .WithMethods("GET", "POST", "PUT", "PATCH", "DELETE")
+            .WithExposedHeaders("api-supported-versions", "Content-Disposition", "Location")
+            .SetPreflightMaxAge(TimeSpan.FromMinutes(10)));
+    });
 
 // Rate limiting: estricto en endpoints sensibles y general por usuario/IP.
 var rl = config.GetSection("RateLimiting");
@@ -118,8 +125,12 @@ builder.Services.AddRateLimiter(o =>
     o.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
     o.OnRejected = async (ctx, ct) =>
     {
-        ctx.HttpContext.Response.ContentType = "application/problem+json";
-        await ctx.HttpContext.Response.WriteAsJsonAsync(new { status = 429, title = "Demasiadas solicitudes", code = "rate_limited", traceId = ctx.HttpContext.TraceIdentifier }, ct);
+        var problems = ctx.HttpContext.RequestServices.GetRequiredService<Microsoft.AspNetCore.Http.IProblemDetailsService>();
+        await problems.WriteAsync(new ProblemDetailsContext
+        {
+            HttpContext = ctx.HttpContext,
+            ProblemDetails = new Microsoft.AspNetCore.Mvc.ProblemDetails { Status = StatusCodes.Status429TooManyRequests },
+        });
     };
     o.AddPolicy(RateLimitPolicies.Auth, http => RateLimitPartition.GetFixedWindowLimiter(
         $"auth:{http.Connection.RemoteIpAddress}", _ => new FixedWindowRateLimiterOptions
@@ -157,7 +168,9 @@ builder.Services.AddSwaggerGen(o =>
     });
     o.OperationFilter<PermissionsOperationFilter>();
     o.SupportNonNullableReferenceTypes();
-    o.CustomSchemaIds(t => t.FullName!.Replace("Odontia.Application.Features.", "").Replace("+", "."));
+    // Nombres aptos para generadores TypeScript (ng-openapi-gen, openapi-generator typescript-angular).
+    o.CustomSchemaIds(OpenApiNaming.SchemaId);
+    o.CustomOperationIds(OpenApiNaming.OperationId);
     foreach (var xml in Directory.GetFiles(AppContext.BaseDirectory, "Odontia.*.xml")) o.IncludeXmlComments(xml);
 });
 
@@ -165,6 +178,9 @@ builder.Services.AddHsts(o => { o.MaxAge = TimeSpan.FromDays(180); o.IncludeSubD
 
 // ---------------- Pipeline ----------------
 var app = builder.Build();
+
+// Valida la configuración de CORS al iniciar (p. ej. rechaza '*' fuera de desarrollo).
+_ = app.Services.GetRequiredService<IOptions<Microsoft.AspNetCore.Cors.Infrastructure.CorsOptions>>().Value;
 
 if (config.GetValue("Database:ApplyMigrationsOnStartup", false))
 {
@@ -184,7 +200,7 @@ if (!app.Environment.IsDevelopment() && !app.Environment.IsEnvironment("Testing"
 
 if (app.Environment.IsDevelopment() || config.GetValue("Swagger:Enabled", false))
 {
-    app.UseSwagger(o => o.RouteTemplate = "swagger/{documentName}/swagger.json");
+    app.UseSwagger(o => o.RouteTemplate = "swagger/{documentName}/swagger.{extension:regex(^(json|yaml)$)}");
     app.UseSwaggerUI(o =>
     {
         foreach (var d in app.DescribeApiVersions()) o.SwaggerEndpoint($"/swagger/{d.GroupName}/swagger.json", $"Odontia API {d.GroupName}");

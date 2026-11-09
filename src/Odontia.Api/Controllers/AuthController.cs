@@ -101,7 +101,7 @@ public sealed class AuthController(IAuthService auth, AuthCookieManager cookies)
 
     /// <summary>Revoca todas las sesiones excepto la actual.</summary>
     [HttpPost("sessions/revoke-others")]
-    public async Task<object> RevokeOthers(CancellationToken ct) => new { revoked = await auth.RevokeOtherSessionsAsync(User.SessionId(), ct) };
+    public async Task<RevokedSessionsDto> RevokeOthers(CancellationToken ct) => new(await auth.RevokeOtherSessionsAsync(User.SessionId(), ct));
 
     /// <summary>Solicita el correo de recuperación. Responde siempre igual (protección contra enumeración).</summary>
     [HttpPost("forgot-password"), AllowAnonymous, EnableRateLimiting(RateLimitPolicies.Auth)]

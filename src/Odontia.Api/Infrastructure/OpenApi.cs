@@ -60,11 +60,75 @@ internal sealed class PermissionsOperationFilter : IOperationFilter
             operation.Description = string.IsNullOrWhiteSpace(operation.Description) ? text : $"{operation.Description}\n\n{text}";
         }
 
+        // Respuestas de archivo: no deben figurar como JSON (el cliente generado usaría responseType 'blob').
+        foreach (var response in operation.Responses?.Values.ToList() ?? [])
+            if (response.Content is { } content && content.Values.Any(m => m.Schema?.Format == "binary") && content.Count > 1)
+                content.Remove("application/json");
+
+        AddErrorResponses(operation, context, requiresAuth);
         if (!requiresAuth) return;
         operation.Security ??= [];
         operation.Security.Add(new OpenApiSecurityRequirement { [new OpenApiSecuritySchemeReference("Bearer", context.Document)] = [] });
+    }
+
+    /// <summary>Documenta las respuestas de error (ProblemDetails) que puede devolver cada operación.</summary>
+    private static void AddErrorResponses(OpenApiOperation operation, OperationFilterContext context, bool requiresAuth)
+    {
+        var schema = context.SchemaGenerator.GenerateSchema(typeof(ApiProblem), context.SchemaRepository);
         operation.Responses ??= new OpenApiResponses();
-        operation.Responses.TryAdd("401", new OpenApiResponse { Description = "No autenticado o sesión invalidada." });
-        operation.Responses.TryAdd("403", new OpenApiResponse { Description = "Sin permiso o sin consultorio activo." });
+        var api = context.ApiDescription;
+        var method = api.HttpMethod?.ToUpperInvariant() ?? "GET";
+        var hasInput = api.ParameterDescriptions.Any(p => p.Source.Id is "Body" or "Form" or "Query");
+        var hasPathIds = api.ParameterDescriptions.Any(p => p.Source.Id == "Path" && p.Name != "version");
+        var mutating = method is "POST" or "PUT" or "PATCH" or "DELETE";
+
+        void Add(string code, string description)
+        {
+            // Reemplaza respuestas de error sin contenido (p. ej. declaradas sólo con [ProducesResponseType]).
+            if (operation.Responses.TryGetValue(code, out var existing) && existing.Content?.Count > 0
+                && existing.Content.Values.Any(c => c.Schema is OpenApiSchemaReference r && r.Reference.Id == nameof(ApiProblem))) return;
+            operation.Responses[code] = new OpenApiResponse
+            {
+                Description = description,
+                Content = new Dictionary<string, OpenApiMediaType> { ["application/problem+json"] = new() { Schema = schema } },
+            };
+        }
+
+        if (hasInput) Add("400", "Datos inválidos (`validation_error`, con `errors` por campo).");
+        if (requiresAuth)
+        {
+            Add("401", "No autenticado o sesión invalidada (`unauthorized`, `session_invalidated`).");
+            Add("403", "Sin permiso o sin consultorio activo (`forbidden`, `membership_inactive`).");
+        }
+        else if (operation.Responses.ContainsKey("401"))
+        {
+            Add("401", "Credenciales o sesión inválidas (`invalid_credentials`, `invalid_refresh_token`, …).");
+        }
+        if (hasPathIds) Add("404", "No existe o pertenece a otro consultorio (`not_found`).");
+        if (mutating)
+        {
+            Add("409", "Conflicto: duplicado, horario ocupado o versión desactualizada (`slot_taken`, `concurrency_conflict`, …).");
+            Add("422", "Regla de negocio incumplida (el `detail` es apto para mostrar al usuario).");
+        }
+        Add("429", "Demasiadas solicitudes (`rate_limited`).");
+    }
+}
+
+/// <summary>Identificadores de schema legibles para generadores TypeScript (sin puntos ni nombres de ensamblado).</summary>
+internal static class OpenApiNaming
+{
+    public static string SchemaId(Type type)
+    {
+        if (!type.IsGenericType) return type.Name;
+        var name = type.Name[..type.Name.IndexOf('`')];
+        return $"{name}Of{string.Concat(type.GetGenericArguments().Select(SchemaId))}";
+    }
+
+    /// <summary>operationId en camelCase: {controlador}{Acción}, p. ej. patientsSearch, appointmentsCreate.</summary>
+    public static string? OperationId(Microsoft.AspNetCore.Mvc.ApiExplorer.ApiDescription api)
+    {
+        if (api.ActionDescriptor is not Microsoft.AspNetCore.Mvc.Controllers.ControllerActionDescriptor a) return null;
+        var controller = char.ToLowerInvariant(a.ControllerName[0]) + a.ControllerName[1..];
+        return controller + a.ActionName;
     }
 }

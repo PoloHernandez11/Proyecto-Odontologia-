@@ -4,7 +4,7 @@ API REST para la gestión odontológica **multi-consultorio**: agenda y turnos, 
 odontograma FDI, tratamientos, presupuestos, pagos y cuenta corriente, laboratorio, documentos y
 consentimientos, tareas, notificaciones y dashboards por perfil (odontólogo / secretaria / administrador).
 
-El frontend (React + TypeScript) se integra **sólo** a través de esta API documentada con OpenAPI.
+El frontend (Angular + TypeScript; cualquier cliente HTTP es compatible) se integra **sólo** a través de esta API documentada con OpenAPI.
 
 ## Tecnologías
 
@@ -41,7 +41,7 @@ Odontia/
 Detalle: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) · Base de datos: [docs/DATABASE.md](docs/DATABASE.md) ·
 Roles y permisos: [docs/ROLES_AND_PERMISSIONS.md](docs/ROLES_AND_PERMISSIONS.md) · Endpoints: [docs/ENDPOINTS.md](docs/ENDPOINTS.md) ·
 Seguridad: [docs/SECURITY.md](docs/SECURITY.md) · Servicios externos: [docs/EXTERNAL_SERVICES.md](docs/EXTERNAL_SERVICES.md) ·
-Integración React: [docs/FRONTEND_INTEGRATION.md](docs/FRONTEND_INTEGRATION.md)
+Integración **Angular**: [docs/ANGULAR_INTEGRATION.md](docs/ANGULAR_INTEGRATION.md) · Integración React: [docs/FRONTEND_INTEGRATION.md](docs/FRONTEND_INTEGRATION.md)
 
 ## Requisitos
 
@@ -152,9 +152,9 @@ ODONTIA_TEST_MYSQL="server=localhost;port=3306;database=odontia_test;user=root;p
 
 ## Documentación de la API
 
-- OpenAPI: `/swagger/v1/swagger.json` (copia versionada en [docs/openapi.v1.json](docs/openapi.v1.json))
+- OpenAPI: `/swagger/v1/swagger.json` y `/swagger/v1/swagger.yaml` (copias versionadas en [docs/openapi.v1.json](docs/openapi.v1.json) y [docs/openapi.v1.yaml](docs/openapi.v1.yaml)), con `operationId` únicos para generar clientes TypeScript
 - Tabla completa de endpoints y permisos: [docs/ENDPOINTS.md](docs/ENDPOINTS.md)
 - Postman: importar `postman/Odontia.postman_collection.json` y `postman/Odontia.local.postman_environment.json`
 
 Para regenerar `docs/ENDPOINTS.md` y la colección Postman después de cambiar la API, exportar el OpenAPI a
-`docs/openapi.v1.json` y ejecutar `node tools/gen-docs.js .` desde la carpeta `Odontia`.
+`docs/openapi.v1.json` (y `/swagger/v1/swagger.yaml` a `docs/openapi.v1.yaml`) y ejecutar `node tools/gen-docs.js .` desde la carpeta `Odontia`.

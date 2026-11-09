@@ -62,7 +62,7 @@ for (const [p, methods] of Object.entries(spec.paths)) {
     const okCode = Object.keys(o.responses ?? {}).find(c => c.startsWith('2')) ?? '200';
     const okSchema = o.responses?.[okCode]?.content?.['application/json']?.schema;
     ops.push({
-      path: p, method: m.toUpperCase(), tag: o.tags?.[0] ?? 'Otros', summary: (o.summary ?? '').replace(/\n/g, ' '),
+      opId: o.operationId ?? "", path: p, method: m.toUpperCase(), tag: o.tags?.[0] ?? "Otros", summary: (o.summary ?? '').replace(/\n/g, ' '),
       auth, anonymous, perms, body, isMultipart, okCode, okSchema,
       params: (o.parameters ?? []).map(x => ({ name: x.name, in: x.in, required: !!x.required })),
       codes: Object.keys(o.responses ?? {}),
@@ -78,12 +78,12 @@ md += `## Índice\n\n` + order.filter(t => ops.some(o => o.tag === t)).map(t => 
 for (const tag of order) {
   const list = ops.filter(o => o.tag === tag);
   if (!list.length) continue;
-  md += `## ${tagTitles[tag]}\n\n| Método | Ruta | Descripción | Parámetros | Cuerpo | Respuesta | Permiso |\n|---|---|---|---|---|---|---|\n`;
+  md += `## ${tagTitles[tag]}\n\n| Método | Ruta | operationId | Descripción | Parámetros | Cuerpo | Respuesta | Permiso |\n|---|---|---|---|---|---|---|---|\n`;
   for (const o of list) {
     const params = o.params.filter(x => x.name !== 'version').map(x => `${x.name}${x.in === 'path' ? ' (ruta)' : ''}`).join(', ') || '—';
     const body = o.body ? (o.isMultipart ? 'multipart/form-data' : '`' + refName(o.body) + '`') : '—';
     const resp = `${o.okCode}${o.okSchema ? ' `' + refName(o.okSchema) + '`' : ''}`;
-    md += `| ${o.method} | \`${o.path.replace('/api/v1', '')}\` | ${o.summary || '—'} | ${params} | ${body} | ${resp} | ${o.auth} |\n`;
+    md += `| ${o.method} | \`${o.path.replace('/api/v1', '')}\` | \`${o.opId}\` | ${o.summary || '—'} | ${params} | ${body} | ${resp} | ${o.auth} |\n`;
   }
   md += '\n';
 }
