@@ -2,102 +2,147 @@
   <header class="od-topbar"><div><h1>Perfil y configuración</h1><p>Tus datos, tu seguridad y las preferencias del consultorio</p></div></header>
 
   <div class="od-content settings">
-    <aside class="summary" *ngIf="perfil as p">
-      <span class="avatar" aria-hidden="true">{{ iniciales }}</span>
-      <strong>{{ p.displayName }}</strong>
-      <small>{{ p.email }}</small>
-      <div class="chips"><span class="od-chip info" *ngFor="let rol of roles()">{{ rol }}</span></div>
-      <small class="where" *ngIf="nombreConsultorio()">{{ nombreConsultorio() }}</small>
-      <nav class="sections" aria-label="Secciones de configuración">
-        <button type="button" [class.selected]="seccion === 'datos'" (click)="abrir('datos')">Mis datos</button>
-        <button type="button" *ngIf="esProfesional()" [class.selected]="seccion === 'profesional'" (click)="abrir('profesional')">Datos profesionales</button>
-        <button type="button" [class.selected]="seccion === 'seguridad'" (click)="abrir('seguridad')">Seguridad</button>
-        <button type="button" [class.selected]="seccion === 'notificaciones'" (click)="abrir('notificaciones')">Notificaciones</button>
-        <button type="button" *ngIf="veConsultorio" [class.selected]="seccion === 'consultorio'" (click)="abrir('consultorio')">Consultorio</button>
-      </nav>
-    </aside>
+    @if (perfil; as p) {
+      <aside class="summary">
+        <span class="avatar" aria-hidden="true">{{ iniciales }}</span>
+        <strong>{{ p.displayName }}</strong>
+        <small>{{ p.email }}</small>
+        <div class="chips">@for (rol of roles(); track rol) {
+          <span class="od-chip info">{{ rol }}</span>
+        }</div>
+        @if (nombreConsultorio()) {
+          <small class="where">{{ nombreConsultorio() }}</small>
+        }
+        <nav class="sections" aria-label="Secciones de configuración">
+          <button type="button" [class.selected]="seccion === 'datos'" (click)="abrir('datos')">Mis datos</button>
+          @if (esProfesional()) {
+            <button type="button" [class.selected]="seccion === 'profesional'" (click)="abrir('profesional')">Datos profesionales</button>
+          }
+          <button type="button" [class.selected]="seccion === 'seguridad'" (click)="abrir('seguridad')">Seguridad</button>
+          <button type="button" [class.selected]="seccion === 'notificaciones'" (click)="abrir('notificaciones')">Notificaciones</button>
+          @if (veConsultorio) {
+            <button type="button" [class.selected]="seccion === 'consultorio'" (click)="abrir('consultorio')">Consultorio</button>
+          }
+        </nav>
+      </aside>
+    }
 
     <section class="od-panel detail">
-      <p class="od-note loading" *ngIf="cargando">Cargando tu perfil…</p>
-      <div class="od-panel-body" *ngIf="perfil as p">
-        <p class="od-feedback" role="status" *ngIf="mensaje">{{ mensaje }}</p>
-        <p class="od-feedback error" role="alert" *ngIf="error">{{ error }}</p>
-
-        <form class="od-form" *ngIf="seccion === 'datos'" [formGroup]="datos" (ngSubmit)="guardarDatos()">
-          <h2>Mis datos</h2>
-          <div class="od-form-row">
-            <label>Nombre<input type="text" formControlName="nombre" autocomplete="given-name"><small *ngIf="datos.controls.nombre.touched && datos.controls.nombre.invalid">Ingresá tu nombre (mínimo 2 caracteres).</small></label>
-            <label>Apellido<input type="text" formControlName="apellido" autocomplete="family-name"><small *ngIf="datos.controls.apellido.touched && datos.controls.apellido.invalid">Ingresá tu apellido (mínimo 2 caracteres).</small></label>
-          </div>
-          <div class="od-form-row">
-            <label>Tratamiento (opcional)<input type="text" formControlName="tratamiento" placeholder="Ej. Dra., Dr., Lic."></label>
-            <label>Teléfono (opcional)<input type="tel" formControlName="telefono" autocomplete="tel" placeholder="11 5555-0000"><small *ngIf="datos.controls.telefono.invalid">Usá sólo números, espacios y los símbolos + ( ) -.</small></label>
-          </div>
-          <label>Correo electrónico<input type="email" [value]="p.email" disabled></label>
-          <p class="od-note">{{ p.emailConfirmed ? '✓ Correo confirmado.' : 'Tu correo todavía no está confirmado.' }} El correo es tu usuario de ingreso y no se cambia desde esta pantalla.</p>
-          <footer><button type="submit" class="od-button" [disabled]="guardando || datos.pristine">{{ guardando ? 'Guardando…' : 'Guardar cambios' }}</button></footer>
-        </form>
-
-        <form class="od-form" *ngIf="seccion === 'profesional'" [formGroup]="profesional" (ngSubmit)="guardarProfesional()">
-          <h2>Datos profesionales</h2>
-          <div class="od-form-row">
-            <label>Especialidad<input type="text" formControlName="especialidad" placeholder="Ej. Endodoncia"></label>
-            <label>Matrícula<input type="text" formControlName="matricula" placeholder="Ej. M.P. 12345"></label>
-          </div>
-          <label>Duración habitual de tus turnos (minutos)<input type="number" min="5" max="480" step="5" formControlName="duracion"><small *ngIf="profesional.controls.duracion.invalid">Elegí un valor entre 5 y 480 minutos.</small></label>
-          <p class="od-note">Esta duración se propone automáticamente al agendar un turno con vos.</p>
-          <footer><button type="submit" class="od-button" [disabled]="guardando || profesional.pristine">{{ guardando ? 'Guardando…' : 'Guardar cambios' }}</button></footer>
-        </form>
-
-        <ng-container *ngIf="seccion === 'seguridad'">
-          <form class="od-form" [formGroup]="contrasena" (ngSubmit)="cambiarContrasena()">
-            <h2>Cambiar contraseña</h2>
-            <label>Contraseña actual<input [type]="verContrasenas ? 'text' : 'password'" formControlName="actual" autocomplete="current-password"></label>
-            <div class="od-form-row">
-              <label>Contraseña nueva<input [type]="verContrasenas ? 'text' : 'password'" formControlName="nueva" autocomplete="new-password"></label>
-              <label>Repetir la contraseña nueva<input [type]="verContrasenas ? 'text' : 'password'" formControlName="repetida" autocomplete="new-password"></label>
+      @if (cargando) {
+        <p class="od-note loading">Cargando tu perfil…</p>
+      }
+      @if (perfil; as p) {
+        <div class="od-panel-body">
+          @if (mensaje) {
+            <p class="od-feedback" role="status">{{ mensaje }}</p>
+          }
+          @if (error) {
+            <p class="od-feedback error" role="alert">{{ error }}</p>
+          }
+          @if (seccion === 'datos') {
+            <form class="od-form" [formGroup]="datos" (ngSubmit)="guardarDatos()">
+              <h2>Mis datos</h2>
+              <div class="od-form-row">
+                <label>Nombre<input type="text" formControlName="nombre" autocomplete="given-name">@if (datos.controls.nombre.touched && datos.controls.nombre.invalid) {
+                  <small>Ingresá tu nombre (mínimo 2 caracteres).</small>
+                }</label>
+                <label>Apellido<input type="text" formControlName="apellido" autocomplete="family-name">@if (datos.controls.apellido.touched && datos.controls.apellido.invalid) {
+                  <small>Ingresá tu apellido (mínimo 2 caracteres).</small>
+                }</label>
+              </div>
+              <div class="od-form-row">
+                <label>Tratamiento (opcional)<input type="text" formControlName="tratamiento" placeholder="Ej. Dra., Dr., Lic."></label>
+                <label>Teléfono (opcional)<input type="tel" formControlName="telefono" autocomplete="tel" placeholder="11 5555-0000">@if (datos.controls.telefono.invalid) {
+                  <small>Usá sólo números, espacios y los símbolos + ( ) -.</small>
+                }</label>
+              </div>
+              <label>Correo electrónico<input type="email" [value]="p.email" disabled></label>
+              <p class="od-note">{{ p.emailConfirmed ? '✓ Correo confirmado.' : 'Tu correo todavía no está confirmado.' }} El correo es tu usuario de ingreso y no se cambia desde esta pantalla.</p>
+              <footer><button type="submit" class="od-button" [disabled]="guardando || datos.pristine">{{ guardando ? 'Guardando…' : 'Guardar cambios' }}</button></footer>
+            </form>
+          }
+          @if (seccion === 'profesional') {
+            <form class="od-form" [formGroup]="profesional" (ngSubmit)="guardarProfesional()">
+              <h2>Datos profesionales</h2>
+              <div class="od-form-row">
+                <label>Especialidad<input type="text" formControlName="especialidad" placeholder="Ej. Endodoncia"></label>
+                <label>Matrícula<input type="text" formControlName="matricula" placeholder="Ej. M.P. 12345"></label>
+              </div>
+              <label>Duración habitual de tus turnos (minutos)<input type="number" min="5" max="480" step="5" formControlName="duracion">@if (profesional.controls.duracion.invalid) {
+                <small>Elegí un valor entre 5 y 480 minutos.</small>
+              }</label>
+              <p class="od-note">Esta duración se propone automáticamente al agendar un turno con vos.</p>
+              <footer><button type="submit" class="od-button" [disabled]="guardando || profesional.pristine">{{ guardando ? 'Guardando…' : 'Guardar cambios' }}</button></footer>
+            </form>
+          }
+          @if (seccion === 'seguridad') {
+            <form class="od-form" [formGroup]="contrasena" (ngSubmit)="cambiarContrasena()">
+              <h2>Cambiar contraseña</h2>
+              <label>Contraseña actual<input [type]="verContrasenas ? 'text' : 'password'" formControlName="actual" autocomplete="current-password"></label>
+              <div class="od-form-row">
+                <label>Contraseña nueva<input [type]="verContrasenas ? 'text' : 'password'" formControlName="nueva" autocomplete="new-password"></label>
+                <label>Repetir la contraseña nueva<input [type]="verContrasenas ? 'text' : 'password'" formControlName="repetida" autocomplete="new-password"></label>
+              </div>
+              <label class="check"><input type="checkbox" [checked]="verContrasenas" (change)="verContrasenas = !verContrasenas"> Mostrar las contraseñas</label>
+              @if (contrasena.controls.nueva.value) {
+                <ul class="requirements">
+                  @for (requisito of requisitos; track requisito) {
+                    <li [class.ok]="requisito.cumple">{{ requisito.cumple ? '✓' : '○' }} {{ requisito.titulo }}</li>
+                  }
+                </ul>
+              }
+              <footer><button type="submit" class="od-button" [disabled]="guardando">{{ guardando ? 'Guardando…' : 'Cambiar contraseña' }}</button></footer>
+            </form>
+            <div class="block">
+              <h2>Sesión</h2>
+              <p class="od-note">Verificación en dos pasos: <strong>{{ p.twoFactorEnabled ? 'activada' : 'desactivada' }}</strong>. Al cambiar la contraseña se cierran tus sesiones en otros dispositivos.</p>
+              <button type="button" class="od-button danger" (click)="cerrarSesion()">Cerrar sesión en este dispositivo</button>
             </div>
-            <label class="check"><input type="checkbox" [checked]="verContrasenas" (change)="verContrasenas = !verContrasenas"> Mostrar las contraseñas</label>
-            <ul class="requirements" *ngIf="contrasena.controls.nueva.value">
-              <li *ngFor="let requisito of requisitos" [class.ok]="requisito.cumple">{{ requisito.cumple ? '✓' : '○' }} {{ requisito.titulo }}</li>
-            </ul>
-            <footer><button type="submit" class="od-button" [disabled]="guardando">{{ guardando ? 'Guardando…' : 'Cambiar contraseña' }}</button></footer>
-          </form>
-          <div class="block">
-            <h2>Sesión</h2>
-            <p class="od-note">Verificación en dos pasos: <strong>{{ p.twoFactorEnabled ? 'activada' : 'desactivada' }}</strong>. Al cambiar la contraseña se cierran tus sesiones en otros dispositivos.</p>
-            <button type="button" class="od-button danger" (click)="cerrarSesion()">Cerrar sesión en este dispositivo</button>
-          </div>
-        </ng-container>
-
-        <div *ngIf="seccion === 'notificaciones' && ajustes as a">
-          <h2>Notificaciones</h2>
-          <p class="od-note">Los cambios se guardan al instante.</p>
-          <ul class="switches">
-            <li *ngFor="let opcion of notificaciones">
-              <span><strong>{{ opcion.titulo }}</strong><small>{{ opcion.detalle }}</small></span>
-              <button type="button" role="switch" class="switch" [class.on]="a[opcion.clave]" [attr.aria-checked]="a[opcion.clave]" [attr.aria-label]="opcion.titulo" (click)="alternar(opcion.clave)"><i></i></button>
-            </li>
-          </ul>
+          }
+          @if (seccion === 'notificaciones' && ajustes; as a) {
+            <div>
+              <h2>Notificaciones</h2>
+              <p class="od-note">Los cambios se guardan al instante.</p>
+              <ul class="switches">
+                @for (opcion of notificaciones; track opcion) {
+                  <li>
+                    <span><strong>{{ opcion.titulo }}</strong><small>{{ opcion.detalle }}</small></span>
+                    <button type="button" role="switch" class="switch" [class.on]="a[opcion.clave]" [attr.aria-checked]="a[opcion.clave]" [attr.aria-label]="opcion.titulo" (click)="alternar(opcion.clave)"><i></i></button>
+                  </li>
+                }
+              </ul>
+            </div>
+          }
+          @if (seccion === 'consultorio') {
+            <form class="od-form" [formGroup]="datosConsultorio" (ngSubmit)="guardarConsultorio()">
+              <h2>Consultorio</h2>
+              @if (!puedeEditarConsultorio) {
+                <p class="od-note">Sólo un administrador puede modificar estos datos.</p>
+              }
+              <label>Nombre del consultorio<input type="text" formControlName="nombre">@if (datosConsultorio.controls.nombre.touched && datosConsultorio.controls.nombre.invalid) {
+                <small>El nombre es obligatorio.</small>
+              }</label>
+              <div class="od-form-row">
+                <label>Teléfono<input type="tel" formControlName="telefono"></label>
+                <label>Correo de contacto<input type="email" formControlName="email">@if (datosConsultorio.controls.email.invalid) {
+                  <small>Revisá el formato del correo.</small>
+                }</label>
+              </div>
+              <label>Dirección<input type="text" formControlName="direccion"></label>
+              <div class="od-form-row">
+                <label>Ciudad<input type="text" formControlName="ciudad"></label>
+                <label>Provincia<input type="text" formControlName="provincia"></label>
+              </div>
+              @if (consultorio; as c) {
+                <p class="od-note">Zona horaria: {{ c.timeZoneId }} · Turnos de {{ c.defaultAppointmentMinutes }} min por defecto · Recordatorios {{ c.reminderHoursBefore }} h antes.</p>
+              }
+              @if (puedeEditarConsultorio) {
+                <footer><button type="submit" class="od-button" [disabled]="guardando || datosConsultorio.pristine">{{ guardando ? 'Guardando…' : 'Guardar cambios' }}</button></footer>
+              }
+            </form>
+          }
         </div>
-
-        <form class="od-form" *ngIf="seccion === 'consultorio'" [formGroup]="datosConsultorio" (ngSubmit)="guardarConsultorio()">
-          <h2>Consultorio</h2>
-          <p class="od-note" *ngIf="!puedeEditarConsultorio">Sólo un administrador puede modificar estos datos.</p>
-          <label>Nombre del consultorio<input type="text" formControlName="nombre"><small *ngIf="datosConsultorio.controls.nombre.touched && datosConsultorio.controls.nombre.invalid">El nombre es obligatorio.</small></label>
-          <div class="od-form-row">
-            <label>Teléfono<input type="tel" formControlName="telefono"></label>
-            <label>Correo de contacto<input type="email" formControlName="email"><small *ngIf="datosConsultorio.controls.email.invalid">Revisá el formato del correo.</small></label>
-          </div>
-          <label>Dirección<input type="text" formControlName="direccion"></label>
-          <div class="od-form-row">
-            <label>Ciudad<input type="text" formControlName="ciudad"></label>
-            <label>Provincia<input type="text" formControlName="provincia"></label>
-          </div>
-          <p class="od-note" *ngIf="consultorio as c">Zona horaria: {{ c.timeZoneId }} · Turnos de {{ c.defaultAppointmentMinutes }} min por defecto · Recordatorios {{ c.reminderHoursBefore }} h antes.</p>
-          <footer *ngIf="puedeEditarConsultorio"><button type="submit" class="od-button" [disabled]="guardando || datosConsultorio.pristine">{{ guardando ? 'Guardando…' : 'Guardar cambios' }}</button></footer>
-        </form>
-      </div>
+      }
     </section>
   </div>
 </main>

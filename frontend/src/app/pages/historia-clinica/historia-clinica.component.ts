@@ -1,4 +1,4 @@
-import { CommonModule } from '@angular/common';
+
 import { Component, inject } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
@@ -17,7 +17,7 @@ const ANTECEDENTES: [keyof ClinicalRecordDto['medicalHistory'], string][] = [
 
 @Component({
   selector: 'app-historia-clinica', standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, RouterLink],
+  imports: [ReactiveFormsModule, RouterLink],
   templateUrl: './historia-clinica.component.html', styleUrl: './historia-clinica.component.css'
 })
 export class HistoriaClinicaComponent {

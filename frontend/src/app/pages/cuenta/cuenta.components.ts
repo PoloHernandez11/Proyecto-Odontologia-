@@ -1,4 +1,4 @@
-import { CommonModule } from '@angular/common';
+
 import { Component, Input, inject } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
@@ -16,15 +16,19 @@ const obligatorio = (maximo: number) => new FormControl('', { nonNullable: true,
 
 /** Tarjeta común de las pantallas de cuenta: marca, título, contenido y mensajes. */
 @Component({
-  selector: 'app-marco-cuenta', standalone: true, imports: [CommonModule, RouterLink],
+  selector: 'app-marco-cuenta', standalone: true, imports: [RouterLink],
   template: `
     <main class="od-auth">
       <section class="od-auth-card">
         <a class="od-auth-brand" routerLink="/login">Odontia</a>
         <h1>{{ titulo }}</h1>
         <ng-content />
-        <p class="od-feedback" role="status" *ngIf="mensaje">{{ mensaje }}</p>
-        <p class="od-feedback error" role="alert" *ngIf="error">{{ error }}</p>
+        @if (mensaje) {
+          <p class="od-feedback" role="status">{{ mensaje }}</p>
+        }
+        @if (error) {
+          <p class="od-feedback error" role="alert">{{ error }}</p>
+        }
         <a class="od-auth-back" routerLink="/login">Ir al inicio de sesión</a>
       </section>
     </main>`
@@ -36,14 +40,18 @@ export class MarcoCuentaComponent {
 }
 
 @Component({
-  selector: 'app-confirmar-correo', standalone: true, imports: [CommonModule, ReactiveFormsModule, MarcoCuentaComponent],
+  selector: 'app-confirmar-correo', standalone: true, imports: [ReactiveFormsModule, MarcoCuentaComponent],
   template: `<app-marco-cuenta titulo="Confirmar correo" [mensaje]="mensaje" [error]="error">
-    <p *ngIf="estado === 'verificando'">Estamos confirmando tu correo electrónico…</p>
-    <form class="od-form" *ngIf="estado === 'fallo'" (ngSubmit)="reenviar()">
-      <p>El enlace no es válido o ya venció. Podés pedir uno nuevo:</p>
-      <label>Correo electrónico<input type="email" autocomplete="email" [formControl]="correo"></label>
-      <button type="submit" class="od-button" [disabled]="enviando">Enviar un enlace nuevo</button>
-    </form></app-marco-cuenta>`
+      @if (estado === 'verificando') {
+        <p>Estamos confirmando tu correo electrónico…</p>
+      }
+      @if (estado === 'fallo') {
+        <form class="od-form" (ngSubmit)="reenviar()">
+          <p>El enlace no es válido o ya venció. Podés pedir uno nuevo:</p>
+          <label>Correo electrónico<input type="email" autocomplete="email" [formControl]="correo"></label>
+          <button type="submit" class="od-button" [disabled]="enviando">Enviar un enlace nuevo</button>
+        </form>
+      }</app-marco-cuenta>`
 })
 export class ConfirmarCorreoComponent {
   private readonly auth = inject(AuthService);
@@ -75,17 +83,21 @@ export class ConfirmarCorreoComponent {
 }
 
 @Component({
-  selector: 'app-restablecer-contrasena', standalone: true, imports: [CommonModule, ReactiveFormsModule, MarcoCuentaComponent],
+  selector: 'app-restablecer-contrasena', standalone: true, imports: [ReactiveFormsModule, MarcoCuentaComponent],
   template: `<app-marco-cuenta titulo="Restablecer contraseña" [mensaje]="mensaje" [error]="error">
-    <form class="od-form" *ngIf="!listo" [formGroup]="formulario" (ngSubmit)="guardar()">
-      <p *ngIf="!enlaceValido">Este enlace no es válido. Pedí uno nuevo desde "¿Olvidaste tu contraseña?" en el inicio de sesión.</p>
-      <ng-container *ngIf="enlaceValido">
-        <label>Contraseña nueva<input type="password" autocomplete="new-password" formControlName="nueva"></label>
-        <label>Repetir la contraseña<input type="password" autocomplete="new-password" formControlName="repetida"></label>
-        <p class="od-note">{{ ayuda }}</p>
-        <button type="submit" class="od-button" [disabled]="enviando">{{ enviando ? 'Guardando…' : 'Guardar la contraseña nueva' }}</button>
-      </ng-container>
-    </form></app-marco-cuenta>`
+      @if (!listo) {
+        <form class="od-form" [formGroup]="formulario" (ngSubmit)="guardar()">
+          @if (!enlaceValido) {
+            <p>Este enlace no es válido. Pedí uno nuevo desde "¿Olvidaste tu contraseña?" en el inicio de sesión.</p>
+          }
+          @if (enlaceValido) {
+            <label>Contraseña nueva<input type="password" autocomplete="new-password" formControlName="nueva"></label>
+            <label>Repetir la contraseña<input type="password" autocomplete="new-password" formControlName="repetida"></label>
+            <p class="od-note">{{ ayuda }}</p>
+            <button type="submit" class="od-button" [disabled]="enviando">{{ enviando ? 'Guardando…' : 'Guardar la contraseña nueva' }}</button>
+          }
+        </form>
+      }</app-marco-cuenta>`
 })
 export class RestablecerContrasenaComponent {
   private readonly auth = inject(AuthService);
@@ -115,19 +127,27 @@ export class RestablecerContrasenaComponent {
 }
 
 @Component({
-  selector: 'app-aceptar-invitacion', standalone: true, imports: [CommonModule, ReactiveFormsModule, MarcoCuentaComponent],
+  selector: 'app-aceptar-invitacion', standalone: true, imports: [ReactiveFormsModule, MarcoCuentaComponent],
   template: `<app-marco-cuenta titulo="Aceptar invitación" [mensaje]="mensaje" [error]="error">
-    <p *ngIf="cargando">Buscando tu invitación…</p>
-    <form class="od-form" *ngIf="invitacion as i" [hidden]="listo" [formGroup]="formulario" (ngSubmit)="aceptar()">
-      <p>Te invitaron a <strong>{{ i.consultorioName }}</strong> como <strong>{{ i.roles.join(', ') }}</strong> con el correo {{ i.email }}.</p>
-      <div class="od-form-row" *ngIf="!i.userExists">
-        <label>Nombre<input type="text" autocomplete="given-name" formControlName="nombre"></label>
-        <label>Apellido<input type="text" autocomplete="family-name" formControlName="apellido"></label>
-      </div>
-      <label>{{ i.userExists ? 'Tu contraseña actual de Odontia' : 'Elegí una contraseña' }}<input type="password" [attr.autocomplete]="i.userExists ? 'current-password' : 'new-password'" formControlName="contrasena"></label>
-      <p class="od-note" *ngIf="!i.userExists">{{ ayuda }}</p>
-      <button type="submit" class="od-button" [disabled]="enviando">{{ enviando ? 'Aceptando…' : 'Aceptar la invitación' }}</button>
-    </form></app-marco-cuenta>`
+      @if (cargando) {
+        <p>Buscando tu invitación…</p>
+      }
+      @if (invitacion; as i) {
+        <form class="od-form" [hidden]="listo" [formGroup]="formulario" (ngSubmit)="aceptar()">
+          <p>Te invitaron a <strong>{{ i.consultorioName }}</strong> como <strong>{{ i.roles.join(', ') }}</strong> con el correo {{ i.email }}.</p>
+          @if (!i.userExists) {
+            <div class="od-form-row">
+              <label>Nombre<input type="text" autocomplete="given-name" formControlName="nombre"></label>
+              <label>Apellido<input type="text" autocomplete="family-name" formControlName="apellido"></label>
+            </div>
+          }
+          <label>{{ i.userExists ? 'Tu contraseña actual de Odontia' : 'Elegí una contraseña' }}<input type="password" [attr.autocomplete]="i.userExists ? 'current-password' : 'new-password'" formControlName="contrasena"></label>
+          @if (!i.userExists) {
+            <p class="od-note">{{ ayuda }}</p>
+          }
+          <button type="submit" class="od-button" [disabled]="enviando">{{ enviando ? 'Aceptando…' : 'Aceptar la invitación' }}</button>
+        </form>
+      }</app-marco-cuenta>`
 })
 export class AceptarInvitacionComponent {
   private readonly auth = inject(AuthService);
@@ -168,21 +188,23 @@ export class AceptarInvitacionComponent {
 }
 
 @Component({
-  selector: 'app-registro', standalone: true, imports: [CommonModule, ReactiveFormsModule, MarcoCuentaComponent],
+  selector: 'app-registro', standalone: true, imports: [ReactiveFormsModule, MarcoCuentaComponent],
   template: `<app-marco-cuenta titulo="Crear una cuenta" [mensaje]="mensaje" [error]="error">
-    <form class="od-form" *ngIf="!listo" [formGroup]="formulario" (ngSubmit)="registrar()">
-      <p>Registrá tu consultorio. Vas a ser su administrador y después podés invitar al resto del equipo.</p>
-      <label>Nombre del consultorio<input type="text" autocomplete="organization" formControlName="consultorio"></label>
-      <div class="od-form-row">
-        <label>Tu nombre<input type="text" autocomplete="given-name" formControlName="nombre"></label>
-        <label>Tu apellido<input type="text" autocomplete="family-name" formControlName="apellido"></label>
-      </div>
-      <label>Correo electrónico<input type="email" autocomplete="email" formControlName="correo"></label>
-      <label>Contraseña<input type="password" autocomplete="new-password" formControlName="contrasena"></label>
-      <p class="od-note">{{ ayuda }}</p>
-      <label class="check"><input type="checkbox" formControlName="profesional"> Soy odontólogo/a y atiendo pacientes</label>
-      <button type="submit" class="od-button" [disabled]="enviando">{{ enviando ? 'Creando la cuenta…' : 'Crear la cuenta' }}</button>
-    </form></app-marco-cuenta>`
+      @if (!listo) {
+        <form class="od-form" [formGroup]="formulario" (ngSubmit)="registrar()">
+          <p>Registrá tu consultorio. Vas a ser su administrador y después podés invitar al resto del equipo.</p>
+          <label>Nombre del consultorio<input type="text" autocomplete="organization" formControlName="consultorio"></label>
+          <div class="od-form-row">
+            <label>Tu nombre<input type="text" autocomplete="given-name" formControlName="nombre"></label>
+            <label>Tu apellido<input type="text" autocomplete="family-name" formControlName="apellido"></label>
+          </div>
+          <label>Correo electrónico<input type="email" autocomplete="email" formControlName="correo"></label>
+          <label>Contraseña<input type="password" autocomplete="new-password" formControlName="contrasena"></label>
+          <p class="od-note">{{ ayuda }}</p>
+          <label class="check"><input type="checkbox" formControlName="profesional"> Soy odontólogo/a y atiendo pacientes</label>
+          <button type="submit" class="od-button" [disabled]="enviando">{{ enviando ? 'Creando la cuenta…' : 'Crear la cuenta' }}</button>
+        </form>
+      }</app-marco-cuenta>`
 })
 export class RegistroComponent {
   private readonly auth = inject(AuthService);

@@ -5,46 +5,64 @@
   </header>
 
   <div class="od-content">
-    <p class="od-feedback error" role="alert" *ngIf="error">{{ error }}</p>
+    @if (error) {
+      <p class="od-feedback error" role="alert">{{ error }}</p>
+    }
 
     <section class="od-stats" aria-label="Resumen financiero">
-      <article class="od-stat success"><span>Ingresos de {{ tituloDelPeriodo }}</span><strong>{{ pesos(ingresos) }}</strong><small>{{ cantidadDeCobros }} cobros registrados<ng-container *ngIf="anulados"> · {{ anulados }} anulados</ng-container></small></article>
-      <article class="od-stat warning"><span>Pendiente por cobrar</span><strong>{{ pesos(pendientePorCobrar) }}</strong><small>Saldo de presupuestos aprobados</small></article>
-      <article class="od-stat" *ngIf="veLaboratorio"><span>Laboratorio en curso</span><strong>{{ pesos(costoDeLaboratorio) }}</strong><small>Costo de {{ laboratorioEnCurso.length }} trabajos sin finalizar</small></article>
-    </section>
+      <article class="od-stat success"><span>Ingresos de {{ tituloDelPeriodo }}</span><strong>{{ pesos(ingresos) }}</strong><small>{{ cantidadDeCobros }} cobros registrados@if (anulados) {
+      · {{ anulados }} anulados
+    }</small></article>
+    <article class="od-stat warning"><span>Pendiente por cobrar</span><strong>{{ pesos(pendientePorCobrar) }}</strong><small>Saldo de presupuestos aprobados</small></article>
+    @if (veLaboratorio) {
+      <article class="od-stat"><span>Laboratorio en curso</span><strong>{{ pesos(costoDeLaboratorio) }}</strong><small>Costo de {{ laboratorioEnCurso.length }} trabajos sin finalizar</small></article>
+    }
+  </section>
 
-    <section class="od-panel">
-      <div class="od-panel-heading"><div><h2>Ingresos por método de pago</h2><small>{{ tituloDelPeriodo }}</small></div></div>
-      <div class="od-panel-body">
-        <div class="method" *ngFor="let fila of porMetodo">
+  <section class="od-panel">
+    <div class="od-panel-heading"><div><h2>Ingresos por método de pago</h2><small>{{ tituloDelPeriodo }}</small></div></div>
+    <div class="od-panel-body">
+      @for (fila of porMetodo; track fila) {
+        <div class="method">
           <span class="method-name">{{ fila.metodo }}</span>
           <span class="bar" aria-hidden="true"><i [style.width.%]="fila.porcentaje"></i></span>
           <strong>{{ pesos(fila.total) }}</strong><small>{{ fila.porcentaje }} %</small>
         </div>
-        <p class="od-note" *ngIf="!cargando && porMetodo.length === 0">No hay cobros registrados en este período.</p>
-      </div>
-    </section>
+      }
+      @if (!cargando && porMetodo.length === 0) {
+        <p class="od-note">No hay cobros registrados en este período.</p>
+      }
+    </div>
+  </section>
 
-    <section class="od-panel">
-      <div class="od-panel-heading"><div><h2>Libro de ingresos</h2><small>Los cobros se incorporan automáticamente desde <a routerLink="/pagos">Pagos de pacientes</a>.</small></div></div>
-      <div class="od-table-scroll">
-        <table class="od-table">
-          <thead><tr><th>FECHA</th><th>CONCEPTO</th><th>MÉTODO</th><th>RECIBO</th><th class="num">IMPORTE</th><th>ESTADO</th></tr></thead>
-          <tbody>
-            <tr *ngFor="let pago of pagos">
+  <section class="od-panel">
+    <div class="od-panel-heading"><div><h2>Libro de ingresos</h2><small>Los cobros se incorporan automáticamente desde <a routerLink="/pagos">Pagos de pacientes</a>.</small></div></div>
+    <div class="od-table-scroll">
+      <table class="od-table">
+        <thead><tr><th>FECHA</th><th>CONCEPTO</th><th>MÉTODO</th><th>RECIBO</th><th class="num">IMPORTE</th><th>ESTADO</th></tr></thead>
+        <tbody>
+          @for (pago of pagos; track pago) {
+            <tr>
               <td>{{ fecha(pago.paidAtUtc) }}</td>
-              <td><strong>Pago · {{ pago.patientName }}</strong><small *ngIf="pago.budgetNumber">Presupuesto N.º {{ pago.budgetNumber }}</small></td>
-              <td>{{ metodos[pago.method] }}</td><td>N.º {{ pago.receiptNumber }}</td>
-              <td class="num"><strong>{{ pesos(pago.amount) }}</strong></td>
-              <td><span class="od-chip" [ngClass]="pago.status === 'Voided' ? 'bad' : 'ok'">{{ pago.status === 'Voided' ? 'Anulado' : 'Registrado' }}</span></td>
-            </tr>
-            <tr *ngIf="!cargando && pagos.length === 0"><td colspan="6" class="empty">No hay movimientos en {{ tituloDelPeriodo }}.</td></tr>
-            <tr *ngIf="cargando"><td colspan="6" class="empty">Cargando…</td></tr>
-          </tbody>
-        </table>
-      </div>
-    </section>
-
-    <p class="od-note">Este resumen muestra los ingresos reales registrados en el sistema. El registro de egresos (insumos, pagos a laboratorios y otros gastos) todavía no existe en el servidor, por eso no se calcula un balance neto.</p>
+              <td><strong>Pago · {{ pago.patientName }}</strong>@if (pago.budgetNumber) {
+              <small>Presupuesto N.º {{ pago.budgetNumber }}</small>
+            }</td>
+            <td>{{ metodos[pago.method] }}</td><td>N.º {{ pago.receiptNumber }}</td>
+            <td class="num"><strong>{{ pesos(pago.amount) }}</strong></td>
+            <td><span class="od-chip" [ngClass]="pago.status === 'Voided' ? 'bad' : 'ok'">{{ pago.status === 'Voided' ? 'Anulado' : 'Registrado' }}</span></td>
+          </tr>
+        }
+        @if (!cargando && pagos.length === 0) {
+          <tr><td colspan="6" class="empty">No hay movimientos en {{ tituloDelPeriodo }}.</td></tr>
+        }
+        @if (cargando) {
+          <tr><td colspan="6" class="empty">Cargando…</td></tr>
+        }
+      </tbody>
+    </table>
   </div>
+</section>
+
+<p class="od-note">Este resumen muestra los ingresos reales registrados en el sistema. El registro de egresos (insumos, pagos a laboratorios y otros gastos) todavía no existe en el servidor, por eso no se calcula un balance neto.</p>
+</div>
 </main>

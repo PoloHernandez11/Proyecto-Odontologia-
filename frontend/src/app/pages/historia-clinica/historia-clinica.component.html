@@ -1,46 +1,96 @@
-<div class="clinical-page" *ngIf="paciente as p">
-  <main class="clinical-content">
-    <p class="breadcrumb"><a routerLink="/historia-clinica">Historia clínica</a> / {{ p.firstName }} {{ p.lastName }}</p>
-    <section class="patient-heading"><div><span class="eyebrow">FICHA CLÍNICA</span><h1>{{ p.firstName }} {{ p.lastName }}</h1><p>DNI {{ p.documentNumber }}<ng-container *ngIf="p.age"> · {{ p.age }} años</ng-container> · {{ p.healthInsuranceName || 'Particular' }}</p></div><a class="patient-tag" routerLink="/historia-clinica">Cambiar de paciente</a></section>
-    <nav class="clinical-tabs"><a class="selected" [routerLink]="['/historia-clinica', p.id]">Historia clínica</a><a *ngIf="veOdontograma" [routerLink]="['/odontograma', p.id]">Odontograma</a></nav>
-
-    <section class="background-card" *ngIf="historia">
-      <h3>Antecedentes y alertas</h3>
-      <p class="alert-line" *ngFor="let alerta of historia.alerts">⚠ <strong>{{ alerta.title }}</strong><ng-container *ngIf="alerta.details"> — {{ alerta.details }}</ng-container></p>
-      <p *ngIf="antecedentes.length"><b>Antecedentes:</b> {{ antecedentes.join(', ') }}</p>
-      <p *ngIf="historia.medicalHistory.allergies"><b>Alergias:</b> {{ historia.medicalHistory.allergies }}</p>
-      <p *ngIf="historia.medicalHistory.currentMedication"><b>Medicación actual:</b> {{ historia.medicalHistory.currentMedication }}</p>
-      <p *ngIf="historia.medicalHistory.otherConditions"><b>Otros:</b> {{ historia.medicalHistory.otherConditions }}</p>
-      <p class="muted" *ngIf="!historia.alerts.length && !antecedentes.length && !historia.medicalHistory.allergies && !historia.medicalHistory.currentMedication && !historia.medicalHistory.otherConditions">Sin antecedentes médicos registrados.</p>
+@if (paciente; as p) {
+  <div class="clinical-page">
+    <main class="clinical-content">
+      <p class="breadcrumb"><a routerLink="/historia-clinica">Historia clínica</a> / {{ p.firstName }} {{ p.lastName }}</p>
+      <section class="patient-heading"><div><span class="eyebrow">FICHA CLÍNICA</span><h1>{{ p.firstName }} {{ p.lastName }}</h1><p>DNI {{ p.documentNumber }}@if (p.age) {
+      · {{ p.age }} años
+      } · {{ p.healthInsuranceName || 'Particular' }}</p></div><a class="patient-tag" routerLink="/historia-clinica">Cambiar de paciente</a></section>
+      <nav class="clinical-tabs"><a class="selected" [routerLink]="['/historia-clinica', p.id]">Historia clínica</a>@if (veOdontograma) {
+      <a [routerLink]="['/odontograma', p.id]">Odontograma</a>
+    }</nav>
+    @if (historia) {
+      <section class="background-card">
+        <h3>Antecedentes y alertas</h3>
+        @for (alerta of historia.alerts; track alerta) {
+          <p class="alert-line">⚠ <strong>{{ alerta.title }}</strong>@if (alerta.details) {
+          — {{ alerta.details }}
+        }</p>
+      }
+      @if (antecedentes.length) {
+        <p><b>Antecedentes:</b> {{ antecedentes.join(', ') }}</p>
+      }
+      @if (historia.medicalHistory.allergies) {
+        <p><b>Alergias:</b> {{ historia.medicalHistory.allergies }}</p>
+      }
+      @if (historia.medicalHistory.currentMedication) {
+        <p><b>Medicación actual:</b> {{ historia.medicalHistory.currentMedication }}</p>
+      }
+      @if (historia.medicalHistory.otherConditions) {
+        <p><b>Otros:</b> {{ historia.medicalHistory.otherConditions }}</p>
+      }
+      @if (!historia.alerts.length && !antecedentes.length && !historia.medicalHistory.allergies && !historia.medicalHistory.currentMedication && !historia.medicalHistory.otherConditions) {
+        <p class="muted">Sin antecedentes médicos registrados.</p>
+      }
     </section>
-
-    <div class="section-heading"><div><h2>Registro de consultas</h2><p>Consultas, evoluciones y tratamientos realizados. Los registros no se borran: quedan en el historial.</p></div><button type="button" class="primary" *ngIf="puedeEscribir" (click)="mostrarFormulario = !mostrarFormulario">＋ Nueva consulta</button></div>
-    <p class="feedback" role="status" *ngIf="mensaje">{{ mensaje }}</p>
-    <p class="feedback error-feedback" role="alert" *ngIf="error">{{ error }}</p>
-    <form class="record-form" *ngIf="mostrarFormulario" [formGroup]="formulario" (ngSubmit)="guardarRegistro()">
-      <h3>Registrar consulta</h3>
-      <label>Tipo de registro<select formControlName="tipo"><option *ngFor="let tipo of tiposDisponibles" [value]="tipo[0]">{{ tipo[1] }}</option></select></label>
-      <label>Motivo de consulta<input formControlName="motivo" placeholder="Ej. Dolor al masticar"></label><small *ngIf="formulario.controls.motivo.touched && formulario.controls.motivo.invalid">Ingresá el motivo de consulta (mínimo 3 caracteres).</small>
-      <label>Diagnóstico<input formControlName="diagnostico" placeholder="Diagnóstico del profesional"></label>
-      <label>Tratamiento realizado<input formControlName="tratamiento" placeholder="Ej. Limpieza, endodoncia..."></label>
-      <label>Piezas dentales (opcional)<input formControlName="piezas" inputmode="numeric" placeholder="Numeración FDI separada por comas. Ej. 36, 37"></label><small *ngIf="formulario.controls.piezas.touched && formulario.controls.piezas.invalid">Usá números FDI de dos dígitos separados por comas.</small>
-      <label>Indicaciones y observaciones<textarea rows="3" formControlName="observaciones" placeholder="Indicaciones y observaciones adicionales"></textarea></label>
-      <div class="form-actions"><button type="button" class="secondary" (click)="mostrarFormulario = false">Cancelar</button><button class="primary" type="submit" [disabled]="guardando">{{ guardando ? 'Guardando…' : 'Guardar consulta' }}</button></div>
-    </form>
-    <section class="records">
-      <article class="record-card" *ngFor="let registro of registros" [class.voided]="registro.isVoided">
-        <div class="record-date">{{ fecha(registro.occurredAtUtc) }}</div>
-        <div class="record-body">
-          <div class="record-meta"><strong>{{ registro.title }}</strong><span>{{ tipos[registro.type] }} · {{ registro.professionalName }}</span></div>
-          <p class="multiline" *ngIf="registro.description">{{ registro.description }}</p>
-          <p *ngIf="registro.teeth.length"><b>Piezas:</b> {{ registro.teeth.join(', ') }}</p>
-          <p *ngIf="registro.indications"><b>Indicaciones:</b> {{ registro.indications }}</p>
-          <p class="muted" *ngIf="registro.isVoided"><b>Registro anulado:</b> {{ registro.voidReason }}</p>
-        </div>
-      </article>
-      <div class="empty" *ngIf="registros.length === 0">Todavía no hay consultas registradas para este paciente.</div>
-    </section>
-  </main>
+  }
+  <div class="section-heading"><div><h2>Registro de consultas</h2><p>Consultas, evoluciones y tratamientos realizados. Los registros no se borran: quedan en el historial.</p></div>@if (puedeEscribir) {
+  <button type="button" class="primary" (click)="mostrarFormulario = !mostrarFormulario">＋ Nueva consulta</button>
+}</div>
+@if (mensaje) {
+  <p class="feedback" role="status">{{ mensaje }}</p>
+}
+@if (error) {
+  <p class="feedback error-feedback" role="alert">{{ error }}</p>
+}
+@if (mostrarFormulario) {
+  <form class="record-form" [formGroup]="formulario" (ngSubmit)="guardarRegistro()">
+    <h3>Registrar consulta</h3>
+    <label>Tipo de registro<select formControlName="tipo">@for (tipo of tiposDisponibles; track tipo) {
+      <option [value]="tipo[0]">{{ tipo[1] }}</option>
+    }</select></label>
+    <label>Motivo de consulta<input formControlName="motivo" placeholder="Ej. Dolor al masticar"></label>@if (formulario.controls.motivo.touched && formulario.controls.motivo.invalid) {
+    <small>Ingresá el motivo de consulta (mínimo 3 caracteres).</small>
+  }
+  <label>Diagnóstico<input formControlName="diagnostico" placeholder="Diagnóstico del profesional"></label>
+  <label>Tratamiento realizado<input formControlName="tratamiento" placeholder="Ej. Limpieza, endodoncia..."></label>
+  <label>Piezas dentales (opcional)<input formControlName="piezas" inputmode="numeric" placeholder="Numeración FDI separada por comas. Ej. 36, 37"></label>@if (formulario.controls.piezas.touched && formulario.controls.piezas.invalid) {
+  <small>Usá números FDI de dos dígitos separados por comas.</small>
+}
+<label>Indicaciones y observaciones<textarea rows="3" formControlName="observaciones" placeholder="Indicaciones y observaciones adicionales"></textarea></label>
+<div class="form-actions"><button type="button" class="secondary" (click)="mostrarFormulario = false">Cancelar</button><button class="primary" type="submit" [disabled]="guardando">{{ guardando ? 'Guardando…' : 'Guardar consulta' }}</button></div>
+</form>
+}
+<section class="records">
+  @for (registro of registros; track registro) {
+    <article class="record-card" [class.voided]="registro.isVoided">
+      <div class="record-date">{{ fecha(registro.occurredAtUtc) }}</div>
+      <div class="record-body">
+        <div class="record-meta"><strong>{{ registro.title }}</strong><span>{{ tipos[registro.type] }} · {{ registro.professionalName }}</span></div>
+        @if (registro.description) {
+          <p class="multiline">{{ registro.description }}</p>
+        }
+        @if (registro.teeth.length) {
+          <p><b>Piezas:</b> {{ registro.teeth.join(', ') }}</p>
+        }
+        @if (registro.indications) {
+          <p><b>Indicaciones:</b> {{ registro.indications }}</p>
+        }
+        @if (registro.isVoided) {
+          <p class="muted"><b>Registro anulado:</b> {{ registro.voidReason }}</p>
+        }
+      </div>
+    </article>
+  }
+  @if (registros.length === 0) {
+    <div class="empty">Todavía no hay consultas registradas para este paciente.</div>
+  }
+</section>
+</main>
 </div>
-<main class="not-found" *ngIf="cargando"><p>Cargando la historia clínica…</p></main>
-<main class="not-found" *ngIf="noEncontrado"><h2>No encontramos al paciente</h2><a routerLink="/historia-clinica">Elegir otro paciente</a></main>
+}
+@if (cargando) {
+  <main class="not-found"><p>Cargando la historia clínica…</p></main>
+}
+@if (noEncontrado) {
+  <main class="not-found"><h2>No encontramos al paciente</h2><a routerLink="/historia-clinica">Elegir otro paciente</a></main>
+}

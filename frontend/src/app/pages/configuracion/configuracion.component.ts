@@ -1,4 +1,4 @@
-import { CommonModule } from '@angular/common';
+
 import { Component, inject } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -23,7 +23,7 @@ const NOTIFICACIONES: { clave: keyof NotificationSettingsDto; titulo: string; de
 
 @Component({
   selector: 'app-configuracion', standalone: true,
-  imports: [CommonModule, ReactiveFormsModule],
+  imports: [ReactiveFormsModule],
   templateUrl: './configuracion.component.html',
   styleUrl: './configuracion.component.css'
 })

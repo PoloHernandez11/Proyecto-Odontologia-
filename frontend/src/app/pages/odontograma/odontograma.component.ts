@@ -1,4 +1,4 @@
-import { CommonModule } from '@angular/common';
+
 import { Component, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
@@ -18,7 +18,7 @@ const NOMBRE_DE_CARA: Record<ToothSurface, string> = {
 };
 const PIEZA_COMPLETA = 'completa';
 
-@Component({ selector: 'app-odontograma', standalone: true, imports: [CommonModule, FormsModule, RouterLink], templateUrl: './odontograma.component.html', styleUrl: './odontograma.component.css' })
+@Component({ selector: 'app-odontograma', standalone: true, imports: [FormsModule, RouterLink], templateUrl: './odontograma.component.html', styleUrl: './odontograma.component.css' })
 export class OdontogramaComponent {
   private readonly api = inject(OdontiaApi);
   private readonly auth = inject(AuthService);

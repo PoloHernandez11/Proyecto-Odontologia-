@@ -1,69 +1,119 @@
-<div class="odontogram-page" *ngIf="paciente as p">
-  <main class="content">
-    <p class="breadcrumb"><a routerLink="/odontograma">Odontograma</a> / {{ p.firstName }} {{ p.lastName }}</p>
-    <section class="heading"><div><span class="eyebrow">REGISTRO DENTAL</span><h1>{{ p.firstName }} {{ p.lastName }}</h1><p>DNI {{ p.documentNumber }} · Odontograma FDI<ng-container *ngIf="ultimaModificacion"> · Última modificación: {{ ultimaModificacion }}</ng-container></p></div><a class="change-patient" routerLink="/odontograma">Cambiar de paciente</a></section>
-    <nav class="tabs"><a *ngIf="veHistoria" [routerLink]="['/historia-clinica', p.id]">Historia clínica</a><a class="selected" [routerLink]="['/odontograma', p.id]">Odontograma</a></nav>
-
-    <section class="chart-card">
-      <div class="chart-title"><div><h2>Odontograma</h2><p>Seleccioná una pieza dental (o una de sus caras) para consultar o modificar su estado.</p></div><span class="fdi">Sistema FDI</span></div>
-      <ng-container *ngFor="let fila of filas; let indice = index">
-        <div class="midline" *ngIf="indice === 1 || indice === 3"></div>
-        <div class="jaw-label">{{ fila.titulo }}</div>
-        <div class="teeth-row" [class.temporary-row]="fila.temporal" [style.grid-template-columns]="'repeat(' + fila.piezas.length + ', minmax(0, 1fr))'">
-          <button *ngFor="let numero of fila.piezas" type="button" class="tooth" [class.absent]="ausente(numero)" [class.selected]="piezaSeleccionada === numero"
+@if (paciente; as p) {
+  <div class="odontogram-page">
+    <main class="content">
+      <p class="breadcrumb"><a routerLink="/odontograma">Odontograma</a> / {{ p.firstName }} {{ p.lastName }}</p>
+      <section class="heading"><div><span class="eyebrow">REGISTRO DENTAL</span><h1>{{ p.firstName }} {{ p.lastName }}</h1><p>DNI {{ p.documentNumber }} · Odontograma FDI@if (ultimaModificacion) {
+      · Última modificación: {{ ultimaModificacion }}
+      }</p></div><a class="change-patient" routerLink="/odontograma">Cambiar de paciente</a></section>
+      <nav class="tabs">@if (veHistoria) {
+        <a [routerLink]="['/historia-clinica', p.id]">Historia clínica</a>
+        }<a class="selected" [routerLink]="['/odontograma', p.id]">Odontograma</a></nav>
+        <section class="chart-card">
+          <div class="chart-title"><div><h2>Odontograma</h2><p>Seleccioná una pieza dental (o una de sus caras) para consultar o modificar su estado.</p></div><span class="fdi">Sistema FDI</span></div>
+          @for (fila of filas; track fila; let indice = $index) {
+            @if (indice === 1 || indice === 3) {
+              <div class="midline"></div>
+            }
+            <div class="jaw-label">{{ fila.titulo }}</div>
+            <div class="teeth-row" [class.temporary-row]="fila.temporal" [style.grid-template-columns]="'repeat(' + fila.piezas.length + ', minmax(0, 1fr))'">
+              @for (numero of fila.piezas; track numero) {
+                <button type="button" class="tooth" [class.absent]="ausente(numero)" [class.selected]="piezaSeleccionada === numero"
                   [style.border-color]="hallazgoDePieza(numero) ? color(hallazgoDePieza(numero)!) : null" [attr.aria-label]="descripcion(numero)" [title]="descripcion(numero)" (click)="seleccionarPieza(numero)">
-            <svg class="tooth-diagram" viewBox="0 0 40 40" aria-hidden="true">
-              <polygon *ngFor="let zona of zonas" [attr.points]="zona.puntos" [attr.fill]="colorDeZona(numero, zona.zona)" (click)="seleccionarPieza(numero, zona.zona); $event.stopPropagation()"/>
-              <path d="M2 2H38V38H2Z M13 13H27V27H13Z" fill="none" stroke="#82949d" stroke-width="1"/>
-              <path *ngIf="ausente(numero)" d="M4 4L36 36M36 4L4 36" fill="none" stroke="#7a8b94" stroke-width="2"/>
-            </svg>
-            <small>{{ numero }}</small>
-            <i class="whole-mark" *ngIf="hallazgoDePieza(numero) as completo" [style.background]="color(completo)"></i>
-          </button>
-        </div>
-      </ng-container>
-      <div class="legend"><span><i style="background:#f8fbfc"></i>Sana</span><span *ngFor="let condicion of condiciones"><i [style.background]="condicion.color || '#f4a477'"></i>{{ condicion.name }}</span></div>
-    </section>
-
-    <p class="feedback" role="status" *ngIf="mensaje">{{ mensaje }}</p>
-    <p class="feedback error-feedback" role="alert" *ngIf="error">{{ error }}</p>
-
-    <section class="edit-card detail-card" *ngIf="piezaSeleccionada; else selectHint">
-      <div class="detail-title"><span class="eyebrow">PIEZA SELECCIONADA</span><h3>Pieza {{ piezaSeleccionada }}<small *ngIf="nombreDeLaPieza"> · {{ nombreDeLaPieza }}</small></h3></div>
-
-      <div class="detail-block">
-        <h4>Estado actual</h4>
-        <ul class="finding-list" *ngIf="hallazgosDeLaPieza.length; else sana">
-          <li *ngFor="let hallazgo of hallazgosDeLaPieza">
-            <i [style.background]="color(hallazgo)"></i>
-            <span><strong>{{ hallazgo.conditionName }}</strong> · {{ hallazgo.surface ? 'Cara ' + nombresDeCara[hallazgo.surface].toLowerCase() : 'Pieza completa' }}<em *ngIf="hallazgo.status === 'Planned'"> · Planificado</em>
-              <small>{{ fecha(hallazgo.recordedAtUtc) }} · {{ hallazgo.recordedBy }}<ng-container *ngIf="hallazgo.notes"> · {{ hallazgo.notes }}</ng-container></small></span>
-            <button type="button" class="remove" *ngIf="puedeEscribir" [disabled]="guardando" (click)="quitarHallazgo(hallazgo)">Quitar</button>
-          </li>
-        </ul>
-        <ng-template #sana><p class="hint-inline">Pieza sana: no tiene hallazgos registrados.</p></ng-template>
+                  <svg class="tooth-diagram" viewBox="0 0 40 40" aria-hidden="true">
+                    @for (zona of zonas; track zona) {
+                      <polygon [attr.points]="zona.puntos" [attr.fill]="colorDeZona(numero, zona.zona)" (click)="seleccionarPieza(numero, zona.zona); $event.stopPropagation()"/>
+                    }
+                    <path d="M2 2H38V38H2Z M13 13H27V27H13Z" fill="none" stroke="#82949d" stroke-width="1"/>
+                    @if (ausente(numero)) {
+                      <path d="M4 4L36 36M36 4L4 36" fill="none" stroke="#7a8b94" stroke-width="2"/>
+                    }
+                  </svg>
+                  <small>{{ numero }}</small>
+                  @if (hallazgoDePieza(numero); as completo) {
+                    <i class="whole-mark" [style.background]="color(completo)"></i>
+                  }
+                </button>
+              }
+            </div>
+          }
+          <div class="legend"><span><i style="background:#f8fbfc"></i>Sana</span>@for (condicion of condiciones; track condicion) {
+          <span><i [style.background]="condicion.color || '#f4a477'"></i>{{ condicion.name }}</span>
+        }</div>
+      </section>
+      @if (mensaje) {
+        <p class="feedback" role="status">{{ mensaje }}</p>
+      }
+      @if (error) {
+        <p class="feedback error-feedback" role="alert">{{ error }}</p>
+      }
+      @if (piezaSeleccionada) {
+        <section class="edit-card detail-card">
+          <div class="detail-title"><span class="eyebrow">PIEZA SELECCIONADA</span><h3>Pieza {{ piezaSeleccionada }}@if (nombreDeLaPieza) {
+          <small> · {{ nombreDeLaPieza }}</small>
+        }</h3></div>
+        <div class="detail-block">
+          <h4>Estado actual</h4>
+          @if (hallazgosDeLaPieza.length) {
+            <ul class="finding-list">
+              @for (hallazgo of hallazgosDeLaPieza; track hallazgo) {
+                <li>
+                  <i [style.background]="color(hallazgo)"></i>
+                  <span><strong>{{ hallazgo.conditionName }}</strong> · {{ hallazgo.surface ? 'Cara ' + nombresDeCara[hallazgo.surface].toLowerCase() : 'Pieza completa' }}@if (hallazgo.status === 'Planned') {
+                  <em> · Planificado</em>
+                }
+                <small>{{ fecha(hallazgo.recordedAtUtc) }} · {{ hallazgo.recordedBy }}@if (hallazgo.notes) {
+                  · {{ hallazgo.notes }}
+                }</small></span>
+                @if (puedeEscribir) {
+                  <button type="button" class="remove" [disabled]="guardando" (click)="quitarHallazgo(hallazgo)">Quitar</button>
+                }
+              </li>
+            }
+          </ul>
+        } @else {
+          <p class="hint-inline">Pieza sana: no tiene hallazgos registrados.</p>
+        }
       </div>
-
-      <div class="detail-block" *ngIf="puedeEscribir">
-        <h4>Registrar un hallazgo</h4>
-        <div class="finding-form">
-          <label>Ubicación<select [(ngModel)]="caraElegida" (ngModelChange)="ajustarCondicion()"><option [value]="piezaCompleta">Pieza completa</option><option *ngFor="let cara of carasDeLaPieza" [value]="cara">Cara {{ nombresDeCara[cara].toLowerCase() }}</option></select></label>
-          <label>Condición<select [(ngModel)]="condicionElegida"><option *ngFor="let condicion of condicionesAplicables" [value]="condicion.id">{{ condicion.name }}</option></select></label>
+      @if (puedeEscribir) {
+        <div class="detail-block">
+          <h4>Registrar un hallazgo</h4>
+          <div class="finding-form">
+            <label>Ubicación<select [(ngModel)]="caraElegida" (ngModelChange)="ajustarCondicion()"><option [value]="piezaCompleta">Pieza completa</option>@for (cara of carasDeLaPieza; track cara) {
+            <option [value]="cara">Cara {{ nombresDeCara[cara].toLowerCase() }}</option>
+          }</select></label>
+          <label>Condición<select [(ngModel)]="condicionElegida">@for (condicion of condicionesAplicables; track condicion) {
+            <option [value]="condicion.id">{{ condicion.name }}</option>
+          }</select></label>
           <label>Situación<select [(ngModel)]="estadoElegido"><option value="Existing">Existente</option><option value="Planned">Planificado</option></select></label>
           <label class="wide">Detalle (opcional)<input [(ngModel)]="notaDelHallazgo" maxlength="500" placeholder="Ej. Caries profunda"></label>
           <button class="save" type="button" [disabled]="guardando || !condicionElegida" (click)="agregarHallazgo()">{{ guardando ? 'Guardando…' : 'Registrar' }}</button>
         </div>
       </div>
-
-      <div class="detail-block">
-        <h4>Observaciones de la pieza</h4>
-        <ul class="note-list" *ngIf="notasDeLaPieza.length"><li *ngFor="let nota of notasDeLaPieza">{{ nota.text }}<small>{{ fecha(nota.writtenAtUtc) }} · {{ nota.professional }}</small></li></ul>
-        <p class="hint-inline" *ngIf="!notasDeLaPieza.length">Sin observaciones.</p>
-        <div class="note-form" *ngIf="puedeEscribir"><input aria-label="Nueva observación" [(ngModel)]="notaNueva" maxlength="1000" placeholder="Agregar una observación"><button class="save" type="button" [disabled]="guardando || !notaNueva.trim()" (click)="agregarNota()">Agregar</button></div>
-      </div>
-    </section>
-    <ng-template #selectHint><p class="hint">Elegí una pieza del odontograma para ver o editar su estado.</p></ng-template>
-  </main>
+    }
+    <div class="detail-block">
+      <h4>Observaciones de la pieza</h4>
+      @if (notasDeLaPieza.length) {
+        <ul class="note-list">@for (nota of notasDeLaPieza; track nota) {
+          <li>{{ nota.text }}<small>{{ fecha(nota.writtenAtUtc) }} · {{ nota.professional }}</small></li>
+        }</ul>
+      }
+      @if (!notasDeLaPieza.length) {
+        <p class="hint-inline">Sin observaciones.</p>
+      }
+      @if (puedeEscribir) {
+        <div class="note-form"><input aria-label="Nueva observación" [(ngModel)]="notaNueva" maxlength="1000" placeholder="Agregar una observación"><button class="save" type="button" [disabled]="guardando || !notaNueva.trim()" (click)="agregarNota()">Agregar</button></div>
+      }
+    </div>
+  </section>
+} @else {
+  <p class="hint">Elegí una pieza del odontograma para ver o editar su estado.</p>
+}
+</main>
 </div>
-<main class="not-found" *ngIf="cargando"><p>Cargando el odontograma…</p></main>
-<main class="not-found" *ngIf="noEncontrado"><h2>No pudimos abrir el odontograma</h2><p>{{ error }}</p><a routerLink="/odontograma">Elegir otro paciente</a></main>
+}
+@if (cargando) {
+  <main class="not-found"><p>Cargando el odontograma…</p></main>
+}
+@if (noEncontrado) {
+  <main class="not-found"><h2>No pudimos abrir el odontograma</h2><p>{{ error }}</p><a routerLink="/odontograma">Elegir otro paciente</a></main>
+}

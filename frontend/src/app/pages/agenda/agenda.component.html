@@ -8,101 +8,177 @@
       <strong class="date-title">{{ fechaTitulo }}</strong>
       <select class="professional-select" aria-label="Profesional" [(ngModel)]="profesionalSeleccionado" (ngModelChange)="cargar()">
         <option value="Todos">Todos los profesionales</option>
-        <option *ngFor="let profesional of profesionales" [value]="profesional.userId">{{ profesional.displayName }}</option>
+        @for (profesional of profesionales; track profesional) {
+          <option [value]="profesional.userId">{{ profesional.displayName }}</option>
+        }
       </select>
-      <button type="button" class="primary-button" *ngIf="puedeEscribir" (click)="abrirFormulario()">＋ Nuevo turno</button>
+      @if (puedeEscribir) {
+        <button type="button" class="primary-button" (click)="abrirFormulario()">＋ Nuevo turno</button>
+      }
     </section>
 
-    <p class="success-message" role="status" *ngIf="mensaje">{{ mensaje }}</p>
-    <p class="success-message error-message" role="alert" *ngIf="error">{{ error }}</p>
+    @if (mensaje) {
+      <p class="success-message" role="status">{{ mensaje }}</p>
+    }
+    @if (error) {
+      <p class="success-message error-message" role="alert">{{ error }}</p>
+    }
 
     <div class="agenda-content">
       <section class="calendar-panel">
-        <ng-container *ngIf="vista === 'dia'">
+        @if (vista === 'dia') {
           <div class="day-heading" [style.grid-template-columns]="'60px repeat(' + (columnas.length || 1) + ', minmax(0, 1fr))'">
             <span></span>
-            <div *ngFor="let profesional of columnas"><span class="avatar">{{ iniciales(profesional.displayName) }}</span><span><strong>{{ profesional.displayName }}</strong><small>{{ profesional.specialty || 'Odontología' }} · {{ turnosDe(profesional).length }} turnos</small></span></div>
-            <div *ngIf="columnas.length === 0"><span><strong>Sin profesionales</strong><small>Todavía no hay profesionales en el consultorio.</small></span></div>
+            @for (profesional of columnas; track profesional) {
+              <div><span class="avatar">{{ iniciales(profesional.displayName) }}</span><span><strong>{{ profesional.displayName }}</strong><small>{{ profesional.specialty || 'Odontología' }} · {{ turnosDe(profesional).length }} turnos</small></span></div>
+            }
+            @if (columnas.length === 0) {
+              <div><span><strong>Sin profesionales</strong><small>Todavía no hay profesionales en el consultorio.</small></span></div>
+            }
           </div>
           <div class="day-grid" [style.grid-template-columns]="'60px repeat(' + (columnas.length || 1) + ', minmax(0, 1fr))'" [style.height.px]="altoDelDia">
-            <div class="hours"><span *ngFor="let h of horas">{{ h < 10 ? '0' + h : h }}:00</span></div>
-            <div class="day-column" *ngFor="let profesional of columnas">
-              <div class="block" *ngFor="let bloqueo of bloqueosDe(profesional)" [ngStyle]="estilo(bloqueo)">{{ bloqueo.reason || 'Horario bloqueado' }}</div>
-              <button type="button" class="slot" *ngFor="let turno of turnosDe(profesional)" [ngStyle]="estilo(turno)" [ngClass]="clases[turno.status]" [class.selected-slot]="turnoSeleccionado?.id === turno.id" (click)="seleccionarTurno(turno)">
-                <strong>{{ hora(turno.startUtc) }} · {{ turno.patientName }}</strong><span>{{ turno.reason || 'Turno' }}<ng-container *ngIf="turno.isOverbooking"> · Sobreturno</ng-container></span>
-              </button>
+            <div class="hours">@for (h of horas; track h) {
+              <span>{{ h < 10 ? '0' + h : h }}:00</span>
+            }</div>
+            @for (profesional of columnas; track profesional) {
+              <div class="day-column">
+                @for (bloqueo of bloqueosDe(profesional); track bloqueo) {
+                  <div class="block" [ngStyle]="estilo(bloqueo)">{{ bloqueo.reason || 'Horario bloqueado' }}</div>
+                }
+                @for (turno of turnosDe(profesional); track turno) {
+                  <button type="button" class="slot" [ngStyle]="estilo(turno)" [ngClass]="clases[turno.status]" [class.selected-slot]="turnoSeleccionado?.id === turno.id" (click)="seleccionarTurno(turno)">
+                    <strong>{{ hora(turno.startUtc) }} · {{ turno.patientName }}</strong><span>{{ turno.reason || 'Turno' }}@if (turno.isOverbooking) {
+                    · Sobreturno
+                  }</span>
+                </button>
+              }
             </div>
-            <div class="day-column" *ngIf="columnas.length === 0"></div>
-            <div class="now-line" *ngIf="lineaDeAhora !== null" [style.top.px]="lineaDeAhora"></div>
-          </div>
-          <p class="empty" *ngIf="!cargando && turnosActivos.length === 0">No hay turnos agendados para este día.</p>
-        </ng-container>
+          }
+          @if (columnas.length === 0) {
+            <div class="day-column"></div>
+          }
+          @if (lineaDeAhora !== null) {
+            <div class="now-line" [style.top.px]="lineaDeAhora"></div>
+          }
+        </div>
+        @if (!cargando && turnosActivos.length === 0) {
+          <p class="empty">No hay turnos agendados para este día.</p>
+        }
+      }
 
-        <div class="alternate-view" *ngIf="vista !== 'dia'">
+      @if (vista !== 'dia') {
+        <div class="alternate-view">
           <div class="alternate-title">{{ vista === 'semana' ? 'Turnos de la semana' : 'Turnos del mes' }}</div>
-          <article class="list-appointment" *ngFor="let turno of turnosFiltrados" tabindex="0" (click)="seleccionarTurno(turno)" (keydown.enter)="seleccionarTurno(turno)">
-            <span class="date-chip">{{ fecha(turno.startUtc).slice(0, 5) }}</span>
-            <span><strong>{{ hora(turno.startUtc) }} · {{ turno.patientName }}</strong><small>{{ turno.reason || 'Turno' }} · {{ turno.professionalName }}</small></span>
-            <em class="status" [ngClass]="clases[turno.status]">{{ estados[turno.status] }}</em>
-          </article>
-          <p *ngIf="!cargando && turnosFiltrados.length === 0" class="empty">No hay turnos para los filtros seleccionados.</p>
+          @for (turno of turnosFiltrados; track turno) {
+            <article class="list-appointment" tabindex="0" (click)="seleccionarTurno(turno)" (keydown.enter)="seleccionarTurno(turno)">
+              <span class="date-chip">{{ fecha(turno.startUtc).slice(0, 5) }}</span>
+              <span><strong>{{ hora(turno.startUtc) }} · {{ turno.patientName }}</strong><small>{{ turno.reason || 'Turno' }} · {{ turno.professionalName }}</small></span>
+              <em class="status" [ngClass]="clases[turno.status]">{{ estados[turno.status] }}</em>
+            </article>
+          }
+          @if (!cargando && turnosFiltrados.length === 0) {
+            <p class="empty">No hay turnos para los filtros seleccionados.</p>
+          }
         </div>
-      </section>
-
-      <aside class="details-column">
-        <section class="side-panel selected-panel"><header><h2>Turno seleccionado</h2><span class="status" *ngIf="turnoSeleccionado as turno" [ngClass]="clases[turno.status]">{{ estados[turno.status] }}</span></header>
-          <div class="empty-selection" *ngIf="!turnoSeleccionado">Seleccioná un turno del calendario para ver sus detalles.</div>
-          <div class="selected-content" *ngIf="turnoSeleccionado as turno">
-            <div class="patient-heading"><span class="avatar large">{{ iniciales(turno.patientName) }}</span><span><strong>{{ turno.patientName }}</strong><small><a routerLink="/pacientes" [queryParams]="{ buscar: turno.patientName }">Ver ficha del paciente</a></small></span></div>
-            <p>◷ {{ fecha(turno.startUtc) }} · {{ hora(turno.startUtc) }} a {{ hora(turno.endUtc) }} ({{ turno.durationMinutes }} min)</p>
-            <p>▤ {{ turno.reason || 'Sin motivo indicado' }}</p>
-            <p>♙ {{ turno.professionalName }}<ng-container *ngIf="turno.gabineteName"> · {{ turno.gabineteName }}</ng-container></p>
-            <p *ngIf="turno.patientPhone">☎ {{ turno.patientPhone }}</p>
-            <div class="action-buttons" *ngIf="!cancelando">
-              <button type="button" *ngFor="let accion of accionesDisponibles" (click)="ejecutar(accion)">{{ accion.titulo }}</button>
-              <button type="button" class="cancel" *ngIf="puedeCancelar" (click)="cancelando = true">× Cancelar turno</button>
-              <button type="button" class="cancel neutral" *ngIf="vista !== 'dia'" (click)="verDia(turno)">Ver ese día</button>
-            </div>
-            <div class="cancel-form" *ngIf="cancelando">
-              <label>Motivo de la cancelación (opcional)<input type="text" maxlength="250" [(ngModel)]="motivoCancelacion" placeholder="Ej. El paciente avisó que no puede venir"></label>
-              <div class="action-buttons"><button type="button" class="cancel" (click)="confirmarCancelacion()">Confirmar cancelación</button><button type="button" class="cancel neutral" (click)="cancelando = false">Volver</button></div>
-            </div>
-          </div>
-        </section>
-        <section class="side-panel summary"><header><h2>{{ vista === 'dia' ? 'Resumen del día' : vista === 'semana' ? 'Resumen de la semana' : 'Resumen del mes' }}</h2></header>
-          <p>Turnos agendados <strong>{{ turnos.length - contar('Cancelled') }}</strong></p>
-          <p>Confirmados <strong>{{ contar('Confirmed') }}</strong></p>
-          <p>Pendientes de confirmar <strong>{{ contar('Pending') }}</strong></p>
-          <p>Atendidos <strong>{{ contar('Attended') }}</strong></p>
-          <p>Cancelados <strong>{{ contar('Cancelled') }}</strong></p>
-        </section>
-        <section class="side-panel"><header><h2>Estados del turno</h2></header><div class="status-list"><span class="status confirmado">● Confirmado</span><span class="status pendiente">● Pendiente</span><span class="status en-sala">● En sala / en atención</span><span class="status atendido">● Atendido</span><span class="status cancelado">● Cancelado / ausente</span></div></section>
-      </aside>
-    </div>
-  </main>
-
-  <div class="modal-backdrop" *ngIf="mostrarFormulario" (click)="cerrarFormulario()">
-    <section class="turn-modal" role="dialog" aria-modal="true" aria-labelledby="titulo-turno" (click)="$event.stopPropagation()"><header><div><h2 id="titulo-turno">Nuevo turno</h2><p>Completá los datos para agendar una cita</p></div><button type="button" class="close" aria-label="Cerrar" (click)="cerrarFormulario()">×</button></header>
-      <form [formGroup]="formularioTurno" (ngSubmit)="guardarTurno()">
-        <label>Paciente
-          <input type="search" autocomplete="off" placeholder="Buscar por nombre o DNI..." [ngModelOptions]="{ standalone: true }" [(ngModel)]="textoPaciente" (ngModelChange)="buscarPaciente()"/>
-        </label>
-        <ul class="patient-results" *ngIf="pacientesEncontrados.length">
-          <li *ngFor="let paciente of pacientesEncontrados"><button type="button" (click)="elegirPaciente(paciente)"><strong>{{ paciente.firstName }} {{ paciente.lastName }}</strong><small>DNI {{ paciente.documentNumber }}<ng-container *ngIf="paciente.phone"> · {{ paciente.phone }}</ng-container></small></button></li>
-        </ul>
-        <small class="chosen-patient" *ngIf="pacienteElegido">✓ {{ pacienteElegido.firstName }} {{ pacienteElegido.lastName }} · DNI {{ pacienteElegido.documentNumber }}</small>
-        <small class="hint" *ngIf="!pacienteElegido && textoPaciente.length >= 2 && pacientesEncontrados.length === 0">Si el paciente no aparece, registralo primero en <a routerLink="/pacientes">Pacientes</a>.</small>
-        <div class="form-row"><label>Fecha<input type="date" formControlName="fecha"/></label><label>Hora<input type="time" formControlName="hora"/></label></div>
-        <div class="form-row">
-          <label>Odontólogo<select formControlName="profesional" (change)="alCambiarProfesional()"><option *ngFor="let profesional of profesionales" [value]="profesional.userId">{{ profesional.displayName }}</option></select></label>
-          <label>Duración (minutos)<input type="number" min="5" max="480" step="5" formControlName="duracion"/></label>
-        </div>
-        <label *ngIf="gabinetes.length">Consultorio<select formControlName="gabinete"><option value="">Sin asignar</option><option *ngFor="let gabinete of gabinetes" [value]="gabinete.id">{{ gabinete.name }}</option></select></label>
-        <label>Motivo / tratamiento<input type="text" formControlName="motivo" placeholder="Ej. Control general"/></label>
-        <label class="check" *ngIf="puedeSobreturno"><input type="checkbox" formControlName="sobreturno"/> Es un sobreturno o urgencia (permite superponer horarios)</label>
-        <p class="error form-error" role="alert" *ngIf="errorFormulario">{{ errorFormulario }}</p>
-        <footer><button type="button" class="secondary-button" (click)="cerrarFormulario()">Cancelar</button><button type="submit" class="primary-button" [disabled]="guardando">{{ guardando ? 'Guardando…' : 'Guardar turno' }}</button></footer>
-      </form>
+      }
     </section>
-  </div>
+
+    <aside class="details-column">
+      <section class="side-panel selected-panel"><header><h2>Turno seleccionado</h2>@if (turnoSeleccionado; as turno) {
+      <span class="status" [ngClass]="clases[turno.status]">{{ estados[turno.status] }}</span>
+    }</header>
+    @if (!turnoSeleccionado) {
+      <div class="empty-selection">Seleccioná un turno del calendario para ver sus detalles.</div>
+    }
+    @if (turnoSeleccionado; as turno) {
+      <div class="selected-content">
+        <div class="patient-heading"><span class="avatar large">{{ iniciales(turno.patientName) }}</span><span><strong>{{ turno.patientName }}</strong><small><a routerLink="/pacientes" [queryParams]="{ buscar: turno.patientName }">Ver ficha del paciente</a></small></span></div>
+        <p>◷ {{ fecha(turno.startUtc) }} · {{ hora(turno.startUtc) }} a {{ hora(turno.endUtc) }} ({{ turno.durationMinutes }} min)</p>
+        <p>▤ {{ turno.reason || 'Sin motivo indicado' }}</p>
+        <p>♙ {{ turno.professionalName }}@if (turno.gabineteName) {
+          · {{ turno.gabineteName }}
+        }</p>
+        @if (turno.patientPhone) {
+          <p>☎ {{ turno.patientPhone }}</p>
+        }
+        @if (!cancelando) {
+          <div class="action-buttons">
+            @for (accion of accionesDisponibles; track accion) {
+              <button type="button" (click)="ejecutar(accion)">{{ accion.titulo }}</button>
+            }
+            @if (puedeCancelar) {
+              <button type="button" class="cancel" (click)="cancelando = true">× Cancelar turno</button>
+            }
+            @if (vista !== 'dia') {
+              <button type="button" class="cancel neutral" (click)="verDia(turno)">Ver ese día</button>
+            }
+          </div>
+        }
+        @if (cancelando) {
+          <div class="cancel-form">
+            <label>Motivo de la cancelación (opcional)<input type="text" maxlength="250" [(ngModel)]="motivoCancelacion" placeholder="Ej. El paciente avisó que no puede venir"></label>
+            <div class="action-buttons"><button type="button" class="cancel" (click)="confirmarCancelacion()">Confirmar cancelación</button><button type="button" class="cancel neutral" (click)="cancelando = false">Volver</button></div>
+          </div>
+        }
+      </div>
+    }
+  </section>
+  <section class="side-panel summary"><header><h2>{{ vista === 'dia' ? 'Resumen del día' : vista === 'semana' ? 'Resumen de la semana' : 'Resumen del mes' }}</h2></header>
+  <p>Turnos agendados <strong>{{ turnos.length - contar('Cancelled') }}</strong></p>
+  <p>Confirmados <strong>{{ contar('Confirmed') }}</strong></p>
+  <p>Pendientes de confirmar <strong>{{ contar('Pending') }}</strong></p>
+  <p>Atendidos <strong>{{ contar('Attended') }}</strong></p>
+  <p>Cancelados <strong>{{ contar('Cancelled') }}</strong></p>
+</section>
+<section class="side-panel"><header><h2>Estados del turno</h2></header><div class="status-list"><span class="status confirmado">● Confirmado</span><span class="status pendiente">● Pendiente</span><span class="status en-sala">● En sala / en atención</span><span class="status atendido">● Atendido</span><span class="status cancelado">● Cancelado / ausente</span></div></section>
+</aside>
+</div>
+</main>
+
+@if (mostrarFormulario) {
+  <div class="modal-backdrop" (click)="cerrarFormulario()">
+    <section class="turn-modal" role="dialog" aria-modal="true" aria-labelledby="titulo-turno" (click)="$event.stopPropagation()"><header><div><h2 id="titulo-turno">Nuevo turno</h2><p>Completá los datos para agendar una cita</p></div><button type="button" class="close" aria-label="Cerrar" (click)="cerrarFormulario()">×</button></header>
+    <form [formGroup]="formularioTurno" (ngSubmit)="guardarTurno()">
+      <label>Paciente
+        <input type="search" autocomplete="off" placeholder="Buscar por nombre o DNI..." [ngModelOptions]="{ standalone: true }" [(ngModel)]="textoPaciente" (ngModelChange)="buscarPaciente()"/>
+      </label>
+      @if (pacientesEncontrados.length) {
+        <ul class="patient-results">
+          @for (paciente of pacientesEncontrados; track paciente) {
+            <li><button type="button" (click)="elegirPaciente(paciente)"><strong>{{ paciente.firstName }} {{ paciente.lastName }}</strong><small>DNI {{ paciente.documentNumber }}@if (paciente.phone) {
+            · {{ paciente.phone }}
+          }</small></button></li>
+        }
+      </ul>
+    }
+    @if (pacienteElegido) {
+      <small class="chosen-patient">✓ {{ pacienteElegido.firstName }} {{ pacienteElegido.lastName }} · DNI {{ pacienteElegido.documentNumber }}</small>
+    }
+    @if (!pacienteElegido && textoPaciente.length >= 2 && pacientesEncontrados.length === 0) {
+      <small class="hint">Si el paciente no aparece, registralo primero en <a routerLink="/pacientes">Pacientes</a>.</small>
+    }
+    <div class="form-row"><label>Fecha<input type="date" formControlName="fecha"/></label><label>Hora<input type="time" formControlName="hora"/></label></div>
+    <div class="form-row">
+      <label>Odontólogo<select formControlName="profesional" (change)="alCambiarProfesional()">@for (profesional of profesionales; track profesional) {
+        <option [value]="profesional.userId">{{ profesional.displayName }}</option>
+      }</select></label>
+      <label>Duración (minutos)<input type="number" min="5" max="480" step="5" formControlName="duracion"/></label>
+    </div>
+    @if (gabinetes.length) {
+      <label>Consultorio<select formControlName="gabinete"><option value="">Sin asignar</option>@for (gabinete of gabinetes; track gabinete) {
+      <option [value]="gabinete.id">{{ gabinete.name }}</option>
+    }</select></label>
+  }
+  <label>Motivo / tratamiento<input type="text" formControlName="motivo" placeholder="Ej. Control general"/></label>
+  @if (puedeSobreturno) {
+    <label class="check"><input type="checkbox" formControlName="sobreturno"/> Es un sobreturno o urgencia (permite superponer horarios)</label>
+  }
+  @if (errorFormulario) {
+    <p class="error form-error" role="alert">{{ errorFormulario }}</p>
+  }
+  <footer><button type="button" class="secondary-button" (click)="cerrarFormulario()">Cancelar</button><button type="submit" class="primary-button" [disabled]="guardando">{{ guardando ? 'Guardando…' : 'Guardar turno' }}</button></footer>
+</form>
+</section>
+</div>
+}
 </div>
