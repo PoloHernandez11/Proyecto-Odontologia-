@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, inject } from '@angular/core';
+import { Component, inject, ChangeDetectionStrategy } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { OdontiaApi } from '../../api/odontia-api.service';
@@ -15,7 +15,8 @@ import { METODOS_DE_PAGO } from '../pagos/pagos.component';
 @Component({
   selector: 'app-finanzas', standalone: true,
   imports: [CommonModule, FormsModule, RouterLink],
-  templateUrl: './finanzas.component.html', styleUrl: './finanzas.component.css'
+  templateUrl: './finanzas.component.html', changeDetection: ChangeDetectionStrategy.Eager,
+ styleUrl: './finanzas.component.css'
 })
 export class FinanzasComponent {
   private readonly api = inject(OdontiaApi);

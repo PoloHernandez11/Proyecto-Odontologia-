@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, ChangeDetectionStrategy } from '@angular/core';
 import { RouterLink } from '@angular/router';
 
 @Component({
@@ -12,6 +12,7 @@ import { RouterLink } from '@angular/router';
       <a routerLink="/dashboard">Volver al inicio</a>
     </main>
   `,
+  changeDetection: ChangeDetectionStrategy.Eager,
   styles: [`
     .aviso { max-width: 520px; margin: 12vh auto 0; padding: 32px; border: 1px solid #dce4e7; border-radius: 14px; background: #fff; text-align: center; color: #26383e; }
     h1 { margin: 0 0 10px; font-size: 22px; }

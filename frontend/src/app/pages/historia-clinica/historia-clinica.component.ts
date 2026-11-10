@@ -1,5 +1,5 @@
 
-import { Component, inject } from '@angular/core';
+import { Component, inject, ChangeDetectionStrategy } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { OdontiaApi } from '../../api/odontia-api.service';
@@ -18,7 +18,8 @@ const ANTECEDENTES: [keyof ClinicalRecordDto['medicalHistory'], string][] = [
 @Component({
   selector: 'app-historia-clinica', standalone: true,
   imports: [ReactiveFormsModule, RouterLink],
-  templateUrl: './historia-clinica.component.html', styleUrl: './historia-clinica.component.css'
+  templateUrl: './historia-clinica.component.html', changeDetection: ChangeDetectionStrategy.Eager,
+ styleUrl: './historia-clinica.component.css'
 })
 export class HistoriaClinicaComponent {
   private readonly api = inject(OdontiaApi);

@@ -73,8 +73,8 @@
           }
           <div class="detail-section"><h4>DATOS DE CONTACTO</h4><p><span>Teléfono</span><strong>{{ paciente.phone || 'No informado' }}</strong></p><p><span>Correo</span><strong>{{ ficha?.email || 'No informado' }}</strong></p><p><span>Obra social</span><strong>{{ ficha?.healthInsuranceName || paciente.healthInsurance || 'Particular' }}</strong></p></div>
           <div class="detail-section"><h4>ACTIVIDAD</h4>
-          <p><span>Última visita</span><strong>{{ fecha(resumen?.lastVisitUtc, 'Sin visitas') }}</strong></p>
-          <p><span>Próximo turno</span><strong>{{ fechaYHora(resumen?.upcomingAppointments?.[0]?.startUtc, 'Sin turno') }}</strong></p>
+          <p><span>Última visita</span><strong>{{ fecha($safeNavigationMigration(resumen?.lastVisitUtc), 'Sin visitas') }}</strong></p>
+          <p><span>Próximo turno</span><strong>{{ fechaYHora($safeNavigationMigration(resumen?.upcomingAppointments?.[0]?.startUtc), 'Sin turno') }}</strong></p>
           @if (resumen && vePagos) {
             <p><span>Saldo pendiente</span><strong>{{ pesos(resumen.account.balance) }}</strong></p>
           }

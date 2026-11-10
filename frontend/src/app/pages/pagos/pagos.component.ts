@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, inject } from '@angular/core';
+import { Component, inject, ChangeDetectionStrategy } from '@angular/core';
 import { FormControl, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { switchMap } from 'rxjs';
@@ -23,7 +23,8 @@ const ESTADOS: Record<BudgetStatus, string> = {
 @Component({
   selector: 'app-pagos', standalone: true,
   imports: [CommonModule, FormsModule, ReactiveFormsModule, RouterLink],
-  templateUrl: './pagos.component.html', styleUrl: './pagos.component.css'
+  templateUrl: './pagos.component.html', changeDetection: ChangeDetectionStrategy.Eager,
+ styleUrl: './pagos.component.css'
 })
 export class PagosComponent {
   private readonly api = inject(OdontiaApi);

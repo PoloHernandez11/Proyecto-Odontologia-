@@ -1,4 +1,4 @@
-import { Component, OnDestroy, inject } from '@angular/core';
+import { Component, OnDestroy, inject, ChangeDetectionStrategy } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { Subject, Subscription, debounceTime, startWith, switchMap } from 'rxjs';
@@ -31,6 +31,7 @@ import { fechaCorta, iniciales, mensajeDeError } from '../../core/api';
       @if (total > pacientes.length) { <p class="more">Mostrando {{ pacientes.length }} de {{ total }} pacientes. Escribí para acotar la búsqueda.</p> }
     </main>
   `,
+  changeDetection: ChangeDetectionStrategy.Eager,
   styles: [`
     :host { display: block; color: #243746; }
     .picker { max-width: 860px; margin: 0 auto; padding: 36px 24px; }

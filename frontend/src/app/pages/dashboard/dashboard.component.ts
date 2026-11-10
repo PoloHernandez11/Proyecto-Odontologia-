@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, inject } from '@angular/core';
+import { Component, inject, ChangeDetectionStrategy } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { ESTADOS_DE_TURNO, OdontiaApi } from '../../api/odontia-api.service';
 import { AppointmentStatus, ClinicalDashboardDto, DashboardTaskDto, PaymentDto, ReceptionDashboardDto } from '../../api/schema';
@@ -18,6 +18,7 @@ const CLASE_DE_ESTADO: Record<AppointmentStatus, string> = {
   standalone: true,
   imports: [CommonModule, RouterLink],
   templateUrl: './dashboard.component.html',
+  changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './dashboard.component.css'
 })
 export class DashboardComponent {

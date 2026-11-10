@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, inject } from '@angular/core';
+import { Component, inject, ChangeDetectionStrategy } from '@angular/core';
 import { FormControl, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Observable, of, switchMap } from 'rxjs';
 import { OdontiaApi } from '../../api/odontia-api.service';
@@ -22,6 +22,7 @@ const NUEVO_LABORATORIO = '__nuevo__';
   standalone: true,
   imports: [CommonModule, FormsModule, ReactiveFormsModule],
   templateUrl: './laboratorio.component.html',
+  changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './laboratorio.component.css'
 })
 export class LaboratorioComponent {

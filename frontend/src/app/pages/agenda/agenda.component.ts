@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnDestroy, inject } from '@angular/core';
+import { Component, OnDestroy, inject, ChangeDetectionStrategy } from '@angular/core';
 import { FormControl, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { Subject, Subscription, debounceTime, of, switchMap } from 'rxjs';
@@ -31,6 +31,7 @@ const CLASE_DE_ESTADO: Record<AppointmentStatus, string> = {
   standalone: true,
   imports: [CommonModule, FormsModule, ReactiveFormsModule, RouterLink],
   templateUrl: './agenda.component.html',
+  changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './agenda.component.css'
 })
 export class AgendaComponent implements OnDestroy {

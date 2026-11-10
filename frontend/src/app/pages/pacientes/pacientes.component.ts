@@ -1,5 +1,5 @@
 
-import { Component, OnDestroy, inject } from '@angular/core';
+import { Component, OnDestroy, inject, ChangeDetectionStrategy } from '@angular/core';
 import { FormControl, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { Observable, Subject, Subscription, debounceTime, of, switchMap } from 'rxjs';
@@ -16,6 +16,7 @@ const NUEVA_OBRA_SOCIAL = '__nueva__';
   standalone: true,
   imports: [FormsModule, ReactiveFormsModule, RouterLink],
   templateUrl: './pacientes.component.html',
+  changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './pacientes.component.css'
 })
 export class PacientesComponent implements OnDestroy {

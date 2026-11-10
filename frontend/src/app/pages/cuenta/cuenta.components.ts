@@ -1,5 +1,5 @@
 
-import { Component, Input, inject } from '@angular/core';
+import { Component, Input, inject, ChangeDetectionStrategy } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { InvitationInfoDto } from '../../api/schema';
@@ -17,6 +17,7 @@ const obligatorio = (maximo: number) => new FormControl('', { nonNullable: true,
 /** Tarjeta común de las pantallas de cuenta: marca, título, contenido y mensajes. */
 @Component({
   selector: 'app-marco-cuenta', standalone: true, imports: [RouterLink],
+  changeDetection: ChangeDetectionStrategy.Eager,
   template: `
     <main class="od-auth">
       <section class="od-auth-card">
@@ -41,6 +42,7 @@ export class MarcoCuentaComponent {
 
 @Component({
   selector: 'app-confirmar-correo', standalone: true, imports: [ReactiveFormsModule, MarcoCuentaComponent],
+  changeDetection: ChangeDetectionStrategy.Eager,
   template: `<app-marco-cuenta titulo="Confirmar correo" [mensaje]="mensaje" [error]="error">
       @if (estado === 'verificando') {
         <p>Estamos confirmando tu correo electrónico…</p>
@@ -84,6 +86,7 @@ export class ConfirmarCorreoComponent {
 
 @Component({
   selector: 'app-restablecer-contrasena', standalone: true, imports: [ReactiveFormsModule, MarcoCuentaComponent],
+  changeDetection: ChangeDetectionStrategy.Eager,
   template: `<app-marco-cuenta titulo="Restablecer contraseña" [mensaje]="mensaje" [error]="error">
       @if (!listo) {
         <form class="od-form" [formGroup]="formulario" (ngSubmit)="guardar()">
@@ -128,6 +131,7 @@ export class RestablecerContrasenaComponent {
 
 @Component({
   selector: 'app-aceptar-invitacion', standalone: true, imports: [ReactiveFormsModule, MarcoCuentaComponent],
+  changeDetection: ChangeDetectionStrategy.Eager,
   template: `<app-marco-cuenta titulo="Aceptar invitación" [mensaje]="mensaje" [error]="error">
       @if (cargando) {
         <p>Buscando tu invitación…</p>
@@ -189,6 +193,7 @@ export class AceptarInvitacionComponent {
 
 @Component({
   selector: 'app-registro', standalone: true, imports: [ReactiveFormsModule, MarcoCuentaComponent],
+  changeDetection: ChangeDetectionStrategy.Eager,
   template: `<app-marco-cuenta titulo="Crear una cuenta" [mensaje]="mensaje" [error]="error">
       @if (!listo) {
         <form class="od-form" [formGroup]="formulario" (ngSubmit)="registrar()">

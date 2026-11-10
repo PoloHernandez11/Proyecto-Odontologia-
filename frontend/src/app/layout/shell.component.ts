@@ -1,4 +1,4 @@
-import { Component, computed, inject } from '@angular/core';
+import { Component, computed, inject, ChangeDetectionStrategy } from '@angular/core';
 import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { iniciales } from '../core/api';
 import { AuthService } from '../core/auth.service';
@@ -36,6 +36,7 @@ const MENU: GrupoMenu[] = [
   standalone: true,
   imports: [RouterOutlet, RouterLink, RouterLinkActive],
   templateUrl: './shell.component.html',
+  changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './shell.component.css'
 })
 export class ShellComponent {

@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, inject } from '@angular/core';
+import { Component, inject, ChangeDetectionStrategy } from '@angular/core';
 import { FormControl, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { AccionTurno, ESTADOS_DE_TURNO, OdontiaApi } from '../../api/odontia-api.service';
@@ -20,6 +20,7 @@ type Filtro = 'abiertas' | 'mias' | 'completadas';
   standalone: true,
   imports: [CommonModule, FormsModule, ReactiveFormsModule, RouterLink],
   templateUrl: './tareas.component.html',
+  changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './tareas.component.css'
 })
 export class TareasComponent {

@@ -1,5 +1,5 @@
 
-import { Component, inject } from '@angular/core';
+import { Component, inject, ChangeDetectionStrategy } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import { OdontiaApi } from '../../api/odontia-api.service';
@@ -25,6 +25,7 @@ const NOTIFICACIONES: { clave: keyof NotificationSettingsDto; titulo: string; de
   selector: 'app-configuracion', standalone: true,
   imports: [ReactiveFormsModule],
   templateUrl: './configuracion.component.html',
+  changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './configuracion.component.css'
 })
 export class ConfiguracionComponent {
