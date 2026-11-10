@@ -1,0 +1,53 @@
+:host { display: block; }
+
+.shell { min-height: 100vh; display: flex; background: #f3f5f6; }
+.shell-content { flex: 1; min-width: 0; }
+
+.sidebar { position: sticky; top: 0; width: 264px; flex: 0 0 264px; height: 100vh; padding: 27px 17px 16px; display: flex; flex-direction: column; background: #fff; border-right: 1px solid #dce4e7; overflow-y: auto; }
+.brand { display: flex; align-items: center; gap: 11px; padding: 0 9px; color: #26383e; text-decoration: none; }
+.brand-icon { width: 39px; height: 39px; flex: 0 0 39px; display: grid; place-items: center; border-radius: 11px; background: #105c6c; }
+.brand-icon svg { width: 23px; height: 23px; fill: none; stroke: #fff; stroke-width: 1.6; stroke-linejoin: round; }
+.brand strong, .brand small, .user-information strong, .user-information small { display: block; }
+.brand strong { font-size: 18px; line-height: 21px; }
+.brand small { color: #7d8f96; font-size: 12px; margin-top: 2px; }
+
+.main-navigation { margin-top: 37px; }
+.navigation-heading { margin: 22px 12px 10px; color: #7d8f96; font-size: 11px; font-weight: 700; letter-spacing: .06em; }
+.navigation-heading:first-child { margin-top: 0; }
+.navigation-link { min-height: 43px; display: flex; align-items: center; gap: 13px; padding: 0 12px; margin: 3px 0; border-radius: 9px; color: #5c7078; text-decoration: none; font-size: 14px; font-weight: 550; }
+.navigation-link:hover, .navigation-link.active { color: #105c6c; background: #eaf3f5; }
+.navigation-link:focus-visible, .logout-button:focus-visible, .brand:focus-visible { outline: 2px solid #105c6c; outline-offset: 2px; }
+.nav-icon { width: 21px; height: 21px; flex: 0 0 21px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+
+.user-card { display: flex; align-items: center; gap: 10px; margin-top: auto; padding: 11px 10px; border: 1px solid #dce5e8; border-radius: 12px; background: #fbfcfc; min-width: 0; }
+.main-navigation + .user-card { margin-top: 24px; }
+.sidebar > .user-card { margin-top: auto; }
+.user-avatar { display: grid; flex: 0 0 auto; place-items: center; width: 39px; height: 39px; border-radius: 50%; background: #d6eaee; color: #105c6c; font-size: 12px; font-weight: 700; }
+.user-information { min-width: 0; flex: 1; }
+.user-information strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; color: #26383e; }
+.user-information small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #7d8f96; font-size: 11px; margin-top: 3px; }
+.logout-button { display: grid; place-items: center; width: 34px; height: 34px; flex: 0 0 34px; padding: 0; border: 0; border-radius: 8px; background: transparent; color: #5c7078; cursor: pointer; }
+.logout-button:hover { background: #eaf3f5; color: #105c6c; }
+.logout-button svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+
+@media (max-width: 1200px) {
+  .sidebar { width: 230px; flex-basis: 230px; }
+}
+
+/* Tablet: sólo íconos. */
+@media (max-width: 900px) {
+  .sidebar { width: 76px; flex-basis: 76px; padding: 22px 10px 12px; }
+  .brand { justify-content: center; padding: 0; }
+  .brand-text, .navigation-heading, .navigation-link span, .user-information, .user-avatar { display: none; }
+  .navigation-link { justify-content: center; padding: 0; }
+  .user-card { justify-content: center; padding: 6px 3px; border: 0; background: transparent; }
+}
+
+/* Teléfono: barra superior con todas las opciones desplazables. */
+@media (max-width: 640px) {
+  .shell { display: block; }
+  .sidebar { position: static; width: 100%; height: auto; padding: 10px 12px; flex-direction: row; align-items: center; gap: 8px; border-right: 0; border-bottom: 1px solid #dce4e7; overflow: visible; }
+  .main-navigation { display: flex; flex: 1; min-width: 0; gap: 4px; margin: 0; overflow-x: auto; }
+  .navigation-link { width: 42px; min-width: 42px; height: 42px; min-height: 42px; margin: 0; }
+  .sidebar > .user-card { margin: 0; padding: 0; }
+}

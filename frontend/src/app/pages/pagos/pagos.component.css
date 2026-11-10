@@ -1,0 +1,4 @@
+:host { display: block; }
+.search-bar { padding: 0 0 16px; border: 0; }
+.inline-select { height: 36px; border: 1px solid #d4dfe1; border-radius: 7px; padding: 0 10px; font: inherit; font-size: 13px; background: #fff; color: #30454d; }
+.od-feedback a { color: inherit; font-weight: bold; }

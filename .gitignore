@@ -15,8 +15,11 @@ keys/
 # Secretos
 .env
 appsettings.*.local.json
-# evitar artchivos para subir a git
+
+# Frontend (Angular)
 node_modules/
 dist/
-build/
-.env
+.angular/
+
+# Credenciales locales de las cuentas de demostración (tools/seed-dev.js)
+tools/.seed-dev.json

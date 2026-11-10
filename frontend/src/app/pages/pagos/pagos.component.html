@@ -1,0 +1,117 @@
+<main class="od-page">
+  <header class="od-topbar">
+    <div><h1>Pagos de pacientes</h1><p>Registro y consulta de los cobros a pacientes · importes en pesos argentinos (ARS)</p></div>
+    <div class="od-actions">
+      <button type="button" class="od-button secondary" *ngIf="puedeCrearConcepto" (click)="abrirConcepto()">＋ Nuevo concepto</button>
+      <button type="button" class="od-button" *ngIf="puedeCobrar" [disabled]="cobrables.length === 0" (click)="abrirCobro()">＋ Registrar cobro</button>
+    </div>
+  </header>
+
+  <div class="od-content">
+    <p class="od-feedback" *ngIf="pacienteId">Mostrando sólo la cuenta de <strong>{{ nombreDelPaciente || 'un paciente' }}</strong>. <a routerLink="/pagos" (click)="pacienteId = null; cargar()">Ver todos los pacientes</a></p>
+    <p class="od-feedback" role="status" *ngIf="mensaje">{{ mensaje }}</p>
+    <p class="od-feedback error" role="alert" *ngIf="error">{{ error }}</p>
+
+    <section class="od-stats" aria-label="Resumen de cobros">
+      <article class="od-stat"><span>Cobrado hoy</span><strong>{{ pesos(cobradoHoy) }}</strong><small>Operaciones registradas hoy</small></article>
+      <article class="od-stat success"><span>Cobrado acumulado</span><strong>{{ pesos(totalCobrado) }}</strong><small>Pagos no anulados</small></article>
+      <article class="od-stat warning"><span>Saldo pendiente</span><strong>{{ pesos(saldoPendiente) }}</strong><small>Importe todavía no cobrado</small></article>
+      <article class="od-stat"><span>Pacientes con saldo</span><strong>{{ pacientesConSaldo }}</strong><small>Con conceptos pendientes</small></article>
+    </section>
+
+    <div class="od-filters search-bar"><input type="search" aria-label="Buscar" placeholder="Buscar por paciente, concepto, recibo o comprobante…" [(ngModel)]="busqueda"></div>
+
+    <section class="od-panel">
+      <div class="od-panel-heading">
+        <div><h2>Conceptos y saldos</h2><small>Cada concepto es un presupuesto aprobado. El saldo lo calcula el sistema restando los cobros al total.</small></div>
+        <select aria-label="Filtrar por estado" class="inline-select" [(ngModel)]="filtroEstado"><option>Todos</option><option>Pendiente</option><option>Pago parcial</option><option>Pagado</option><option>Borrador</option><option>Emitido</option></select>
+      </div>
+      <div class="od-table-scroll">
+        <table class="od-table">
+          <thead><tr><th>PACIENTE / CONCEPTO</th><th>FECHA</th><th class="num">TOTAL</th><th class="num">ABONADO</th><th class="num">SALDO</th><th>ESTADO</th><th>ACCIÓN</th></tr></thead>
+          <tbody>
+            <tr *ngFor="let presupuesto of presupuestosFiltrados">
+              <td><strong>{{ presupuesto.patientName }}</strong><small>{{ descripcion(presupuesto) }} · N.º {{ presupuesto.number }}</small></td>
+              <td>{{ fecha(presupuesto.issueDate) }}</td>
+              <td class="num">{{ pesos(presupuesto.total) }}</td><td class="num">{{ pesos(presupuesto.paid) }}</td><td class="num"><strong>{{ pesos(presupuesto.outstanding) }}</strong></td>
+              <td><span class="od-chip" [ngClass]="situacion(presupuesto).clase">{{ situacion(presupuesto).titulo }}</span></td>
+              <td>
+                <button type="button" class="od-button small" *ngIf="puedeCobrar && presupuesto.status === 'Approved' && presupuesto.outstanding > 0" (click)="abrirCobro(presupuesto)">Cobrar</button>
+                <button type="button" class="od-button small secondary" *ngIf="puedeAprobar && (presupuesto.status === 'Draft' || presupuesto.status === 'Issued')" (click)="aprobar(presupuesto)">Aprobar</button>
+                <span class="od-note" *ngIf="presupuesto.status === 'Approved' && presupuesto.outstanding <= 0">Completo</span>
+              </td>
+            </tr>
+            <tr *ngIf="!cargando && presupuestosFiltrados.length === 0"><td colspan="7" class="empty">{{ presupuestos.length === 0 ? 'Todavía no hay conceptos de cobro registrados.' : 'No hay conceptos con esos filtros.' }}</td></tr>
+            <tr *ngIf="cargando"><td colspan="7" class="empty">Cargando…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="od-panel">
+      <div class="od-panel-heading">
+        <div><h2>Pagos registrados</h2><small>{{ pagosFiltrados.length }} movimientos</small></div>
+        <select aria-label="Filtrar por método" class="inline-select" [(ngModel)]="filtroMetodo"><option value="Todos">Método: todos</option><option *ngFor="let metodo of listaDeMetodos" [value]="metodo[0]">{{ metodo[1] }}</option></select>
+      </div>
+      <div class="od-table-scroll">
+        <table class="od-table">
+          <thead><tr><th>FECHA</th><th>PACIENTE</th><th>RECIBO</th><th>MÉTODO</th><th class="num">IMPORTE</th><th>ESTADO</th><th *ngIf="puedeAnular">ACCIÓN</th></tr></thead>
+          <tbody>
+            <tr *ngFor="let pago of pagosFiltrados">
+              <td>{{ fecha(pago.paidAtUtc) }}</td>
+              <td><strong>{{ pago.patientName }}</strong><small *ngIf="pago.budgetNumber">Presupuesto N.º {{ pago.budgetNumber }}</small></td>
+              <td>N.º {{ pago.receiptNumber }}<small *ngIf="pago.reference">{{ pago.reference }}</small></td>
+              <td>{{ metodos[pago.method] }}<small>Recibió: {{ pago.receivedBy }}</small></td>
+              <td class="num"><strong>{{ pesos(pago.amount) }}</strong></td>
+              <td><span class="od-chip" [ngClass]="pago.status === 'Voided' ? 'bad' : 'ok'">{{ pago.status === 'Voided' ? 'Anulado' : 'Registrado' }}</span><small *ngIf="pago.voidReason">{{ pago.voidReason }}</small></td>
+              <td *ngIf="puedeAnular"><button type="button" class="od-button small danger" *ngIf="pago.status === 'Registered'" (click)="pedirAnulacion(pago)">Anular</button></td>
+            </tr>
+            <tr *ngIf="pagosFiltrados.length === 0"><td [attr.colspan]="puedeAnular ? 7 : 6" class="empty">Todavía no hay pagos registrados.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+</main>
+
+<div class="od-backdrop" *ngIf="mostrarConcepto" (click)="mostrarConcepto = false">
+  <section class="od-modal" role="dialog" aria-modal="true" aria-labelledby="titulo-concepto" (click)="$event.stopPropagation()">
+    <header><div><h2 id="titulo-concepto">Nuevo concepto de cobro</h2><p>Se registra como un presupuesto aprobado, listo para cobrar.</p></div><button type="button" class="od-close" aria-label="Cerrar" (click)="mostrarConcepto = false">×</button></header>
+    <form class="od-form" [formGroup]="formularioConcepto" (ngSubmit)="guardarConcepto()">
+      <label>Paciente<select formControlName="pacienteId"><option value="">Seleccionar paciente</option><option *ngFor="let paciente of pacientes" [value]="paciente.id">{{ paciente.lastName }}, {{ paciente.firstName }} · DNI {{ paciente.documentNumber }}</option></select><small *ngIf="formularioConcepto.controls.pacienteId.touched && formularioConcepto.controls.pacienteId.invalid">Seleccioná un paciente.</small></label>
+      <label>Concepto<input type="text" formControlName="descripcion" placeholder="Ej. Endodoncia pieza 36"><small *ngIf="formularioConcepto.controls.descripcion.touched && formularioConcepto.controls.descripcion.invalid">Describí el concepto (mínimo 3 caracteres).</small></label>
+      <label>Importe total ($)<input type="number" min="1" step="0.01" formControlName="importe" placeholder="0"><small *ngIf="formularioConcepto.controls.importe.touched && formularioConcepto.controls.importe.invalid">Ingresá un importe mayor a cero.</small></label>
+      <p class="od-feedback error" role="alert" *ngIf="errorFormulario">{{ errorFormulario }}</p>
+      <footer><button type="button" class="od-button secondary" (click)="mostrarConcepto = false">Cancelar</button><button type="submit" class="od-button" [disabled]="guardando">{{ guardando ? 'Guardando…' : 'Registrar concepto' }}</button></footer>
+    </form>
+  </section>
+</div>
+
+<div class="od-backdrop" *ngIf="mostrarCobro" (click)="mostrarCobro = false">
+  <section class="od-modal" role="dialog" aria-modal="true" aria-labelledby="titulo-cobro" (click)="$event.stopPropagation()">
+    <header><div><h2 id="titulo-cobro">Registrar cobro</h2><p>El pago se imputa al concepto elegido y actualiza su saldo.</p></div><button type="button" class="od-close" aria-label="Cerrar" (click)="mostrarCobro = false">×</button></header>
+    <form class="od-form" [formGroup]="formularioCobro" (ngSubmit)="registrarPago()">
+      <label>Concepto a cobrar<select formControlName="presupuestoId" (change)="alElegirPresupuesto()"><option value="">Seleccionar concepto</option><option *ngFor="let presupuesto of cobrables" [value]="presupuesto.id">{{ presupuesto.patientName }} · {{ descripcion(presupuesto) }} · saldo {{ pesos(presupuesto.outstanding) }}</option></select><small *ngIf="formularioCobro.controls.presupuestoId.touched && formularioCobro.controls.presupuestoId.invalid">Seleccioná el concepto.</small></label>
+      <div class="od-form-row">
+        <label>Importe ($)<input type="number" min="0.01" step="0.01" formControlName="importe"><small *ngIf="formularioCobro.controls.importe.touched && formularioCobro.controls.importe.invalid">Ingresá un importe mayor a cero.</small></label>
+        <label>Método de pago<select formControlName="metodo"><option *ngFor="let metodo of listaDeMetodos" [value]="metodo[0]">{{ metodo[1] }}</option></select></label>
+      </div>
+      <p class="od-note" *ngIf="presupuestoElegido as elegido">Saldo pendiente del concepto: <strong>{{ pesos(elegido.outstanding) }}</strong></p>
+      <label>N.º de comprobante (opcional)<input type="text" formControlName="comprobante" placeholder="Ej. número de transferencia"></label>
+      <label>Observaciones (opcional)<textarea rows="2" formControlName="observaciones"></textarea></label>
+      <p class="od-feedback error" role="alert" *ngIf="errorFormulario">{{ errorFormulario }}</p>
+      <footer><button type="button" class="od-button secondary" (click)="mostrarCobro = false">Cancelar</button><button type="submit" class="od-button" [disabled]="guardando">{{ guardando ? 'Guardando…' : 'Registrar cobro' }}</button></footer>
+    </form>
+  </section>
+</div>
+
+<div class="od-backdrop" *ngIf="pagoPorAnular as pago" (click)="pagoPorAnular = null">
+  <section class="od-modal" role="dialog" aria-modal="true" aria-labelledby="titulo-anular" (click)="$event.stopPropagation()">
+    <header><div><h2 id="titulo-anular">Anular el recibo N.º {{ pago.receiptNumber }}</h2><p>{{ pago.patientName }} · {{ pesos(pago.amount) }}. El pago queda en el historial como anulado y el saldo vuelve a estar pendiente.</p></div><button type="button" class="od-close" aria-label="Cerrar" (click)="pagoPorAnular = null">×</button></header>
+    <div class="od-form">
+      <label>Motivo de la anulación<input type="text" maxlength="500" [(ngModel)]="motivoAnulacion" placeholder="Ej. Importe cargado por error"></label>
+      <p class="od-feedback error" role="alert" *ngIf="errorFormulario">{{ errorFormulario }}</p>
+      <footer><button type="button" class="od-button secondary" (click)="pagoPorAnular = null">Volver</button><button type="button" class="od-button danger" [disabled]="guardando" (click)="anular()">Anular pago</button></footer>
+    </div>
+  </section>
+</div>

@@ -1,0 +1,32 @@
+:host { display: block; }
+.settings { display: grid; grid-template-columns: 270px minmax(0, 1fr); gap: 20px; align-items: start; max-width: 1100px; }
+.summary { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 24px 16px 14px; background: #fff; border: 1px solid #e0e7e9; border-radius: 12px; text-align: center; }
+.avatar { display: grid; place-items: center; width: 68px; height: 68px; border-radius: 50%; background: #d6eaee; color: #105c6c; font-size: 22px; font-weight: 700; }
+.summary strong { font-size: 16px; margin-top: 6px; }
+.summary small { color: #6f8188; font-size: 12px; word-break: break-word; }
+.chips { display: flex; flex-wrap: wrap; justify-content: center; gap: 5px; margin-top: 6px; }
+.sections { display: flex; flex-direction: column; gap: 3px; width: 100%; margin-top: 16px; padding-top: 12px; border-top: 1px solid #edf1f2; }
+.sections button { border: 0; background: transparent; text-align: left; padding: 10px 12px; border-radius: 8px; font: inherit; font-size: 13px; color: #526770; cursor: pointer; }
+.sections button:hover, .sections button.selected { background: #eaf4f5; color: #075b6b; font-weight: bold; }
+.sections button:focus-visible, .switch:focus-visible { outline: 2px solid #0b6070; outline-offset: 2px; }
+.detail { margin: 0; }
+.detail h2 { margin: 0 0 4px; font-size: 18px; }
+.loading { padding: 22px 20px; margin: 0; }
+.od-form footer { justify-content: flex-start; }
+.block { margin-top: 26px; padding-top: 20px; border-top: 1px solid #edf1f2; }
+.requirements { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 4px 14px; font-size: 12px; color: #6f8188; }
+.requirements li.ok { color: #1c6a44; font-weight: bold; }
+.switches { list-style: none; margin: 14px 0 0; padding: 0; }
+.switches li { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 13px 0; border-top: 1px solid #edf1f2; }
+.switches strong, .switches small { display: block; }
+.switches strong { font-size: 14px; }
+.switches small { color: #6f8188; font-size: 12px; margin-top: 3px; }
+.switch { position: relative; width: 44px; height: 24px; flex: 0 0 44px; border: 0; border-radius: 20px; background: #c5d1d5; cursor: pointer; transition: background .15s; }
+.switch i { position: absolute; top: 3px; left: 3px; width: 18px; height: 18px; border-radius: 50%; background: #fff; transition: left .15s; }
+.switch.on { background: #0b6070; }
+.switch.on i { left: 23px; }
+@media (max-width: 800px) {
+  .settings { grid-template-columns: 1fr; }
+  .sections { flex-direction: row; flex-wrap: wrap; }
+}
+@media (prefers-reduced-motion: reduce) { .switch, .switch i { transition: none; } }

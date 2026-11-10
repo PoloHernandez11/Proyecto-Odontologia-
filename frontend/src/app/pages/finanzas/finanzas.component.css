@@ -1,0 +1,10 @@
+:host { display: block; }
+.period { display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: bold; color: #40565e; }
+.period input { height: 38px; border: 1px solid #d4dfe1; border-radius: 7px; padding: 0 10px; font: inherit; font-weight: normal; }
+.method { display: grid; grid-template-columns: 170px minmax(60px, 1fr) 120px 48px; align-items: center; gap: 12px; padding: 7px 0; font-size: 13px; }
+.method strong { text-align: right; font-variant-numeric: tabular-nums; }
+.method small { color: #6f8188; text-align: right; }
+.bar { height: 10px; border-radius: 6px; background: #edf2f3; overflow: hidden; }
+.bar i { display: block; height: 100%; border-radius: 6px; background: #0b6070; }
+.od-panel-heading a { color: #0b6070; }
+@media (max-width: 600px) { .method { grid-template-columns: 1fr auto; } .bar { grid-column: 1 / -1; order: 3; } .method small { display: none; } }

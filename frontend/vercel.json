@@ -1,0 +1,16 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": null,
+  "installCommand": "npm ci",
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist/frontend/browser",
+  "routes": [
+    {
+      "src": "/api/(.*)",
+      "dest": "${ODONTIA_API_URL}/api/$1",
+      "env": ["ODONTIA_API_URL"]
+    },
+    { "handle": "filesystem" },
+    { "src": "/(.*)", "dest": "/index.html" }
+  ]
+}

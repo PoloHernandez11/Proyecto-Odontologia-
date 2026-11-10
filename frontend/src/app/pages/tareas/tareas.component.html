@@ -1,0 +1,85 @@
+<main class="tasks-page">
+  <header class="topbar"><div><h1>Turnos y tareas</h1><p>Turnos que necesitan seguimiento y pendientes internos del consultorio</p></div></header>
+
+  <div class="content">
+    <p class="feedback" role="status" *ngIf="mensaje">{{ mensaje }}</p>
+    <p class="feedback error" role="alert" *ngIf="error">{{ error }}</p>
+
+    <div class="columns">
+      <section class="panel" *ngIf="veTareas">
+        <header class="panel-heading">
+          <div><h2>Tareas</h2><small>{{ cargandoTareas ? 'Cargando…' : tareas.length + (tareas.length === 1 ? ' tarea' : ' tareas') }}</small></div>
+          <button type="button" class="primary-button" *ngIf="puedeEscribirTareas" (click)="nuevaTarea()">＋ Nueva tarea</button>
+        </header>
+        <div class="tabs" role="tablist">
+          <button type="button" role="tab" [attr.aria-selected]="filtro === 'abiertas'" [class.selected]="filtro === 'abiertas'" (click)="cambiarFiltro('abiertas')">Abiertas</button>
+          <button type="button" role="tab" [attr.aria-selected]="filtro === 'mias'" [class.selected]="filtro === 'mias'" (click)="cambiarFiltro('mias')">Asignadas a mí</button>
+          <button type="button" role="tab" [attr.aria-selected]="filtro === 'completadas'" [class.selected]="filtro === 'completadas'" (click)="cambiarFiltro('completadas')">Completadas</button>
+        </div>
+        <ul class="task-list">
+          <li *ngFor="let tarea of tareas" [class.done]="tarea.status === 'Completed'">
+            <button type="button" class="check" *ngIf="puedeEscribirTareas" [attr.aria-label]="tarea.status === 'Completed' ? 'Reabrir tarea' : 'Marcar como completada'"
+                    (click)="cambiarEstado(tarea, tarea.status === 'Completed' ? 'Pending' : 'Completed')">{{ tarea.status === 'Completed' ? '✓' : '' }}</button>
+            <div class="task-body">
+              <strong>{{ tarea.title }}</strong>
+              <p *ngIf="tarea.description">{{ tarea.description }}</p>
+              <small>
+                <span class="chip" [ngClass]="'priority-' + tarea.priority">{{ prioridades[tarea.priority] }}</span>
+                <span class="chip">{{ categorias[tarea.category] }}</span>
+                <span class="chip in-progress" *ngIf="tarea.status === 'InProgress'">En curso</span>
+                <span [class.overdue]="tarea.isOverdue">{{ tarea.isOverdue ? 'Vencida · ' : 'Vence: ' }}{{ fecha(tarea.dueAtUtc) }}</span>
+                <span *ngIf="tarea.assignedToName"> · {{ tarea.assignedToName }}</span>
+                <span *ngIf="tarea.patientName"> · Paciente: {{ tarea.patientName }}</span>
+              </small>
+            </div>
+            <div class="task-actions" *ngIf="puedeEscribirTareas && tarea.status !== 'Completed'">
+              <button type="button" *ngIf="tarea.status === 'Pending'" (click)="cambiarEstado(tarea, 'InProgress')">Empezar</button>
+              <button type="button" (click)="editarTarea(tarea)">Editar</button>
+            </div>
+          </li>
+          <li class="empty" *ngIf="!cargandoTareas && tareas.length === 0">{{ filtro === 'completadas' ? 'Todavía no hay tareas completadas.' : 'No hay tareas pendientes. ¡Todo al día!' }}</li>
+        </ul>
+      </section>
+
+      <section class="panel" *ngIf="veTurnos">
+        <header class="panel-heading">
+          <div><h2>Turnos por confirmar</h2><small>Próximos 7 días · {{ cargandoTurnos ? 'cargando…' : turnos.length + ' pendientes' }}</small></div>
+          <a class="link-button" routerLink="/agenda">Ir a la agenda</a>
+        </header>
+        <ul class="task-list">
+          <li *ngFor="let turno of turnos">
+            <div class="task-body">
+              <strong>{{ turno.patientName }}</strong>
+              <p>{{ turno.reason || 'Turno' }} · {{ turno.professionalName }}</p>
+              <small><span class="chip">{{ cuando(turno.startUtc) }}</span><span *ngIf="turno.patientPhone"> ☎ {{ turno.patientPhone }}</span></small>
+            </div>
+            <div class="task-actions" *ngIf="puedeEscribirTurnos">
+              <button type="button" class="strong" (click)="accionTurno(turno, 'confirm')">Confirmar</button>
+            </div>
+          </li>
+          <li class="empty" *ngIf="!cargandoTurnos && turnos.length === 0">No hay turnos pendientes de confirmación esta semana.</li>
+        </ul>
+      </section>
+    </div>
+  </div>
+</main>
+
+<div class="modal-backdrop" *ngIf="mostrarFormulario" (click)="mostrarFormulario = false">
+  <section class="modal" role="dialog" aria-modal="true" aria-labelledby="titulo-tarea" (click)="$event.stopPropagation()">
+    <header><h2 id="titulo-tarea">{{ tareaEnEdicion ? 'Editar tarea' : 'Nueva tarea' }}</h2><button type="button" class="close" aria-label="Cerrar" (click)="mostrarFormulario = false">×</button></header>
+    <form [formGroup]="formulario" (ngSubmit)="guardarTarea()">
+      <label>Título<input type="text" formControlName="titulo" placeholder="Ej. Llamar a un paciente por su presupuesto"><small *ngIf="formulario.controls.titulo.touched && formulario.controls.titulo.invalid">Escribí un título de al menos 3 caracteres.</small></label>
+      <label>Detalle (opcional)<textarea rows="3" formControlName="descripcion"></textarea></label>
+      <div class="form-row">
+        <label>Prioridad<select formControlName="prioridad"><option *ngFor="let prioridad of listaDePrioridades" [value]="prioridad[0]">{{ prioridad[1] }}</option></select></label>
+        <label>Categoría<select formControlName="categoria"><option *ngFor="let categoria of listaDeCategorias" [value]="categoria[0]">{{ categoria[1] }}</option></select></label>
+      </div>
+      <div class="form-row">
+        <label>Vence el<input type="date" formControlName="vence"></label>
+        <label>Asignada a<select formControlName="asignada"><option value="">Sin asignar</option><option *ngFor="let miembro of miembros" [value]="miembro.userId">{{ miembro.displayName }}</option></select></label>
+      </div>
+      <p class="feedback error" role="alert" *ngIf="errorFormulario">{{ errorFormulario }}</p>
+      <footer><button type="button" class="secondary-button" (click)="mostrarFormulario = false">Cancelar</button><button type="submit" class="primary-button" [disabled]="guardando">{{ guardando ? 'Guardando…' : 'Guardar tarea' }}</button></footer>
+    </form>
+  </section>
+</div>

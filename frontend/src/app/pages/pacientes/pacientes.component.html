@@ -1,0 +1,101 @@
+<div class="patients-layout">
+  <main class="main-content">
+    <header class="topbar">
+      <div><h1>Pacientes</h1><p>Administrá la información de tus pacientes</p></div>
+    </header>
+
+    <section class="page-content">
+      <div class="page-heading">
+        <div><h2>Directorio de pacientes</h2><p>{{ totalPacientes }} pacientes · Información de contacto y cobertura</p></div>
+        <button class="primary-button" type="button" *ngIf="puedeEditar" (click)="abrirNuevoPaciente()">＋ Nuevo paciente</button>
+      </div>
+
+      <div class="filters-panel">
+        <label class="search-field"><span aria-hidden="true">⌕</span><input type="search" aria-label="Buscar paciente" placeholder="Buscar por nombre, DNI o teléfono..." [(ngModel)]="busqueda" (ngModelChange)="buscar()"></label>
+        <select aria-label="Filtrar por obra social" [(ngModel)]="obraSocialSeleccionada" (ngModelChange)="buscar()">
+          <option value="Todas">Obra social: todas</option>
+          <option value="Particular">Particular</option>
+          <option *ngFor="let obra of obrasSociales" [value]="obra.id">{{ obra.name }}</option>
+        </select>
+        <select aria-label="Filtrar por estado" [(ngModel)]="estadoSeleccionado" (ngModelChange)="buscar()">
+          <option value="Todos">Estado: todos</option>
+          <option value="New">Nuevo</option><option value="Active">Activo</option><option value="InTreatment">En tratamiento</option><option value="Inactive">Inactivo</option>
+        </select>
+      </div>
+
+      <p class="feedback" role="status" *ngIf="mensaje">{{ mensaje }}</p>
+      <p class="feedback error-feedback" role="alert" *ngIf="error">{{ error }}</p>
+
+      <div class="content-grid">
+        <section class="list-panel">
+          <div class="list-heading"><h3>Listado de pacientes</h3><span>{{ cargando ? 'Cargando…' : pacientes.length + ' resultados' }}</span></div>
+          <div class="table-scroll">
+            <table>
+              <thead><tr><th>PACIENTE</th><th>DNI</th><th>TELÉFONO</th><th>OBRA SOCIAL</th><th>ÚLTIMA VISITA</th><th>PRÓXIMO TURNO</th><th>ESTADO</th></tr></thead>
+              <tbody>
+                <tr *ngFor="let paciente of pacientes" tabindex="0" (click)="seleccionarPaciente(paciente)" (keydown.enter)="seleccionarPaciente(paciente)" [class.selected-row]="pacienteSeleccionado?.id === paciente.id">
+                  <td><div class="patient-cell"><span class="avatar">{{ iniciales(paciente) }}</span><strong>{{ paciente.firstName }} {{ paciente.lastName }}</strong></div></td>
+                  <td>{{ paciente.documentNumber }}</td><td>{{ paciente.phone || '—' }}</td><td>{{ paciente.healthInsurance || 'Particular' }}</td>
+                  <td>{{ fecha(paciente.lastVisitUtc, 'Sin visitas') }}</td><td>{{ fechaYHora(paciente.nextAppointmentUtc, 'Sin turno') }}</td>
+                  <td><span class="status" [class.inactive]="paciente.status === 'Inactive'">{{ estados[paciente.status] }}</span></td>
+                </tr>
+                <tr *ngIf="!cargando && pacientes.length === 0"><td colspan="7" class="empty">{{ totalPacientes === 0 && !busqueda ? 'Todavía no hay pacientes registrados.' : 'No se encontraron pacientes con esos filtros.' }}</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <aside class="detail-panel" *ngIf="pacienteSeleccionado as paciente">
+          <header class="detail-heading"><h3>Ficha del paciente</h3><span class="status" [class.inactive]="(ficha?.status ?? paciente.status) === 'Inactive'">{{ estados[ficha?.status ?? paciente.status] }}</span></header>
+          <div class="patient-profile"><span class="avatar big">{{ iniciales(paciente) }}</span><h2>{{ paciente.firstName }} {{ paciente.lastName }}</h2><p>DNI {{ paciente.documentNumber }}<ng-container *ngIf="ficha?.age"> · {{ ficha?.age }} años</ng-container></p></div>
+          <div class="detail-section alert-section" *ngIf="ficha?.alerts?.length">
+            <h4>ALERTAS</h4>
+            <p *ngFor="let alerta of ficha?.alerts"><strong>⚠ {{ alerta.title }}</strong></p>
+          </div>
+          <div class="detail-section"><h4>DATOS DE CONTACTO</h4><p><span>Teléfono</span><strong>{{ paciente.phone || 'No informado' }}</strong></p><p><span>Correo</span><strong>{{ ficha?.email || 'No informado' }}</strong></p><p><span>Obra social</span><strong>{{ ficha?.healthInsuranceName || paciente.healthInsurance || 'Particular' }}</strong></p></div>
+          <div class="detail-section"><h4>ACTIVIDAD</h4>
+            <p><span>Última visita</span><strong>{{ fecha(resumen?.lastVisitUtc, 'Sin visitas') }}</strong></p>
+            <p><span>Próximo turno</span><strong>{{ fechaYHora(resumen?.upcomingAppointments?.[0]?.startUtc, 'Sin turno') }}</strong></p>
+            <p *ngIf="resumen && vePagos"><span>Saldo pendiente</span><strong>{{ pesos(resumen.account.balance) }}</strong></p>
+          </div>
+          <div class="detail-section history-section"><h4>HISTORIAL DE TURNOS</h4>
+            <div class="history-item" *ngFor="let turno of historial"><span class="history-date">{{ fecha(turno.startUtc, '') }}</span><span><strong>{{ turno.reason || 'Turno' }}</strong><small>{{ hora(turno.startUtc) }} · {{ turno.professionalName }}</small></span><em>{{ estadoDeTurno(turno) }}</em></div>
+            <p class="no-history" *ngIf="historial.length === 0">Todavía no hay turnos registrados para este paciente.</p>
+          </div>
+          <div class="clinical-actions">
+            <a *ngIf="veHistoriaClinica" [routerLink]="['/historia-clinica', paciente.id]">Historia clínica</a>
+            <a *ngIf="veOdontograma" [routerLink]="['/odontograma', paciente.id]">Odontograma</a>
+            <a *ngIf="vePagos" routerLink="/pagos" [queryParams]="{ paciente: paciente.id }">Pagos y cuenta corriente</a>
+            <a routerLink="/agenda" [queryParams]="{ nuevo: 1, paciente: paciente.id }">Agendar turno</a>
+          </div>
+          <ng-container *ngIf="puedeEditar && ficha">
+            <button class="edit-button" type="button" (click)="editarPaciente()">✎ Editar datos del paciente</button>
+            <button class="edit-button subtle-button" type="button" (click)="cambiarEstado()">{{ ficha.status === 'Inactive' ? 'Reactivar paciente' : 'Marcar como inactivo' }}</button>
+          </ng-container>
+        </aside>
+        <aside class="detail-panel empty-detail" *ngIf="!pacienteSeleccionado"><p>Seleccioná un paciente para consultar su ficha.</p></aside>
+      </div>
+    </section>
+  </main>
+</div>
+
+<div class="modal-backdrop" *ngIf="mostrarFormulario" (click)="cerrarFormulario()">
+  <section class="patient-modal" role="dialog" aria-modal="true" aria-labelledby="modal-title" (click)="$event.stopPropagation()">
+    <header><div><h2 id="modal-title">{{ modoEdicion ? 'Editar paciente' : 'Nuevo paciente' }}</h2><p>Completá los datos personales y de contacto.</p></div><button type="button" class="close-button" (click)="cerrarFormulario()" aria-label="Cerrar">×</button></header>
+    <form [formGroup]="formularioPaciente" (ngSubmit)="guardarPaciente()">
+      <div class="form-row"><label>Nombre<input type="text" formControlName="nombre" placeholder="Ej. Martín"><small *ngIf="formularioPaciente.controls.nombre.touched && formularioPaciente.controls.nombre.invalid">Ingresá al menos 2 caracteres.</small></label><label>Apellido<input type="text" formControlName="apellido" placeholder="Ej. Rodríguez"><small *ngIf="formularioPaciente.controls.apellido.touched && formularioPaciente.controls.apellido.invalid">Ingresá al menos 2 caracteres.</small></label></div>
+      <div class="form-row"><label>DNI<input type="text" formControlName="dni" inputmode="numeric" placeholder="Sin puntos ni espacios"><small *ngIf="formularioPaciente.controls.dni.touched && formularioPaciente.controls.dni.invalid">Ingresá un DNI válido.</small></label><label>Teléfono<input type="tel" formControlName="telefono" placeholder="11 5555-0000"><small *ngIf="formularioPaciente.controls.telefono.touched && formularioPaciente.controls.telefono.invalid">Ingresá un teléfono válido.</small></label></div>
+      <label>Correo electrónico<input type="email" formControlName="email" placeholder="paciente@email.com"><small *ngIf="formularioPaciente.controls.email.touched && formularioPaciente.controls.email.invalid">Revisá el formato del correo.</small></label>
+      <label>Obra social
+        <select formControlName="obraSocial">
+          <option value="">Particular</option>
+          <option *ngFor="let obra of obrasSociales" [value]="obra.id">{{ obra.name }}</option>
+          <option *ngIf="puedeCrearObraSocial" [value]="nuevaObraSocial">＋ Agregar una obra social nueva…</option>
+        </select>
+      </label>
+      <label *ngIf="formularioPaciente.controls.obraSocial.value === nuevaObraSocial">Nombre de la obra social nueva<input type="text" formControlName="obraSocialNueva" placeholder="Ej. OSDE"></label>
+      <p class="form-error" role="alert" *ngIf="errorFormulario">{{ errorFormulario }}</p>
+      <footer><button type="button" class="secondary-button" (click)="cerrarFormulario()">Cancelar</button><button type="submit" class="primary-button" [disabled]="guardando">{{ guardando ? 'Guardando…' : modoEdicion ? 'Guardar cambios' : 'Registrar paciente' }}</button></footer>
+    </form>
+  </section>
+</div>
