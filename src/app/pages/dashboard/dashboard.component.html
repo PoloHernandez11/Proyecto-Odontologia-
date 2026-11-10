@@ -1,0 +1,159 @@
+<div class="dashboard-layout">
+  <aside class="sidebar">
+    <a class="brand" routerLink="/dashboard">
+      <span class="brand-icon" aria-hidden="true">✦</span>
+      <span><strong>Odontia</strong><small>Gestión odontológica</small></span>
+    </a>
+
+    <nav class="main-navigation" aria-label="Navegación principal">
+      <p class="navigation-heading">PRINCIPAL</p>
+      <a class="navigation-link active" routerLink="/dashboard"><span class="nav-icon">⌂</span>Inicio</a>
+      <a class="navigation-link" routerLink="/agenda" [queryParams]="{ perfil: perfil }"><span class="nav-icon">▦</span>Agenda <span class="nav-count">12</span></a>
+      <a class="navigation-link" routerLink="/turnos-tareas" [queryParams]="{ perfil: perfil }"><span class="nav-icon">☑</span>Turnos y tareas <span class="nav-count">5</span></a>
+      <a class="navigation-link" routerLink="/pacientes" [queryParams]="{ perfil: perfil }"><span class="nav-icon">♧</span>Pacientes</a>
+
+      <p class="navigation-heading">CLÍNICA</p>
+      <a class="navigation-link" [routerLink]="['/pacientes', pacienteId, 'historia']" [queryParams]="{ perfil: perfil }"><span class="nav-icon">▤</span>Historia clínica</a>
+      <a class="navigation-link" [routerLink]="['/pacientes', pacienteId, 'odontograma']" [queryParams]="{ perfil: perfil }"><span class="nav-icon">♧</span>Odontograma</a>
+      <a class="navigation-link" routerLink="/laboratorio"><span class="nav-icon">⚗</span>Laboratorio dental <span class="nav-count">3</span></a>
+
+      <p class="navigation-heading">GESTIÓN</p>
+      <a class="navigation-link" routerLink="/pagos"><span class="nav-icon">▣</span>Pagos de pacientes</a>
+      <a class="navigation-link" routerLink="/finanzas"><span class="nav-icon">▥</span>Finanzas</a>
+
+      <p class="navigation-heading">CUENTA</p>
+      <a class="navigation-link" routerLink="/configuracion" [queryParams]="{ perfil: perfil }"><span class="nav-icon">☷</span>Perfil y configuración</a>
+    </nav>
+
+    <div class="user-card">
+      <span class="user-avatar">{{ perfil === 'odontologo' ? 'LM' : 'CS' }}</span>
+      <span class="user-information"><strong>{{ nombreUsuario }}</strong><small>{{ perfil === 'odontologo' ? 'Odontóloga · M.P. 12345' : 'Secretaria · Recepción' }}</small></span>
+      <a routerLink="/login" class="logout-link" aria-label="Cerrar sesión" title="Cerrar sesión">↪</a>
+    </div>
+  </aside>
+
+  <main class="main-content">
+    <header class="topbar">
+      <div>
+        <h1>Buenos días, {{ nombreUsuario }}</h1>
+        <p>{{ fechaHoyTexto }} · {{ perfil === 'odontologo' ? 'Tienes 9 pacientes agendados' : 'Vista compartida de recepción' }}</p>
+      </div>
+      <div class="topbar-actions">
+        <label class="search-box">
+          <span aria-hidden="true">⌕</span>
+          <input type="search" placeholder="Buscar paciente, DNI o teléfono..." (input)="buscarPaciente($event)">
+        </label>
+        <button class="notification-button" type="button" aria-label="Notificaciones" (click)="alternarNotificaciones()">♧<i></i></button><div class="notification-popover" *ngIf="mostrarNotificaciones"><strong>Notificaciones</strong><p>Tenés 2 pacientes en sala de espera.</p><p>Hay 3 trabajos de laboratorio en seguimiento.</p><button type="button" (click)="mostrarNotificaciones = false">Cerrar</button></div>
+      </div>
+    </header>
+
+    <section class="dashboard-content">
+      <section class="metrics-grid" aria-label="Resumen del día">
+        <article class="metric-card">
+          <div class="metric-heading"><span>{{ perfil === 'odontologo' ? 'Pacientes de hoy' : 'Turnos de hoy' }}</span><span class="metric-icon">▦</span></div>
+          <strong class="metric-value">{{ perfil === 'odontologo' ? '9' : '18' }}</strong>
+          <p>{{ perfil === 'odontologo' ? '2 atendidos · 7 restantes' : '6 confirmados · 3 por confirmar' }}</p>
+        </article>
+        <article class="metric-card">
+          <div class="metric-heading"><span>{{ perfil === 'odontologo' ? 'Próximo turno' : 'En sala de espera' }}</span><span class="metric-icon">◷</span></div>
+          <strong class="metric-value">{{ perfil === 'odontologo' ? '10:30' : '2' }}</strong>
+          <p>{{ perfil === 'odontologo' ? 'Jorge Castro · Prueba de corona' : 'Tiempo medio de espera: 8 min' }}</p>
+        </article>
+        <article class="metric-card">
+          <div class="metric-heading"><span>{{ perfil === 'odontologo' ? 'Tratamientos en curso' : 'Confirmaciones pendientes' }}</span><span class="metric-icon">⌕</span></div>
+          <strong class="metric-value">{{ perfil === 'odontologo' ? '14' : '5' }}</strong>
+          <p>{{ perfil === 'odontologo' ? '3 requieren seguimiento' : 'Enviar recordatorio por WhatsApp' }}</p>
+        </article>
+        <article class="metric-card">
+          <div class="metric-heading"><span>{{ perfil === 'odontologo' ? 'Trabajos en laboratorio' : 'Tareas abiertas' }}</span><span class="metric-icon">☑</span></div>
+          <strong class="metric-value">{{ perfil === 'odontologo' ? '3' : '7' }}</strong>
+          <p>{{ perfil === 'odontologo' ? '1 listo para retirar' : '2 vencen hoy' }}</p>
+        </article>
+      </section>
+
+      <div class="dashboard-columns">
+        <section class="panel appointments-panel" id="agenda" *ngIf="perfil === 'secretaria'">
+          <header class="panel-header">
+            <h2>Agenda de hoy</h2>
+            <a class="primary-button" routerLink="/agenda" [queryParams]="{ perfil: perfil, nuevo: 1 }">＋ Nuevo turno</a>
+          </header>
+          <div class="table-scroll">
+            <table>
+              <thead><tr><th>HORA</th><th>PACIENTE</th><th>PROFESIONAL</th><th>ESTADO</th><th></th></tr></thead>
+              <tbody>
+                <tr *ngFor="let turno of turnosFiltrados">
+                  <td class="appointment-time">{{ turno.hora }}</td>
+                  <td><div class="patient-cell"><span class="patient-avatar">{{ turno.iniciales }}</span><span><strong>{{ turno.paciente }}</strong><small>{{ turno.detalle }}</small></span></div></td>
+                  <td class="professional-cell">{{ turno.profesional }}</td>
+                  <td><span class="status" [ngClass]="turno.estado.toLowerCase().replace(' ', '-')">{{ turno.estado }}</span></td>
+                  <td class="more-cell">⋮</td>
+                </tr>
+                <tr *ngIf="turnosFiltrados.length === 0"><td colspan="5" class="empty-message">No se encontraron turnos.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="doctor-main" *ngIf="perfil === 'odontologo'">
+          <section class="current-patient">
+            <div class="current-avatar">MR</div>
+            <div class="current-patient-info">
+              <span>EN SALA · CONSULTORIO 1</span>
+              <h2>Martín Rodríguez, 42 años</h2>
+              <p>Endodoncia pieza 36 · 2ª sesión · Última visita: 05/10/2026</p>
+              <strong class="allergy-label">⚠ Alergia a penicilina</strong>
+            </div>
+            <div class="current-actions"><button type="button">✓ Iniciar consulta</button><a [routerLink]="['/pacientes', pacienteId, 'odontograma']" [queryParams]="{ perfil: perfil }">♧ Abrir odontograma</a></div>
+          </section>
+          <section class="panel doctor-appointments">
+            <header class="panel-header"><h2>Mis turnos de hoy</h2><a routerLink="/agenda" [queryParams]="{ perfil: perfil }">▦ Ver agenda</a></header>
+            <div class="doctor-appointment-row" *ngFor="let turno of turnosOdontologo">
+              <time>{{ turno.hora }}</time><span class="doctor-appointment-info"><strong>{{ turno.paciente }}</strong><small>{{ turno.detalle }}</small></span><span class="status" [ngClass]="turno.estado.toLowerCase().replace(' ', '-')">{{ turno.estado }}</span><button type="button" class="record-button">▤ Ficha</button>
+            </div>
+          </section>
+        </section>
+
+        <div class="right-column">
+          <section class="panel waiting-panel" *ngIf="perfil === 'secretaria'">
+            <header class="panel-header"><h2>Sala de espera</h2><span class="small-counter">● 2 pacientes</span></header>
+            <div class="waiting-list">
+              <div class="waiting-person" *ngFor="let paciente of pacientesEnEspera">
+                <span class="patient-avatar">{{ paciente.iniciales }}</span>
+                <span class="waiting-information"><strong>{{ paciente.nombre }}</strong><small>{{ paciente.profesional }}</small></span>
+                <span class="arrival-time">{{ paciente.llegada }}</span>
+              </div>
+            </div>
+          </section>
+
+          <section class="panel tasks-panel" id="tareas" *ngIf="perfil === 'secretaria'">
+            <header class="panel-header"><h2>Tareas pendientes</h2><a routerLink="/turnos-tareas" [queryParams]="{ perfil: perfil }">Ver todas</a></header>
+            <div class="task-list">
+              <label class="task-item" *ngFor="let tarea of tareas" [class.completed]="tarea.completada">
+                <input type="checkbox" [checked]="tarea.completada" (change)="completarTarea(tarea)">
+                <span class="task-description">{{ tarea.descripcion }}</span>
+                <span class="task-date" [class.later]="tarea.fecha !== 'Hoy'">{{ tarea.fecha }}</span>
+              </label>
+            </div>
+          </section>
+
+          <section class="panel doctor-alerts" *ngIf="perfil === 'odontologo'">
+            <header class="panel-header"><h2>Alertas clínicas</h2></header>
+            <div class="clinical-alert" *ngFor="let alerta of alertasClinicas"><span class="alert-icon" [ngClass]="alerta.tipo">!</span><span><strong>{{ alerta.paciente }}</strong><small>{{ alerta.detalle }}</small></span></div>
+          </section>
+          <section class="panel doctor-finances" id="finanzas" *ngIf="perfil === 'odontologo'">
+            <header class="panel-header"><span><h2>Finanzas del mes</h2><small>Resumen de movimientos</small></span><a routerLink="/finanzas">▥ Ver</a></header>
+            <div class="finance-line"><span>Ingresos registrados</span><strong>$ 3.105.000</strong></div>
+            <div class="finance-line"><span>Egresos registrados</span><strong>$ 1.842.300</strong></div>
+            <div class="finance-progress"><span></span></div>
+            <div class="finance-balance"><span>Balance neto</span><strong>$ 1.262.700</strong></div>
+            <p class="finance-note">Ingresos − egresos registrados. No incluye $ 1.320.500 pendientes de cobro.</p>
+          </section>
+          <section class="panel laboratory-panel" id="laboratorio" *ngIf="perfil === 'secretaria'">
+            <header class="panel-header"><h2>Laboratorio · próximas entregas</h2></header>
+            <div class="laboratory-item"><span class="lab-icon">⚗</span><span><strong>Jorge Castro</strong><small>Corona de zirconio · 21</small></span><span class="arrival-time">Hoy</span></div>
+          </section>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>

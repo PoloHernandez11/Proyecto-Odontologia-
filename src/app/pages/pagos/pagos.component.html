@@ -1,0 +1,78 @@
+<div class="payments-layout">
+  <aside class="sidebar">
+    <a class="brand" routerLink="/dashboard"><span class="brand-mark">✚</span><span><strong>Odontia</strong><small>Gestión odontológica</small></span></a>
+    <nav>
+      <span class="nav-title">PRINCIPAL</span><a routerLink="/dashboard">⌂ &nbsp;Inicio</a><a routerLink="/agenda">▦ &nbsp;Agenda</a><a routerLink="/pacientes">♙ &nbsp;Pacientes</a>
+      <span class="nav-title">CLÍNICA</span><a routerLink="/pacientes">▤ &nbsp;Historia clínica</a><a routerLink="/pacientes">◫ &nbsp;Odontograma</a><a routerLink="/laboratorio">⚒ &nbsp;Laboratorio dental</a>
+      <span class="nav-title">GESTIÓN</span><a class="active" routerLink="/pagos">▣ &nbsp;Pagos de pacientes</a>
+    </nav>
+    <div class="user-box"><span class="user-avatar">CS</span><span><strong>Carla Suárez</strong><small>Secretaria · Recepción</small></span></div>
+  </aside>
+
+  <main class="main-content">
+    <header class="topbar"><div><h1>Pagos de pacientes</h1><p>Registro y consulta de los cobros a pacientes</p></div><button class="primary-button" (click)="abrirFormulario()">＋ Registrar pago</button></header>
+    <section class="page-content">
+      <div class="intro"><div><h2>Cobros y cuenta corriente</h2><p>Consultá los conceptos, los pagos recibidos y los saldos pendientes.</p></div><span class="currency-tag">Importes en pesos argentinos · ARS</span></div>
+      <div class="stats-grid">
+        <article class="stat-card"><span>Cobrado hoy</span><strong>{{ formatoPesos(cobradoHoy) }}</strong><small>Operaciones registradas hoy</small></article>
+        <article class="stat-card"><span>Cobrado acumulado</span><strong>{{ formatoPesos(totalCobrado) }}</strong><small>Pagos no anulados</small></article>
+        <article class="stat-card warning"><span>Saldo pendiente</span><strong>{{ formatoPesos(saldoPendiente) }}</strong><small>Importe todavía no cobrado</small></article>
+        <article class="stat-card"><span>Pacientes con saldo</span><strong>{{ pacientesConSaldo }}</strong><small>Con conceptos pendientes</small></article>
+      </div>
+      <p class="feedback success-message" *ngIf="mensaje">{{ mensaje }}</p>
+      <section class="panel patients-payment-panel">
+        <div class="panel-heading"><div><h3>Cuenta corriente de pacientes</h3><small>Todos los pacientes registrados, tengan o no conceptos de cobro.</small></div></div>
+        <div class="patient-payment-grid">
+          <article class="patient-payment-card" *ngFor="let paciente of pacientes">
+            <div><strong>{{ paciente.nombre }} {{ paciente.apellido }}</strong><small>DNI {{ paciente.dni }}</small></div>
+            <span class="patient-balance" [class.has-debt]="saldoPaciente(paciente.id) > 0">{{ saldoPaciente(paciente.id) > 0 ? formatoPesos(saldoPaciente(paciente.id)) : 'Sin saldo pendiente' }}</span>
+            <small>{{ conceptosDePaciente(paciente.id).length }} concepto(s) registrado(s)</small>
+            <button type="button" class="small-action" (click)="abrirConcepto(paciente.id)">＋ Nuevo concepto</button>
+          </article>
+        </div>
+      </section>
+      <section class="panel">
+        <div class="panel-heading"><div><h3>Conceptos y saldos</h3><small>El saldo se calcula restando los cobros al importe total.</small></div><button class="outline-button" (click)="abrirFormulario()">Registrar cobro</button></div>
+        <div class="filters"><label class="search"><span>⌕</span><input type="search" [(ngModel)]="busquedaConceptos" [ngModelOptions]="{standalone:true}" placeholder="Buscar paciente o tratamiento…" /></label><select [(ngModel)]="filtroEstado" [ngModelOptions]="{standalone:true}"><option>Todos</option><option>Pendiente</option><option>Pago parcial</option><option>Pagado</option></select></div>
+        <div class="table-scroll"><table><thead><tr><th>PACIENTE / CONCEPTO</th><th>FECHA</th><th>IMPORTE TOTAL</th><th>ABONADO</th><th>SALDO</th><th>ESTADO</th><th>ACCIÓN</th></tr></thead><tbody>
+          <tr *ngFor="let concepto of conceptosFiltrados"><td><strong>{{ concepto.pacienteNombre }}</strong><small class="subline">{{ concepto.descripcion }}</small></td><td>{{ fechaLegible(concepto.fecha) }}</td><td>{{ formatoPesos(concepto.importeTotal) }}</td><td>{{ formatoPesos(pagado(concepto)) }}<div class="progress"><span [style.width.%]="porcentaje(concepto)"></span></div></td><td><strong>{{ formatoPesos(saldo(concepto)) }}</strong></td><td><span class="status" [ngClass]="claseEstado(concepto.estado)">{{ concepto.estado }}</span></td><td><button class="small-action" *ngIf="saldo(concepto) > 0" (click)="abrirFormulario(concepto.id)">Cobrar</button><span *ngIf="saldo(concepto) === 0" class="paid-label">Completo</span></td></tr>
+          <tr *ngIf="conceptosFiltrados.length === 0"><td colspan="7" class="empty">No hay conceptos que coincidan con la búsqueda.</td></tr>
+        </tbody></table></div>
+      </section>
+      <section class="panel recent-panel">
+        <div class="panel-heading"><div><h3>Historial de cobros</h3><small>Los comprobantes identifican cada operación.</small></div></div>
+        <div class="filters"><label class="search"><span>⌕</span><input type="search" [(ngModel)]="busquedaPagos" [ngModelOptions]="{standalone:true}" placeholder="Buscar paciente o comprobante…" /></label><select [(ngModel)]="filtroMetodo" [ngModelOptions]="{standalone:true}"><option>Todos</option><option *ngFor="let metodo of metodos">{{ metodo }}</option></select></div>
+        <div class="table-scroll"><table><thead><tr><th>FECHA</th><th>PACIENTE</th><th>CONCEPTO</th><th>IMPORTE</th><th>MÉTODO</th><th>CUOTAS</th><th>COMPROBANTE</th><th>ESTADO</th></tr></thead><tbody>
+          <tr *ngFor="let pago of pagosFiltrados"><td>{{ fechaLegible(pago.fecha) }}</td><td><strong>{{ pago.pacienteNombre }}</strong></td><td>{{ pago.conceptoDescripcion }}</td><td><strong>{{ formatoPesos(pago.importe) }}</strong></td><td>{{ pago.metodo }}</td><td>{{ pago.metodo === 'Tarjeta de crédito' ? (pago.cuotas || 1) + ' × ' + formatoPesos(pago.importeCuota || pago.importe) : '—' }}</td><td>{{ pago.comprobante || '—' }}</td><td><span class="status pagado">{{ pago.anulado ? 'Anulado' : 'Registrado' }}</span></td></tr>
+          <tr *ngIf="pagosFiltrados.length === 0"><td colspan="8" class="empty">No se encontraron cobros.</td></tr>
+        </tbody></table></div>
+      </section>
+      <p class="note">Cada cobro se registra una sola vez y reduce el saldo del concepto asociado. Los pagos parciales permanecen vinculados a la misma deuda. Esta versión de demostración no permite anular ni corregir operaciones.</p>
+    </section>
+  </main>
+</div>
+
+<div class="modal-backdrop" *ngIf="mostrarFormulario" (click)="cerrarFormulario()"><section class="modal" (click)="$event.stopPropagation()">
+  <header><div><h2>Registrar cobro</h2><p>El importe no puede superar el saldo pendiente del concepto.</p></div><button class="close" type="button" (click)="cerrarFormulario()">×</button></header>
+  <form [formGroup]="formulario" (ngSubmit)="registrarPago()">
+    <label>Concepto / tratamiento<select formControlName="conceptoId"><option [ngValue]="null">Seleccionar concepto pendiente</option><option *ngFor="let concepto of conceptos" [ngValue]="concepto.id" [disabled]="saldo(concepto) <= 0">{{ concepto.pacienteNombre }} · {{ concepto.descripcion }} · Saldo {{ formatoPesos(saldo(concepto)) }}</option></select><small *ngIf="formulario.controls.conceptoId.touched && formulario.controls.conceptoId.invalid">Seleccioná un concepto.</small></label>
+    <div class="balance-preview" *ngIf="conceptoSeleccionado"><span>{{ conceptoSeleccionado.pacienteNombre }} · {{ conceptoSeleccionado.descripcion }}</span><strong>Saldo pendiente: {{ formatoPesos(saldoSeleccionado) }}</strong></div>
+    <div class="form-row"><label>Importe del pago ($)<input type="number" min="1" [max]="saldoSeleccionado" formControlName="importe" placeholder="0"/><small *ngIf="formulario.controls.importe.touched && formulario.controls.importe.invalid">Ingresá un importe mayor a cero.</small></label><label>Método de pago<select formControlName="metodo"><option *ngFor="let metodo of metodos">{{ metodo }}</option></select></label></div>
+    <div class="form-row" *ngIf="esTarjetaCredito"><label>Plan de cuotas<select formControlName="cuotas"><option value="1">1 cuota</option><option value="3">3 cuotas</option><option value="6">6 cuotas</option><option value="12">12 cuotas</option><option value="personalizadas">Elegir cantidad (odontólogo / secretaría)</option></select></label><label *ngIf="formulario.controls.cuotas.value === 'personalizadas'">Cantidad de cuotas<input type="number" min="1" max="24" formControlName="cuotasPersonalizadas" placeholder="Ej. 9"/><small>Entre 1 y 24 cuotas.</small></label></div>
+    <p class="installment-preview" *ngIf="esTarjetaCredito && cuotasCalculadas > 0 && formulario.controls.importe.value">{{ cuotasCalculadas }} cuota(s) de aproximadamente {{ formatoPesos(importeCuotaVista) }}. Sin cálculo de intereses ni cargos de la tarjeta.</p>
+    <label>N.º de comprobante (opcional)<input formControlName="comprobante" placeholder="Se genera automáticamente si queda vacío"/></label>
+    <label>Observaciones (opcional)<textarea rows="2" formControlName="observaciones" placeholder="Detalle del pago…"></textarea></label>
+    <p class="error-message" *ngIf="error">{{ error }}</p>
+    <footer><button type="button" class="secondary-button" (click)="cerrarFormulario()">Cancelar</button><button type="submit" class="primary-button">Guardar pago</button></footer>
+  </form>
+</section></div>
+
+<div class="modal-backdrop" *ngIf="mostrarConcepto" (click)="cerrarConcepto()"><section class="modal" (click)="$event.stopPropagation()">
+  <header><div><h2>Agregar concepto de cobro</h2><p>Registrá un tratamiento o servicio para cualquier paciente.</p></div><button class="close" type="button" (click)="cerrarConcepto()">×</button></header>
+  <form [formGroup]="formularioConcepto" (ngSubmit)="guardarConcepto()">
+    <label>Paciente<select formControlName="pacienteId"><option [ngValue]="null">Seleccionar paciente</option><option *ngFor="let paciente of pacientes" [ngValue]="paciente.id">{{ paciente.nombre }} {{ paciente.apellido }} · DNI {{ paciente.dni }}</option></select></label>
+    <label>Concepto / tratamiento<input formControlName="descripcion" placeholder="Ej. Consulta, limpieza, corona…"/></label>
+    <label>Importe total ($)<input type="number" min="1" formControlName="importeTotal" placeholder="0"/></label>
+    <p class="error-message" *ngIf="error">{{ error }}</p><footer><button type="button" class="secondary-button" (click)="cerrarConcepto()">Cancelar</button><button type="submit" class="primary-button">Guardar concepto</button></footer>
+  </form>
+</section></div>

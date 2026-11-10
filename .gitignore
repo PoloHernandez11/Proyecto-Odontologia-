@@ -15,3 +15,8 @@ keys/
 # Secretos
 .env
 appsettings.*.local.json
+# evitar artchivos para subir a git
+node_modules/
+dist/
+build/
+.env

@@ -1,0 +1,77 @@
+<div class="laboratory-layout">
+  <aside class="sidebar">
+    <a class="brand" routerLink="/dashboard"><span class="brand-mark">✚</span><span><strong>Odontia</strong><small>Gestión odontológica</small></span></a>
+    <nav>
+      <span class="nav-title">PRINCIPAL</span>
+      <a routerLink="/dashboard"><span>⌂</span> Inicio</a>
+      <a routerLink="/agenda"><span>▦</span> Agenda</a>
+      <a routerLink="/pacientes"><span>♙</span> Pacientes</a>
+      <span class="nav-title">CLÍNICA</span>
+      <a routerLink="/pacientes"><span>▤</span> Historia clínica</a>
+      <a routerLink="/pacientes"><span>◫</span> Odontograma</a>
+      <a class="active" routerLink="/laboratorio"><span>⚒</span> Laboratorio dental</a>
+    </nav>
+    <div class="user-box"><span class="user-avatar">LM</span><span class="user-info"><strong>Dra. Laura Méndez</strong><small>Odontóloga · M.P. 4521</small></span></div>
+  </aside>
+
+  <main class="main-content">
+    <header class="topbar"><div><h1>Laboratorio dental</h1><p>Seguimiento clínico y económico de los trabajos de laboratorio</p></div><span class="top-user">Dra. Laura Méndez</span></header>
+
+    <section class="page-content">
+      <div class="page-heading"><div><h2>Seguimiento de trabajos</h2><p>Controlá solicitudes, entregas y recepción de trabajos externos.</p></div><button class="primary-button" (click)="abrirFormulario()">＋ Nuevo trabajo</button></div>
+
+      <div class="tabs"><button class="selected">Resumen</button><button (click)="filtroVista = 'Activos'; filtroEstado = 'Todos'">Trabajos</button><button (click)="filtroVista = 'Historial'; filtroEstado = 'Todos'">Historial de entregas</button></div>
+
+      <div class="stats-grid">
+        <article class="stat-card"><span>Trabajos activos</span><strong>{{ activos }}</strong><small>Solicitados y en seguimiento</small></article>
+        <article class="stat-card warning"><span>Atrasados</span><strong>{{ trabajosAtrasados }}</strong><small>Requieren seguimiento</small></article>
+        <article class="stat-card"><span>Esta semana</span><strong>{{ entregasEstaSemana }}</strong><small>Entregas previstas</small></article>
+        <article class="stat-card success"><span>Listos para retirar</span><strong>{{ listosParaRetirar }}</strong><small>Esperando recepción</small></article>
+      </div>
+
+      <p class="feedback" *ngIf="mensaje">{{ mensaje }}</p>
+
+      <section class="panel">
+        <div class="panel-heading"><div><h3>Trabajos de laboratorio</h3><small>{{ trabajosFiltrados.length }} resultados</small></div><button class="outline-button" (click)="abrirFormulario()">＋ Agregar trabajo</button></div>
+        <div class="filters">
+          <label class="search"><span>⌕</span><input type="search" placeholder="Buscar paciente, trabajo o laboratorio…" [(ngModel)]="busqueda" /></label>
+          <select [value]="filtroVista" (change)="filtroVista = $any($event.target).value"><option>Todos</option><option>Activos</option><option>Historial</option></select>
+          <select [value]="filtroEstado" (change)="filtroEstado = $any($event.target).value"><option>Todos</option><option *ngFor="let estado of estados">{{ estado }}</option></select>
+        </div>
+        <div class="table-scroll">
+          <table>
+            <thead><tr><th>PACIENTE</th><th>TRABAJO / PIEZA</th><th>LABORATORIO</th><th>FECHA DE ENTREGA</th><th>COSTO</th><th>ESTADO</th><th>ACTUALIZAR</th></tr></thead>
+            <tbody>
+              <tr *ngFor="let trabajo of trabajosFiltrados">
+                <td><strong>{{ trabajo.pacienteNombre }}</strong><small class="subline">Solicitud #{{ trabajo.id }}</small></td>
+                <td><strong>{{ trabajo.tipoTrabajo }}</strong><small class="subline">Pieza {{ trabajo.piezaDental }}</small></td>
+                <td>{{ trabajo.laboratorio }}</td>
+                <td>{{ fechaLegible(trabajo.fechaEntrega) }}<small class="subline" *ngIf="trabajo.fechaRecepcion">Recibido: {{ fechaLegible(trabajo.fechaRecepcion) }}</small></td>
+                <td>{{ formatoPesos(trabajo.costo) }}</td>
+                <td><span class="status" [ngClass]="claseEstado(trabajo.estado)">{{ trabajo.estado }}</span></td>
+                <td><select class="status-select" [value]="trabajo.estado" (change)="cambiarEstado(trabajo, $any($event.target).value)" aria-label="Actualizar estado"><option *ngFor="let estado of estados">{{ estado }}</option></select></td>
+              </tr>
+              <tr *ngIf="trabajosFiltrados.length === 0"><td colspan="7" class="empty">No se encontraron trabajos con esos filtros.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <p class="note">Los estados se actualizan desde la última columna. Al marcar un trabajo como <strong>Recibido</strong> o <strong>Entregado al paciente</strong>, se registra automáticamente la fecha correspondiente.</p>
+    </section>
+  </main>
+</div>
+
+<div class="modal-backdrop" *ngIf="mostrarFormulario" (click)="cerrarFormulario()">
+  <section class="modal" (click)="$event.stopPropagation()">
+    <header><div><h2>Nuevo trabajo de laboratorio</h2><p>Completá los datos para registrar la solicitud.</p></div><button class="close" type="button" (click)="cerrarFormulario()">×</button></header>
+    <form [formGroup]="formulario" (ngSubmit)="guardarTrabajo()">
+      <label>Paciente<select formControlName="pacienteId"><option [ngValue]="null">Seleccionar paciente</option><option *ngFor="let paciente of pacientes" [ngValue]="paciente.id">{{ paciente.nombre }} {{ paciente.apellido }}</option></select><small *ngIf="formulario.controls.pacienteId.touched && formulario.controls.pacienteId.invalid">Seleccioná un paciente.</small></label>
+      <label>Tipo de trabajo<input type="text" formControlName="tipoTrabajo" placeholder="Ej. Corona de zirconio"/><small *ngIf="formulario.controls.tipoTrabajo.touched && formulario.controls.tipoTrabajo.invalid">Ingresá el tipo de trabajo (mínimo 3 caracteres).</small></label>
+      <div class="form-row"><label>Pieza dental<input type="text" formControlName="piezaDental" placeholder="Ej. 36"/></label><label>Laboratorio<input type="text" formControlName="laboratorio" placeholder="Nombre del laboratorio"/><small *ngIf="formulario.controls.laboratorio.touched && formulario.controls.laboratorio.invalid">Campo obligatorio.</small></label></div>
+      <div class="form-row"><label>Fecha estimada de entrega<input type="date" formControlName="fechaEntrega"/><small *ngIf="formulario.controls.fechaEntrega.touched && formulario.controls.fechaEntrega.invalid">Seleccioná una fecha.</small></label><label>Costo estimado ($)<input type="number" min="1" formControlName="costo" placeholder="0"/><small *ngIf="formulario.controls.costo.touched && formulario.controls.costo.invalid">Ingresá un importe mayor a cero.</small></label></div>
+      <label>Observaciones<textarea rows="3" formControlName="observaciones" placeholder="Indicaciones para el laboratorio…"></textarea></label>
+      <footer><button type="button" class="secondary-button" (click)="cerrarFormulario()">Cancelar</button><button type="submit" class="primary-button">Guardar trabajo</button></footer>
+    </form>
+  </section>
+</div>

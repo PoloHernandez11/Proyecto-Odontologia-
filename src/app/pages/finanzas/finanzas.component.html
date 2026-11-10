@@ -1,0 +1,78 @@
+<div class="finance-layout">
+  <aside class="sidebar">
+    <a class="brand" routerLink="/dashboard"><span class="brand-icon">✦</span><span><strong>Odontia</strong><small>Gestión odontológica</small></span></a>
+    <nav class="main-navigation">
+      <p class="navigation-heading">PRINCIPAL</p>
+      <a class="navigation-link" routerLink="/dashboard">⌂ Inicio</a>
+      <a class="navigation-link" routerLink="/agenda">▦ Agenda</a>
+      <a class="navigation-link" routerLink="/pacientes">♧ Pacientes</a>
+      <p class="navigation-heading">CLÍNICA</p>
+      <a class="navigation-link" routerLink="/laboratorio">⚗ Laboratorio dental</a>
+      <p class="navigation-heading">GESTIÓN</p>
+      <a class="navigation-link" routerLink="/pagos">▣ Pagos de pacientes</a>
+      <a class="navigation-link active" routerLink="/finanzas">▥ Finanzas</a>
+    </nav>
+    <div class="sidebar-foot">Odontia · Demo académica</div>
+  </aside>
+
+  <main class="main-content">
+    <header class="topbar">
+      <div><h1>Finanzas</h1><p>Control económico general del consultorio · importes en pesos argentinos (ARS)</p></div>
+      <div class="top-actions"><label>Período <input type="month" [(ngModel)]="periodo" (change)="actualizar()"></label></div>
+    </header>
+    <section class="content">
+      <div class="action-row">
+        <div><span class="eyebrow">RESUMEN FINANCIERO</span><h2>Ingresos y egresos del período</h2></div>
+        <div class="actions"><button class="secondary" type="button" (click)="abrirRegistro('Egreso')">＋ Registrar egreso</button><button class="primary" type="button" (click)="abrirRegistro('Ingreso')">＋ Registrar ingreso</button></div>
+      </div>
+      <p class="notice success" *ngIf="mensaje">{{ mensaje }}</p><p class="notice error" *ngIf="error">{{ error }}</p>
+      <section class="summary-grid">
+        <article class="summary-card income"><span>Ingresos del período</span><strong>{{ pesos(ingresos) }}</strong><small>Dinero recibido y registrado</small></article>
+        <article class="summary-card expense"><span>Egresos del período</span><strong>{{ pesos(egresos) }}</strong><small>Dinero efectivamente pagado</small></article>
+        <article class="summary-card balance"><span>Balance neto</span><strong>{{ pesos(balance) }}</strong><small>Ingresos menos egresos</small></article>
+      </section>
+      <section class="summary-grid secondary-grid">
+        <article class="mini-card"><span>Ingresos desde pagos de pacientes</span><strong>{{ pesos(cobradoPacientes) }}</strong></article>
+        <article class="mini-card"><span>Pagado a laboratorios en el período</span><strong>{{ pesos(pagadoLaboratorios) }}</strong></article>
+        <article class="mini-card"><span>Pendiente por cobrar</span><strong>{{ pesos(totalPendientePacientes) }}</strong></article>
+        <article class="mini-card"><span>Deuda con laboratorios</span><strong>{{ pesos(totalPendienteLaboratorios) }}</strong></article>
+      </section>
+
+      <section class="panel">
+        <header class="panel-header"><div><h2>Libro de movimientos</h2><p>Los cobros de pacientes se incorporan automáticamente desde Pagos.</p></div><div class="filter-buttons"><button type="button" [class.selected]="tipoFiltro === 'Todos'" (click)="tipoFiltro = 'Todos'">Todos</button><button type="button" [class.selected]="tipoFiltro === 'Ingreso'" (click)="tipoFiltro = 'Ingreso'">Ingresos</button><button type="button" [class.selected]="tipoFiltro === 'Egreso'" (click)="tipoFiltro = 'Egreso'">Egresos</button></div></header>
+        <div class="table-scroll"><table><thead><tr><th>FECHA</th><th>TIPO</th><th>CONCEPTO</th><th>CATEGORÍA</th><th>IMPORTE</th><th>MÉTODO</th><th>ORIGEN</th><th>ESTADO</th></tr></thead>
+          <tbody><tr *ngFor="let m of movimientosFiltrados"><td>{{ fecha(m.fecha) }}</td><td><span class="type" [class.income-type]="m.tipo === 'Ingreso'" [class.expense-type]="m.tipo === 'Egreso'">{{ m.tipo }}</span></td><td class="concept">{{ m.concepto }}</td><td>{{ m.categoria }}</td><td class="amount">{{ pesos(m.importe) }}</td><td>{{ m.metodo || '—' }}</td><td>{{ m.origen }}</td><td><span class="state" [class.cancelled]="m.anulado">{{ m.anulado ? 'Anulado' : 'Registrado' }}</span></td></tr>
+          <tr *ngIf="movimientosFiltrados.length === 0"><td colspan="8" class="empty">No hay movimientos para este período.</td></tr></tbody></table></div>
+        <p class="footnote">Los movimientos anulados se conservan en el historial, pero no suman al balance. Los conceptos pendientes tampoco se contabilizan como ingresos.</p>
+      </section>
+
+      <div class="pending-grid">
+        <section class="panel"><header class="panel-header"><div><h2>Pendientes por cobrar</h2><p>Deudas de pacientes según sus conceptos registrados.</p></div><a routerLink="/pagos">Ver pagos →</a></header>
+          <div class="pending-list"><article *ngFor="let p of pendientesPacientes"><div><strong>{{ p.nombre }}</strong><small>{{ p.concepto }} · {{ pesos(p.abonado) }} abonados de {{ pesos(p.total) }}</small></div><b>{{ pesos(p.saldo) }}</b></article><p class="empty" *ngIf="!pendientesPacientes.length">No hay saldos pendientes.</p></div>
+        </section>
+        <section class="panel"><header class="panel-header"><div><h2>Pendientes por pagar</h2><p>Saldo de los trabajos de laboratorio dental.</p></div><button class="text-button" type="button" (click)="abrirPagoLaboratorio()">Registrar pago</button></header>
+          <div class="pending-list"><article *ngFor="let p of pendientesLaboratorios"><div><strong>{{ p.laboratorio }} · {{ p.paciente }}</strong><small>{{ p.trabajo }} · {{ pesos(p.abonado) }} abonados de {{ pesos(p.costo) }}</small></div><span class="pending-action"><b>{{ pesos(p.saldo) }}</b><button type="button" (click)="abrirPagoLaboratorio(p.id)">Pagar</button></span></article><p class="empty" *ngIf="!pendientesLaboratorios.length">No hay saldos pendientes con laboratorios.</p></div>
+        </section>
+      </div>
+
+      <div class="finance-modal-backdrop" *ngIf="mostrarFormulario" (click)="mostrarFormulario = false"></div><section class="panel form-panel finance-modal" *ngIf="mostrarFormulario" (click)="$event.stopPropagation()"><header class="panel-header"><h2>Registrar {{ formulario.controls.tipo.value === 'Ingreso' ? 'ingreso' : 'egreso' }}</h2><button class="close" type="button" (click)="mostrarFormulario = false">✕</button></header>
+        <form [formGroup]="formulario" (ngSubmit)="guardarMovimiento()" class="form-grid">
+          <label>Tipo<select formControlName="tipo"><option value="Ingreso">Ingreso</option><option value="Egreso">Egreso</option></select></label>
+          <label>Fecha<input type="date" formControlName="fecha"></label><label class="wide">Concepto<input type="text" formControlName="concepto" placeholder="Ej. Compra de materiales"></label>
+          <label>Categoría<select formControlName="categoria"><option *ngFor="let c of categorias" [value]="c">{{ c }}</option></select></label>
+          <label>Importe (ARS)<input type="number" min="1" formControlName="importe"></label><label>Método<select formControlName="metodo"><option>Efectivo</option><option>Transferencia</option><option>Tarjeta de débito</option><option>Tarjeta de crédito</option><option>Otro</option></select></label>
+          <div class="form-actions"><button class="secondary" type="button" (click)="mostrarFormulario = false">Cancelar</button><button class="primary" type="submit">Guardar movimiento</button></div>
+        </form>
+      </section>
+      <div class="finance-modal-backdrop" *ngIf="mostrarPagoLaboratorio" (click)="mostrarPagoLaboratorio = false"></div><section class="panel form-panel finance-modal" *ngIf="mostrarPagoLaboratorio" (click)="$event.stopPropagation()"><header class="panel-header"><h2>Registrar pago a laboratorio</h2><button class="close" type="button" (click)="mostrarPagoLaboratorio = false">✕</button></header>
+        <form [formGroup]="formularioLaboratorio" (ngSubmit)="guardarPagoLaboratorio()" class="form-grid">
+          <label class="wide">Trabajo<select formControlName="trabajoId"><option [ngValue]="null">Seleccionar trabajo</option><option *ngFor="let t of trabajos" [ngValue]="t.id" [disabled]="saldoTrabajo(t.id) <= 0">{{ t.laboratorio }} · {{ t.tipoTrabajo }} · {{ t.pacienteNombre }} · saldo {{ pesos(saldoTrabajo(t.id)) }}</option></select></label>
+          <label>Fecha<input type="date" formControlName="fecha"></label><label>Importe (ARS)<input type="number" min="1" formControlName="importe"></label>
+          <label>Método<select formControlName="metodo"><option>Transferencia</option><option>Efectivo</option><option>Tarjeta de débito</option><option>Tarjeta de crédito</option><option>Otro</option></select></label>
+          <div class="form-actions"><button class="secondary" type="button" (click)="mostrarPagoLaboratorio = false">Cancelar</button><button class="primary" type="submit">Guardar pago</button></div>
+        </form>
+      </section>
+      <p class="disclaimer">Datos ficticios para demostración. Esta versión utiliza localStorage; no debe utilizarse para guardar información financiera o clínica real.</p>
+    </section>
+  </main>
+</div>

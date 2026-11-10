@@ -1,0 +1,94 @@
+<div class="patients-layout">
+  <aside class="sidebar">
+    <a class="brand" routerLink="/dashboard"><span class="brand-mark">✦</span><span><strong>Odontia</strong><small>Gestión odontológica</small></span></a>
+    <nav aria-label="Navegación principal">
+      <p class="nav-title">PRINCIPAL</p>
+      <a routerLink="/dashboard" [queryParams]="{ perfil: perfil }">⌂ <span>Inicio</span></a>
+      <a routerLink="/agenda" [queryParams]="{ perfil: perfil }">▦ <span>Agenda</span></a>
+      <a routerLink="/agenda" [queryParams]="{ perfil: perfil }">☑ <span>Turnos y tareas</span></a>
+      <a class="active" routerLink="/pacientes" [queryParams]="{ perfil: perfil }">♧ <span>Pacientes</span></a>
+      <p class="nav-title">CLÍNICA</p>
+      <a *ngIf="pacienteSeleccionado" [routerLink]="['/pacientes', pacienteSeleccionado.id, 'historia']" [queryParams]="{ perfil: perfil }">▤ <span>Historia clínica</span></a>
+      <a *ngIf="pacienteSeleccionado" [routerLink]="['/pacientes', pacienteSeleccionado.id, 'odontograma']" [queryParams]="{ perfil: perfil }">♧ <span>Odontograma</span></a>
+      <a routerLink="/laboratorio">⚗ <span>Laboratorio dental</span></a>
+      <a routerLink="/pagos">▣ <span>Pagos de pacientes</span></a>
+      <p class="nav-title">GESTIÓN</p>
+      <a routerLink="/pagos">▣ <span>Pagos de pacientes</span></a>
+      <p class="nav-title">CUENTA</p>
+      <a routerLink="/configuracion" [queryParams]="{ perfil: perfil }">☷ <span>Perfil y configuración</span></a>
+    </nav>
+    <div class="user-box"><span class="user-avatar">{{ perfil === 'odontologo' ? 'LM' : 'CS' }}</span><span class="user-info"><strong>{{ nombreUsuario }}</strong><small>{{ perfil === 'odontologo' ? 'Odontóloga' : 'Secretaria · Recepción' }}</small></span><a routerLink="/login" title="Cerrar sesión">↪</a></div>
+  </aside>
+
+  <main class="main-content">
+    <header class="topbar">
+      <div><h1>Pacientes</h1><p>Administrá la información de tus pacientes</p></div>
+      <span class="top-user">{{ nombreUsuario }}</span>
+    </header>
+
+    <section class="page-content">
+      <div class="page-heading">
+        <div><h2>Directorio de pacientes</h2><p>{{ pacientes.length }} pacientes registrados · Información de contacto y cobertura</p></div>
+        <button class="primary-button" type="button" (click)="abrirNuevoPaciente()">＋ Nuevo paciente</button>
+      </div>
+
+      <div class="filters-panel">
+        <label class="search-field"><span>⌕</span><input type="search" placeholder="Buscar por nombre, DNI o teléfono..." [value]="busqueda" (input)="busqueda = $any($event.target).value"></label>
+        <select aria-label="Filtrar por obra social" [(ngModel)]="obraSocialSeleccionada" (change)="obraSocialSeleccionada = $any($event.target).value">
+          <option value="Todas">Obra social: todas</option>
+          <option *ngFor="let obra of obrasSociales" [value]="obra">{{ obra }}</option>
+        </select>
+        <select aria-label="Filtrar por estado" [(ngModel)]="estadoSeleccionado" (change)="estadoSeleccionado = $any($event.target).value">
+          <option value="Todos">Estado: todos</option><option value="Activo">Activo</option><option value="Inactivo">Inactivo</option>
+        </select>
+      </div>
+
+      <p class="feedback" *ngIf="mensaje">{{ mensaje }}</p>
+
+      <div class="content-grid">
+        <section class="list-panel">
+          <div class="list-heading"><h3>Listado de pacientes</h3><span>{{ pacientesFiltrados.length }} resultados</span></div>
+          <div class="table-scroll">
+            <table>
+              <thead><tr><th>PACIENTE</th><th>DNI</th><th>TELÉFONO</th><th>OBRA SOCIAL</th><th>ÚLTIMA VISITA</th><th>PRÓXIMO TURNO</th><th>ESTADO</th></tr></thead>
+              <tbody>
+                <tr *ngFor="let paciente of pacientesFiltrados" (click)="seleccionarPaciente(paciente)" [class.selected-row]="pacienteSeleccionado?.id === paciente.id">
+                  <td><div class="patient-cell"><span class="avatar">{{ iniciales(paciente) }}</span><strong>{{ paciente.nombre }} {{ paciente.apellido }}</strong></div></td>
+                  <td>{{ paciente.dni }}</td><td>{{ paciente.telefono }}</td><td>{{ paciente.obraSocial }}</td><td>{{ paciente.ultimaVisita }}</td><td>{{ paciente.proximoTurno }}</td>
+                  <td><span class="status" [class.inactive]="paciente.estado === 'Inactivo'">{{ paciente.estado }}</span></td>
+                </tr>
+                <tr *ngIf="pacientesFiltrados.length === 0"><td colspan="7" class="empty">No se encontraron pacientes con esos filtros.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <aside class="detail-panel" *ngIf="pacienteSeleccionado as paciente">
+          <header class="detail-heading"><h3>Ficha del paciente</h3><span class="status" [class.inactive]="paciente.estado === 'Inactivo'">{{ paciente.estado }}</span></header>
+          <div class="patient-profile"><span class="avatar big">{{ iniciales(paciente) }}</span><h2>{{ paciente.nombre }} {{ paciente.apellido }}</h2><p>DNI {{ paciente.dni }}</p></div>
+          <div class="detail-section"><h4>DATOS DE CONTACTO</h4><p><span>Teléfono</span><strong>{{ paciente.telefono }}</strong></p><p><span>Correo</span><strong>{{ paciente.email || 'No informado' }}</strong></p><p><span>Obra social</span><strong>{{ paciente.obraSocial }}</strong></p></div>
+          <div class="detail-section"><h4>ACTIVIDAD</h4><p><span>Última visita</span><strong>{{ paciente.ultimaVisita }}</strong></p><p><span>Próximo turno</span><strong>{{ paciente.proximoTurno }}</strong></p></div>
+          <div class="detail-section history-section"><h4>HISTORIAL DE TURNOS</h4>
+            <div class="history-item" *ngFor="let turno of historialPaciente"><span class="history-date">{{ turno.fecha | date:'dd/MM/yyyy' }}</span><span><strong>{{ turno.tratamiento }}</strong><small>{{ turno.hora }} · {{ turno.profesional }}</small></span><em>{{ turno.estado }}</em></div>
+            <p class="no-history" *ngIf="historialPaciente.length === 0">Todavía no hay turnos registrados para este paciente.</p>
+          </div>
+          <div class="clinical-actions"><a [routerLink]="['/pacientes', paciente.id, 'historia']" [queryParams]="{ perfil: perfil }">Historia clínica</a><a [routerLink]="['/pacientes', paciente.id, 'odontograma']" [queryParams]="{ perfil: perfil }">Odontograma</a><a routerLink="/pagos">Pagos y cuenta corriente</a></div><button class="edit-button" type="button" (click)="editarPaciente()">✎ Editar datos del paciente</button>
+        </aside>
+        <aside class="detail-panel empty-detail" *ngIf="!pacienteSeleccionado"><p>Seleccioná un paciente para consultar su ficha.</p></aside>
+      </div>
+    </section>
+  </main>
+</div>
+
+<div class="modal-backdrop" *ngIf="mostrarFormulario" (click)="cerrarFormulario()">
+  <section class="patient-modal" role="dialog" aria-modal="true" aria-labelledby="modal-title" (click)="$event.stopPropagation()">
+    <header><div><h2 id="modal-title">{{ modoEdicion ? 'Editar paciente' : 'Nuevo paciente' }}</h2><p>Completá los datos personales y de contacto.</p></div><button type="button" class="close-button" (click)="cerrarFormulario()" aria-label="Cerrar">×</button></header>
+    <form [formGroup]="formularioPaciente" (ngSubmit)="guardarPaciente()">
+      <div class="form-row"><label>Nombre<input type="text" formControlName="nombre" placeholder="Ej. Martín"><small *ngIf="formularioPaciente.controls.nombre.touched && formularioPaciente.controls.nombre.invalid">Ingresá al menos 2 caracteres.</small></label><label>Apellido<input type="text" formControlName="apellido" placeholder="Ej. Rodríguez"><small *ngIf="formularioPaciente.controls.apellido.touched && formularioPaciente.controls.apellido.invalid">Ingresá al menos 2 caracteres.</small></label></div>
+      <div class="form-row"><label>DNI<input type="text" formControlName="dni" placeholder="Sin puntos ni espacios"><small *ngIf="formularioPaciente.controls.dni.touched && formularioPaciente.controls.dni.invalid">Ingresá un DNI válido.</small></label><label>Teléfono<input type="tel" formControlName="telefono" placeholder="11 5555-0000"><small *ngIf="formularioPaciente.controls.telefono.touched && formularioPaciente.controls.telefono.invalid">Ingresá un teléfono válido.</small></label></div>
+      <label>Correo electrónico<input type="email" formControlName="email" placeholder="paciente@email.com"><small *ngIf="formularioPaciente.controls.email.touched && formularioPaciente.controls.email.invalid">Revisá el formato del correo.</small></label>
+      <label>Obra social<select formControlName="obraSocial"><option *ngFor="let obra of obrasSociales" [value]="obra">{{ obra }}</option></select></label>
+      <footer><button type="button" class="secondary-button" (click)="cerrarFormulario()">Cancelar</button><button type="submit" class="primary-button">{{ modoEdicion ? 'Guardar cambios' : 'Registrar paciente' }}</button></footer>
+    </form>
+  </section>
+</div>

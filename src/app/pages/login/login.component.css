@@ -1,0 +1,404 @@
+/* =================================================================auts
+   Estructura general de la pantalla
+   ================================================================ */
+:host {
+  display: block;
+  min-height: 100vh;
+  color: #26383e;
+  font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+}
+
+.login-page {
+  display: grid;
+  grid-template-columns: 43.2% 56.8%;
+  min-height: 100vh;
+  background: #f3f5f6;
+}
+
+/* ================================================================
+   Panel izquierdo: identidad y descripción del sistema
+   ================================================================ */
+.presentation-panel {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 40px 60px;
+  color: #ffffff;
+  background: #105c6c;
+}
+
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 14px;
+  width: fit-content;
+  color: #ffffff;
+  font-size: 22px;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.brand-icon {
+  display: grid;
+  width: 46px;
+  height: 46px;
+  place-items: center;
+  border-radius: 12px;
+  background: #ffffff;
+}
+
+.brand-icon svg {
+  width: 29px;
+  fill: none;
+  stroke: #105c6c;
+  stroke-width: 2;
+}
+
+.presentation-content {
+  max-width: 590px;
+  margin-top: -10px;
+}
+
+.presentation-content h1 {
+  margin: 0 0 20px;
+  font-size: clamp(30px, 2.5vw, 40px);
+  line-height: 1.18;
+  letter-spacing: -0.7px;
+}
+
+.presentation-description {
+  max-width: 560px;
+  margin: 0;
+  color: #c5dce1;
+  font-size: 18px;
+  line-height: 1.5;
+}
+
+.feature-list {
+  display: grid;
+  gap: 16px;
+  margin: 34px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.feature-list li {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  font-size: 16px;
+}
+
+.feature-icon {
+  display: grid;
+  width: 40px;
+  height: 40px;
+  flex: 0 0 40px;
+  place-items: center;
+  border-radius: 10px;
+  background: #19788a;
+  color: #ffffff;
+  font-size: 24px;
+}
+
+.presentation-footer {
+  color: #9fc2ca;
+  font-size: 13px;
+}
+
+/* ================================================================
+   Panel derecho y tarjeta de inicio de sesión
+   ================================================================ */
+.form-panel {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+}
+
+.login-card {
+  width: 100%;
+  max-width: 650px;
+  padding: 58px 60px;
+  border: 1px solid #e5eaec;
+  border-radius: 22px;
+  background: #ffffff;
+  box-shadow: 0 18px 35px rgba(28, 48, 54, 0.13);
+}
+
+.card-header h2 {
+  margin: 0 0 12px;
+  color: #26383e;
+  font-size: 25px;
+  line-height: 1.2;
+}
+
+.card-header p {
+  margin: 0;
+  color: #71838b;
+  font-size: 16px;
+}
+
+.profile-selector {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 5px;
+  margin: 30px 0;
+  padding: 5px;
+  border-radius: 12px;
+  background: #f1f3f4;
+}
+
+.profile-option {
+  display: flex;
+  min-height: 48px;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: #71838b;
+  cursor: pointer;
+  font: inherit;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.profile-option.active {
+  background: #ffffff;
+  color: #105c6c;
+  box-shadow: 0 2px 6px rgba(30, 50, 55, 0.08);
+}
+
+.profile-symbol {
+  font-size: 22px;
+}
+
+.form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  margin-bottom: 24px;
+}
+
+.form-field label {
+  color: #60747d;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.form-field input {
+  width: 100%;
+  height: 52px;
+  box-sizing: border-box;
+  padding: 0 16px;
+  border: 1px solid #cbd7db;
+  border-radius: 10px;
+  outline: none;
+  color: #26383e;
+  background: #ffffff;
+  font: inherit;
+  font-size: 15px;
+}
+
+.form-field input:focus {
+  border-color: #105c6c;
+  box-shadow: 0 0 0 3px rgba(16, 92, 108, 0.1);
+}
+
+.form-field input::placeholder {
+  color: #9aaab0;
+}
+
+.password-input {
+  position: relative;
+}
+
+.password-input input {
+  padding-right: 70px;
+}
+
+.password-toggle {
+  position: absolute;
+  top: 50%;
+  right: 12px;
+  transform: translateY(-50%);
+  border: 0;
+  background: transparent;
+  color: #105c6c;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.field-error {
+  color: #b33b3b;
+  font-size: 12px;
+}
+
+.form-options {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 4px 0 26px;
+  color: #71838b;
+  font-size: 14px;
+}
+
+.remember-option {
+  display: profile-option; /* Nota: Asegúrate de revisar si usabas esto, lo mantuve estilizado abajo como flex */
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  cursor: pointer;
+}
+
+.remember-option input {
+  width: 18px;
+  height: 18px;
+  accent-color: #105c6c;
+}
+
+.forgot-link {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #105c6c;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 600;
+}
+
+.submit-button {
+  width: 100%;
+  min-height: 54px;
+  border: 0;
+  border-radius: 10px;
+  background: #105c6c;
+  color: #ffffff;
+  cursor: pointer;
+  font: inherit;
+  font-size: 16px;
+  font-weight: 600;
+  transition: background 0.2s ease;
+}
+
+.submit-button:hover {
+  background: #0b4c5a;
+}
+
+.information-box,
+.message-box {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  margin-top: 26px;
+  padding: 18px;
+  border-radius: 11px;
+  background: #edf5f6;
+  color: #286477;
+}
+
+.information-box p,
+.message-box p {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.information-icon,
+.message-icon {
+  flex: 0 0 auto;
+  font-size: 21px;
+}
+
+.message-box {
+  background: #f0f6f7;
+}
+
+/* ================================================================
+   Adaptación para tablets y celulares (Media Queries)
+   ================================================================ */
+@media (max-width: 900px) {
+  .login-page {
+    grid-template-columns: 1fr;
+  }
+
+  .presentation-panel {
+    min-height: 330px;
+    padding: 30px;
+  }
+
+  .presentation-content {
+    margin: 55px 0 35px;
+  }
+
+  .presentation-footer {
+    margin-top: 15px;
+  }
+
+  .form-panel {
+    padding: 40px 24px;
+  }
+
+  .login-card {
+    max-width: 560px;
+    padding: 40px;
+  }
+}
+
+@media (max-width: 520px) {
+  .presentation-panel {
+    min-height: auto;
+    padding: 24px;
+  }
+
+  .presentation-content {
+    margin: 45px 0 30px;
+  }
+
+  .presentation-content h1 {
+    font-size: 29px;
+  }
+
+  .presentation-description {
+    font-size: 15px;
+  }
+
+  .feature-list {
+    gap: 12px;
+    margin-top: 24px;
+  }
+
+  .feature-list li {
+    font-size: 14px;
+  }
+
+  .presentation-footer {
+    font-size: 11px;
+  }
+
+  .form-panel {
+    padding: 24px 16px;
+  }
+
+  .login-card {
+    padding: 28px 22px;
+    border-radius: 16px;
+  }
+
+  .card-header h2 {
+    font-size: 22px;
+  }
+
+  .card-header p {
+    font-size: 14px;
+  }
+
+  .form-options {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}

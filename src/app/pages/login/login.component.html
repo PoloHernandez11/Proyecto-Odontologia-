@@ -1,0 +1,143 @@
+<main class="login-page">
+  <section class="presentation-panel">
+    <a class="brand" href="#" aria-label="Odontia, inicio">
+      <span class="brand-icon" aria-hidden="true">
+        <svg viewBox="0 0 32 32" role="img">
+          <path d="M9.2 7.2c2.8-1.3 4.6.5 6.8.5s4-1.8 6.8-.5c3.1 1.4 3.6 5.1 2.3 8.3-.8 2-1.8 3.7-2.4 6.1-.5 2-1.2 4.2-2.8 4.2-1.4 0-1.7-2.5-2.4-4.6-.4-1.2-.7-1.8-1.5-1.8s-1.1.6-1.5 1.8c-.7 2.1-1 4.6-2.4 4.6-1.6 0-2.3-2.2-2.8-4.2-.6-2.4-1.6-4.1-2.4-6.1-1.3-3.2-.8-6.9 2.3-8.3Z"/>
+        </svg>
+      </span>
+      <span>Odontia</span>
+    </a>
+
+    <div class="presentation-content">
+      <h1>Tu consultorio, organizado<br class="desktop-break"> en un solo lugar.</h1>
+      <p class="presentation-description">
+        Agenda, pacientes, historia clínica, odontograma y laboratorio,
+        conectados para el odontólogo y la recepción.
+      </p>
+
+      <ul class="feature-list">
+        <li>
+          <span class="feature-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="16" rx="2"></rect><path d="M7.5 3v4M16.5 3v4M4 9h16"></path></svg>
+          </span>
+          <span>Agenda diaria, semanal y mensual</span>
+        </li>
+        <li>
+          <span class="feature-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><path d="M7 3.5c2.1-.8 3.5.6 5 .6s2.9-1.4 5-.6c2.8 1.1 3.1 4.1 2 6.9-.7 1.7-1.4 3.1-1.9 5.2-.4 1.7-.9 3.5-2.2 3.5-1.1 0-1.3-2.1-1.9-3.8-.3-1-.5-1.5-1-1.5s-.7.5-1 1.5c-.6 1.7-.8 3.8-1.9 3.8-1.3 0-1.8-1.8-2.2-3.5-.5-2.1-1.2-3.5-1.9-5.2C3.9 7.6 4.2 4.6 7 3.5Z"></path></svg>
+          </span>
+          <span>Odontograma FDI interactivo</span>
+        </li>
+        <li>
+          <span class="feature-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><path d="M12 2.8 20 6v5.4c0 5-3.4 8.4-8 10.3-4.6-1.9-8-5.3-8-10.3V6l8-3.2Z"></path></svg>
+          </span>
+          <span>Accesos diferenciados por rol</span>
+        </li>
+      </ul>
+    </div>
+
+    <footer class="presentation-footer">
+      © 2026 Odontia · Soporte: soporte&#64;odontia.app
+    </footer>
+  </section>
+
+  <section class="form-panel">
+    <div class="login-card">
+      <header class="card-header">
+        <h2>Iniciar sesión</h2>
+        <p>Selecciona tu perfil e ingresa tus credenciales.</p>
+      </header>
+
+      <div class="profile-selector" aria-label="Seleccionar perfil">
+        <button
+          type="button"
+          class="profile-option"
+          [class.active]="perfilSeleccionado === 'odontologo'"
+          (click)="seleccionarPerfil('odontologo')">
+          <span class="profile-symbol" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><path d="M7 3.5c2.1-.8 3.5.6 5 .6s2.9-1.4 5-.6c2.8 1.1 3.1 4.1 2 6.9-.7 1.7-1.4 3.1-1.9 5.2-.4 1.7-.9 3.5-2.2 3.5-1.1 0-1.3-2.1-1.9-3.8-.3-1-.5-1.5-1-1.5s-.7.5-1 1.5c-.6 1.7-.8 3.8-1.9 3.8-1.3 0-1.8-1.8-2.2-3.5-.5-2.1-1.2-3.5-1.9-5.2C3.9 7.6 4.2 4.6 7 3.5Z"></path></svg>
+          </span>
+          Odontólogo
+        </button>
+        <button
+          type="button"
+          class="profile-option"
+          [class.active]="perfilSeleccionado === 'secretaria'"
+          (click)="seleccionarPerfil('secretaria')">
+          <span class="profile-symbol user-symbol" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><circle cx="12" cy="7.5" r="3.5"></circle><path d="M5 20v-1.5a7 7 0 0 1 14 0V20"></path></svg>
+          </span>
+          Secretaria
+        </button>
+      </div>
+
+      <form [formGroup]="formularioLogin" (ngSubmit)="ingresar()" novalidate>
+        <div class="form-field">
+          <label for="correo">Correo electrónico</label>
+          <input
+            id="correo"
+            type="email"
+            formControlName="correo"
+            placeholder="laura.mendez@odontia.app"
+            autocomplete="username">
+          <small
+            class="field-error"
+            *ngIf="formularioLogin.controls.correo.touched && formularioLogin.controls.correo.invalid">
+            Ingresá un correo electrónico válido.
+          </small>
+        </div>
+
+        <div class="form-field">
+          <label for="contrasena">Contraseña</label>
+          <div class="password-input">
+            <input
+              id="contrasena"
+              [type]="mostrarContrasena ? 'text' : 'password'"
+              formControlName="contrasena"
+              placeholder="••••••••••"
+              autocomplete="current-password">
+            <button
+              class="password-toggle"
+              type="button"
+              (click)="cambiarVisibilidadContrasena()"
+              [attr.aria-label]="mostrarContrasena ? 'Ocultar contraseña' : 'Mostrar contraseña'">
+              {{ mostrarContrasena ? 'Ocultar' : 'Ver' }}
+            </button>
+          </div>
+          <small
+            class="field-error"
+            *ngIf="formularioLogin.controls.contrasena.touched && formularioLogin.controls.contrasena.invalid">
+            La contraseña debe tener al menos 6 caracteres.
+          </small>
+        </div>
+
+        <div class="form-options">
+          <label class="remember-option">
+            <input type="checkbox" formControlName="recordar">
+            <span>Recordarme</span>
+          </label>
+          <button type="button" class="forgot-link" (click)="recuperarContrasena()">
+            ¿Olvidaste tu contraseña?
+          </button>
+        </div>
+
+        <button class="submit-button" type="submit">Ingresar</button>
+      </form>
+
+      <div class="message-box" role="status" *ngIf="mensaje">
+        <span class="message-icon" aria-hidden="true">ⓘ</span>
+        <p>{{ mensaje }}</p>
+      </div>
+
+      <div class="information-box" *ngIf="!mensaje">
+        <span class="information-icon" aria-hidden="true">♢</span>
+        <p>
+          El perfil Secretaria accede a agenda, turnos, pacientes y tareas.
+          La información clínica queda reservada al odontólogo.
+        </p>
+      </div>
+    </div>
+  </section>
+</main>

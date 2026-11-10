@@ -1,0 +1,77 @@
+<div class="agenda-layout">
+  <aside class="agenda-sidebar">
+    <a class="brand" routerLink="/dashboard"><span class="brand-mark">Od</span><span><strong>Odontia</strong><small>Gestión odontológica</small></span></a>
+    <nav>
+      <small class="nav-title">PRINCIPAL</small>
+      <a routerLink="/dashboard">⌂ <span>Inicio</span></a>
+      <a class="active" routerLink="/agenda" [queryParams]="{ perfil: perfil }">▦ <span>Agenda</span><b>12</b></a>
+      <a routerLink="/turnos-tareas" [queryParams]="{ perfil: perfil }">☑ <span>Turnos y tareas</span></a>
+      <a routerLink="/pacientes" [queryParams]="{ perfil: perfil }">♧ <span>Pacientes</span></a>
+      <small class="nav-title">CLÍNICA</small>
+      <a routerLink="/pacientes" [queryParams]="{ perfil: perfil }">▤ <span>Historia clínica</span></a>
+      <a routerLink="/pacientes" [queryParams]="{ perfil: perfil }">♧ <span>Odontograma</span></a>
+      <a routerLink="/laboratorio">⚗ <span>Laboratorio dental</span></a>
+      <small class="nav-title">GESTIÓN</small>
+      <a routerLink="/pagos">▣ <span>Pagos de pacientes</span></a>
+      <a routerLink="/finanzas" *ngIf="perfil === 'odontologo'">▥ <span>Finanzas</span></a>
+      <small class="nav-title">CUENTA</small>
+      <a routerLink="/configuracion" [queryParams]="{ perfil: perfil }">☷ <span>Perfil y configuración</span></a>
+    </nav>
+    <div class="user-box"><span class="avatar">{{ perfil === 'odontologo' ? 'LM' : 'CS' }}</span><span><strong>{{ nombreUsuario }}</strong><small>{{ perfil === 'odontologo' ? 'Odontóloga · M.P. 12345' : 'Secretaria · Recepción' }}</small></span><a routerLink="/login">↪</a></div>
+  </aside>
+
+  <main class="agenda-main">
+    <header class="topbar"><div><h1>{{ tituloPagina }}</h1><p>Gestiona los turnos del consultorio por día, semana o mes</p></div><input class="search" type="search" placeholder="⌕  Buscar paciente, DNI o teléfono..." [(ngModel)]="busqueda"/><button class="notification" aria-label="Notificaciones">♧</button></header>
+
+    <section class="toolbar">
+      <div class="view-switch"><button [class.selected]="vista === 'dia'" (click)="seleccionarVista('dia')">Día</button><button [class.selected]="vista === 'semana'" (click)="seleccionarVista('semana')">Semana</button><button [class.selected]="vista === 'mes'" (click)="seleccionarVista('mes')">Mes</button></div>
+      <button class="arrow" (click)="cambiarDia(-1)" aria-label="Anterior">‹</button><button class="arrow" (click)="cambiarDia(1)" aria-label="Siguiente">›</button><button class="today" (click)="irHoy()">Hoy</button>
+      <strong class="date-title">{{ fechaTitulo }}</strong>
+      <select class="professional-select" [(ngModel)]="profesionalSeleccionado"><option>Todos</option><option>Dra. Laura Méndez</option><option>Dr. Tomás Paz</option></select>
+      <button class="primary-button" (click)="abrirFormulario()">＋ Nuevo turno</button>
+    </section>
+
+    <p class="success-message" *ngIf="mensaje">{{ mensaje }}</p>
+
+    <div class="agenda-content">
+      <section class="calendar-panel">
+        <div class="calendar-heading"><div><span class="avatar">LM</span><span><strong>Dra. Laura Méndez</strong><small>Consultorio 1 · {{ turnosFiltrados.length }} turnos visibles</small></span></div><div><span class="avatar">TP</span><span><strong>Dr. Tomás Paz</strong><small>Consultorio 2</small></span></div></div>
+
+        <div class="day-schedule" *ngIf="vista === 'dia'">
+          <div class="time-column"><span *ngFor="let hora of ['08:00','09:00','10:00','11:00','12:00','13:00','14:00','15:00','16:00','17:00','18:00']">{{ hora }}</span></div>
+          <div class="schedule-column"><article *ngFor="let turno of turnosFiltrados" class="appointment" [class.right-column]="turno.consultorio === 'Consultorio 2'" [class.pending]="turno.estado === 'Pendiente'" [class.waiting]="turno.estado === 'En sala'" [class.done]="turno.estado === 'Atendido'" (click)="seleccionarTurno(turno)">
+              <strong>{{ turno.hora }} · {{ turno.paciente }}</strong><span>{{ turno.tratamiento }}</span><small>{{ turno.profesional }}</small>
+            </article>
+            <div class="lunch-block">♧ Horario bloqueado · Almuerzo</div>
+            <div class="current-time"></div>
+          </div>
+        </div>
+
+        <div class="alternate-view" *ngIf="vista !== 'dia'"><div class="alternate-title">{{ vista === 'semana' ? 'Turnos de la semana' : 'Turnos del mes' }}</div><article class="list-appointment" *ngFor="let turno of turnosFiltrados" (click)="seleccionarTurno(turno)"><span class="date-chip">{{ turno.fecha | date:'dd/MM' }}</span><span><strong>{{ turno.hora }} · {{ turno.paciente }}</strong><small>{{ turno.tratamiento }} · {{ turno.profesional }}</small></span><em [class]="'status ' + turno.estado.toLowerCase().replace(' ', '-')">{{ turno.estado }}</em></article><p *ngIf="turnosFiltrados.length === 0" class="empty">No hay turnos para los filtros seleccionados.</p></div>
+      </section>
+
+      <aside class="details-column">
+        <section class="side-panel selected-panel"><header><h2>Turno seleccionado</h2><span class="status" *ngIf="turnoSeleccionado">{{ turnoSeleccionado.estado }}</span></header>
+          <div class="empty-selection" *ngIf="!turnoSeleccionado">Seleccioná un turno del calendario para ver sus detalles.</div>
+          <div class="selected-content" *ngIf="turnoSeleccionado"><div class="patient-heading"><span class="avatar large">{{ turnoSeleccionado.paciente.split(' ')[0].charAt(0) }}{{ turnoSeleccionado.paciente.split(' ')[1].charAt(0) }}</span><span><strong>{{ turnoSeleccionado.paciente }}</strong><small>Paciente de Odontia</small></span></div><p>◷ {{ turnoSeleccionado.fecha | date:'dd/MM/yyyy' }} · {{ turnoSeleccionado.hora }} ({{ turnoSeleccionado.duracion }} min)</p><p>♧ {{ turnoSeleccionado.tratamiento }}</p><p>♙ {{ turnoSeleccionado.profesional }} · {{ turnoSeleccionado.consultorio }}</p><p>☎ {{ turnoSeleccionado.telefono }}</p><div class="action-buttons"><button (click)="cambiarEstado('Atendido')">✓ Marcar atendido</button><button class="cancel" (click)="cambiarEstado('Cancelado')">× Cancelar turno</button></div></div>
+        </section>
+        <section class="side-panel"><header><h2>Estados del turno</h2></header><div class="status-list"><span class="status confirmado">● Confirmado</span><span class="status pendiente">● Pendiente</span><span class="status en-sala">● En sala</span><span class="status atendido">● Atendido</span><span class="status cancelado">● Cancelado</span></div></section>
+        <section class="side-panel summary"><header><h2>Resumen del día</h2></header><p>Turnos agendados <strong>{{ turnos.length }}</strong></p><p>Turnos visibles <strong>{{ turnosFiltrados.length }}</strong></p><p>Profesionales <strong>2</strong></p></section>
+      </aside>
+    </div>
+  </main>
+
+  <div class="modal-backdrop" *ngIf="mostrarFormulario" (click)="cerrarFormulario()">
+    <section class="turn-modal" (click)="$event.stopPropagation()"><header><div><h2>Nuevo turno</h2><p>Completá los datos para agendar una cita</p></div><button class="close" (click)="cerrarFormulario()">×</button></header>
+      <form [formGroup]="formularioTurno" (ngSubmit)="guardarTurno()">
+        <label>Nombre del paciente<input type="text" formControlName="paciente" placeholder="Ej. María González"/></label><small class="error" *ngIf="formularioTurno.controls.paciente.touched && formularioTurno.controls.paciente.invalid">Ingresá el nombre del paciente (mínimo 3 caracteres).</small>
+        <label>Teléfono<input type="tel" formControlName="telefono" placeholder="11 5555-0000"/></label>
+        <div class="form-row"><label>Fecha<input type="date" formControlName="fecha"/></label><label>Hora<input type="time" formControlName="hora"/></label></div>
+        <label>Odontólogo<select formControlName="profesional"><option>Dra. Laura Méndez</option><option>Dr. Tomás Paz</option></select></label>
+        <label>Consultorio<select formControlName="consultorio"><option>Consultorio 1</option><option>Consultorio 2</option></select></label>
+        <label>Tratamiento<input type="text" formControlName="tratamiento" placeholder="Ej. Control general"/></label>
+        <footer><button type="button" class="secondary-button" (click)="cerrarFormulario()">Cancelar</button><button type="submit" class="primary-button">Guardar turno</button></footer>
+      </form>
+    </section>
+  </div>
+</div>

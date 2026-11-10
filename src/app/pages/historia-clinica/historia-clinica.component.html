@@ -1,0 +1,22 @@
+<div class="clinical-page" *ngIf="paciente; else noPaciente">
+  <header class="clinical-top"><a routerLink="/pacientes" [queryParams]="{perfil: perfil}">← Pacientes</a><span>ODONTIA · GESTIÓN ODONTOLÓGICA</span></header>
+  <main class="clinical-content">
+    <p class="breadcrumb">Pacientes / {{ paciente.nombre }} {{ paciente.apellido }} / Historia clínica</p>
+    <section class="patient-heading"><div><span class="eyebrow">FICHA CLÍNICA</span><h1>{{ paciente.nombre }} {{ paciente.apellido }}</h1><p>DNI {{ paciente.dni }} · {{ paciente.obraSocial }}</p></div><span class="patient-tag">Paciente activo</span></section>
+    <nav class="clinical-tabs"><a class="selected" [routerLink]="['/pacientes', paciente.id, 'historia']" [queryParams]="{perfil: perfil}">Historia clínica</a><a [routerLink]="['/pacientes', paciente.id, 'odontograma']" [queryParams]="{perfil: perfil}">Odontograma</a></nav>
+    <div class="section-heading"><div><h2>Registro de consultas</h2><p>Antecedentes, diagnósticos y tratamientos realizados.</p></div><button type="button" class="primary" (click)="mostrarFormulario = !mostrarFormulario">＋ Nueva consulta</button></div>
+    <p class="feedback" *ngIf="mensaje">{{ mensaje }}</p>
+    <form class="record-form" *ngIf="mostrarFormulario" [formGroup]="formulario" (ngSubmit)="guardarRegistro()">
+      <h3>Registrar consulta</h3><label>Motivo de consulta<input formControlName="motivo" placeholder="Ej. Dolor al masticar"></label><small *ngIf="formulario.controls.motivo.touched && formulario.controls.motivo.invalid">Ingresá el motivo de consulta.</small>
+      <label>Diagnóstico<input formControlName="diagnostico" placeholder="Diagnóstico del profesional"></label><small *ngIf="formulario.controls.diagnostico.touched && formulario.controls.diagnostico.invalid">Ingresá un diagnóstico.</small>
+      <label>Tratamiento realizado<input formControlName="tratamiento" placeholder="Ej. Limpieza, endodoncia..."></label><small *ngIf="formulario.controls.tratamiento.touched && formulario.controls.tratamiento.invalid">Este campo es obligatorio.</small>
+      <label>Observaciones<textarea rows="3" formControlName="observaciones" placeholder="Indicaciones y observaciones adicionales"></textarea></label>
+      <div class="form-actions"><button type="button" class="secondary" (click)="mostrarFormulario = false">Cancelar</button><button class="primary" type="submit">Guardar consulta</button></div>
+    </form>
+    <section class="records">
+      <article class="record-card" *ngFor="let registro of registros"><div class="record-date">{{ registro.fecha | date:'dd/MM/yyyy' }}</div><div class="record-body"><div class="record-meta"><strong>{{ registro.motivo }}</strong><span>{{ registro.profesional }}</span></div><p><b>Diagnóstico:</b> {{ registro.diagnostico }}</p><p><b>Tratamiento:</b> {{ registro.tratamiento }}</p><p *ngIf="registro.observaciones"><b>Observaciones:</b> {{ registro.observaciones }}</p></div></article>
+      <div class="empty" *ngIf="registros.length === 0">Todavía no hay consultas registradas para este paciente.</div>
+    </section>
+  </main>
+</div>
+<ng-template #noPaciente><main class="not-found"><h2>No encontramos al paciente</h2><a routerLink="/pacientes">Volver al listado</a></main></ng-template>
