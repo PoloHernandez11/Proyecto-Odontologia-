@@ -550,6 +550,25 @@ public sealed class VoidPaymentRequestValidator : AbstractValidator<VoidPaymentR
     public VoidPaymentRequestValidator() => RuleFor(x => x.Reason).Required(500, "El motivo de anulación");
 }
 
+public sealed class RegisterExpenseRequestValidator : AbstractValidator<RegisterExpenseRequest>
+{
+    public RegisterExpenseRequestValidator()
+    {
+        RuleFor(x => x.Description).Required(250, "El concepto");
+        RuleFor(x => x.Category).IsInEnum();
+        RuleFor(x => x.Amount).GreaterThan(0).WithMessage("El importe debe ser mayor que cero.").Money();
+        RuleFor(x => x.Method).IsInEnum();
+        RuleFor(x => x.Supplier).Text(150);
+        RuleFor(x => x.Reference).Text(100);
+        RuleFor(x => x.Notes).Text(500);
+    }
+}
+
+public sealed class VoidExpenseRequestValidator : AbstractValidator<VoidExpenseRequest>
+{
+    public VoidExpenseRequestValidator() => RuleFor(x => x.Reason).Required(500, "El motivo de anulación");
+}
+
 // ---------------- Laboratorio ----------------
 public sealed class SaveLaboratoryRequestValidator : AbstractValidator<SaveLaboratoryRequest>
 {

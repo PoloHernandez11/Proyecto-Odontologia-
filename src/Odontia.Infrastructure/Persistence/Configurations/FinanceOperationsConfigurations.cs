@@ -239,3 +239,21 @@ internal sealed class ConsentConfiguration : IEntityTypeConfiguration<Consent>
         b.HasIndex(x => new { x.ConsultorioId, x.PatientId, x.Status });
     }
 }
+
+internal sealed class ExpenseConfiguration : IEntityTypeConfiguration<Expense>
+{
+    public void Configure(EntityTypeBuilder<Expense> b)
+    {
+        b.ToTable("Expenses");
+        b.HasConsultorio();
+        b.Property(x => x.Description).HasMaxLength(250);
+        b.Property(x => x.Supplier).HasMaxLength(150);
+        b.Property(x => x.Reference).HasMaxLength(100);
+        b.Property(x => x.Notes).HasMaxLength(500);
+        b.Property(x => x.VoidReason).HasMaxLength(500);
+        b.HasTenantReference<Expense, Laboratory>(nameof(Expense.LaboratoryId), required: false);
+        b.HasTenantReference<Expense, ConsultorioMember>(nameof(Expense.RegisteredByUserId), principalKey: nameof(ConsultorioMember.UserId));
+        b.HasIndex(x => new { x.ConsultorioId, x.PaidAtUtc });
+        b.HasIndex(x => new { x.ConsultorioId, x.Category, x.PaidAtUtc });
+    }
+}

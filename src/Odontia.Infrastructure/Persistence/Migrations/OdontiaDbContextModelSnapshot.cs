@@ -471,10 +471,10 @@ namespace Odontia.Infrastructure.Persistence.Migrations
                         .HasPrecision(5, 2)
                         .HasColumnType("decimal(5,2)");
 
-                    b.Property<DateOnly>("ExpirationDate")
+                    b.Property<DateTime>("ExpirationDate")
                         .HasColumnType("date");
 
-                    b.Property<DateOnly>("IssueDate")
+                    b.Property<DateTime>("IssueDate")
                         .HasColumnType("date");
 
                     b.Property<string>("Notes")
@@ -1697,6 +1697,88 @@ namespace Odontia.Infrastructure.Persistence.Migrations
                     b.ToTable("Diagnoses", (string)null);
                 });
 
+            modelBuilder.Entity("Odontia.Domain.Entities.Expense", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("char(36)");
+
+                    b.Property<decimal>("Amount")
+                        .HasPrecision(14, 2)
+                        .HasColumnType("decimal(14,2)");
+
+                    b.Property<int>("Category")
+                        .HasColumnType("int");
+
+                    b.Property<Guid>("ConsultorioId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<Guid?>("CreatedByUserId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(250)
+                        .HasColumnType("varchar(250)");
+
+                    b.Property<Guid?>("LaboratoryId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<int>("Method")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(500)
+                        .HasColumnType("varchar(500)");
+
+                    b.Property<DateTime>("PaidAtUtc")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("Reference")
+                        .HasMaxLength(100)
+                        .HasColumnType("varchar(100)");
+
+                    b.Property<Guid>("RegisteredByUserId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Supplier")
+                        .HasMaxLength(150)
+                        .HasColumnType("varchar(150)");
+
+                    b.Property<DateTime?>("UpdatedAtUtc")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<Guid?>("UpdatedByUserId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<string>("VoidReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("varchar(500)");
+
+                    b.Property<DateTime?>("VoidedAtUtc")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<Guid?>("VoidedByUserId")
+                        .HasColumnType("char(36)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ConsultorioId", "LaboratoryId");
+
+                    b.HasIndex("ConsultorioId", "PaidAtUtc");
+
+                    b.HasIndex("ConsultorioId", "RegisteredByUserId");
+
+                    b.HasIndex("ConsultorioId", "Category", "PaidAtUtc");
+
+                    b.ToTable("Expenses", (string)null);
+                });
+
             modelBuilder.Entity("Odontia.Domain.Entities.Gabinete", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1868,7 +1950,7 @@ namespace Odontia.Infrastructure.Persistence.Migrations
                     b.Property<Guid>("Id")
                         .HasColumnType("char(36)");
 
-                    b.Property<DateOnly?>("ActualDeliveryDate")
+                    b.Property<DateTime?>("ActualDeliveryDate")
                         .HasColumnType("date");
 
                     b.Property<Guid>("ConsultorioId")
@@ -1888,7 +1970,7 @@ namespace Odontia.Infrastructure.Persistence.Migrations
                         .HasMaxLength(1000)
                         .HasColumnType("varchar(1000)");
 
-                    b.Property<DateOnly?>("EstimatedDeliveryDate")
+                    b.Property<DateTime?>("EstimatedDeliveryDate")
                         .HasColumnType("date");
 
                     b.Property<Guid>("LaboratoryId")
@@ -1901,13 +1983,13 @@ namespace Odontia.Infrastructure.Persistence.Migrations
                     b.Property<Guid>("PatientId")
                         .HasColumnType("char(36)");
 
-                    b.Property<DateOnly?>("PlacementDate")
+                    b.Property<DateTime?>("PlacementDate")
                         .HasColumnType("date");
 
                     b.Property<Guid>("ProfessionalUserId")
                         .HasColumnType("char(36)");
 
-                    b.Property<DateOnly?>("SentDate")
+                    b.Property<DateTime?>("SentDate")
                         .HasColumnType("date");
 
                     b.Property<int>("Status")
@@ -2569,7 +2651,7 @@ namespace Odontia.Infrastructure.Persistence.Migrations
                         .HasMaxLength(40)
                         .HasColumnType("varchar(40)");
 
-                    b.Property<DateOnly?>("BirthDate")
+                    b.Property<DateTime?>("BirthDate")
                         .HasColumnType("date");
 
                     b.Property<string>("City")
@@ -3825,7 +3907,7 @@ namespace Odontia.Infrastructure.Persistence.Migrations
                     b.Property<Guid?>("CreatedByUserId")
                         .HasColumnType("char(36)");
 
-                    b.Property<DateOnly?>("EndDate")
+                    b.Property<DateTime?>("EndDate")
                         .HasColumnType("date");
 
                     b.Property<string>("Notes")
@@ -3838,7 +3920,7 @@ namespace Odontia.Infrastructure.Persistence.Migrations
                     b.Property<Guid>("ProfessionalUserId")
                         .HasColumnType("char(36)");
 
-                    b.Property<DateOnly?>("StartDate")
+                    b.Property<DateTime?>("StartDate")
                         .HasColumnType("date");
 
                     b.Property<int>("Status")
@@ -3881,7 +3963,7 @@ namespace Odontia.Infrastructure.Persistence.Migrations
                     b.Property<Guid?>("DiagnosisId")
                         .HasColumnType("char(36)");
 
-                    b.Property<DateOnly?>("EndDate")
+                    b.Property<DateTime?>("EndDate")
                         .HasColumnType("date");
 
                     b.Property<string>("Notes")
@@ -3902,7 +3984,7 @@ namespace Odontia.Infrastructure.Persistence.Migrations
                     b.Property<int>("SortOrder")
                         .HasColumnType("int");
 
-                    b.Property<DateOnly?>("StartDate")
+                    b.Property<DateTime?>("StartDate")
                         .HasColumnType("date");
 
                     b.Property<int>("Status")
@@ -3993,7 +4075,7 @@ namespace Odontia.Infrastructure.Persistence.Migrations
                     b.Property<int>("DayOfWeek")
                         .HasColumnType("int");
 
-                    b.Property<TimeOnly>("EndTime")
+                    b.Property<TimeSpan>("EndTime")
                         .HasColumnType("time");
 
                     b.Property<Guid?>("GabineteId")
@@ -4002,7 +4084,7 @@ namespace Odontia.Infrastructure.Persistence.Migrations
                     b.Property<Guid>("ProfessionalUserId")
                         .HasColumnType("char(36)");
 
-                    b.Property<TimeOnly>("StartTime")
+                    b.Property<TimeSpan>("StartTime")
                         .HasColumnType("time");
 
                     b.Property<DateTime?>("UpdatedAtUtc")
@@ -4384,6 +4466,28 @@ namespace Odontia.Infrastructure.Persistence.Migrations
                     b.HasOne("Odontia.Domain.Entities.ConsultorioMember", null)
                         .WithMany()
                         .HasForeignKey("ConsultorioId", "ProfessionalUserId")
+                        .HasPrincipalKey("ConsultorioId", "UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Odontia.Domain.Entities.Expense", b =>
+                {
+                    b.HasOne("Odontia.Domain.Entities.Consultorio", null)
+                        .WithMany()
+                        .HasForeignKey("ConsultorioId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Odontia.Domain.Entities.Laboratory", null)
+                        .WithMany()
+                        .HasForeignKey("ConsultorioId", "LaboratoryId")
+                        .HasPrincipalKey("ConsultorioId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("Odontia.Domain.Entities.ConsultorioMember", null)
+                        .WithMany()
+                        .HasForeignKey("ConsultorioId", "RegisteredByUserId")
                         .HasPrincipalKey("ConsultorioId", "UserId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();

@@ -49,6 +49,7 @@ public interface IApplicationDbContext
     DbSet<BudgetItem> BudgetItems { get; }
     DbSet<BudgetStatusChange> BudgetStatusChanges { get; }
     DbSet<Payment> Payments { get; }
+    DbSet<Expense> Expenses { get; }
     DbSet<AccountMovement> AccountMovements { get; }
     DbSet<Laboratory> Laboratories { get; }
     DbSet<LabWork> LabWorks { get; }

@@ -8649,6 +8649,535 @@
         ]
       }
     },
+    "/api/v1/expenses": {
+      "get": {
+        "tags": [
+          "Expenses"
+        ],
+        "description": "**Permisos requeridos:** `finance.read`",
+        "operationId": "expensesSearch",
+        "parameters": [
+          {
+            "name": "From",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          {
+            "name": "To",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          {
+            "name": "Category",
+            "in": "query",
+            "schema": {
+              "$ref": "#/components/schemas/ExpenseCategory"
+            }
+          },
+          {
+            "name": "IncludeVoided",
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "Page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "PageSize",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "Sort",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PagedResultOfExpenseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos inválidos (`validation_error`, con `errors` por campo).",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiProblem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No autenticado o sesión invalidada (`unauthorized`, `session_invalidated`).",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiProblem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permiso o sin consultorio activo (`forbidden`, `membership_inactive`).",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiProblem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Demasiadas solicitudes (`rate_limited`).",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiProblem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "Bearer": [ ]
+          }
+        ],
+        "x-permissions": [
+          "finance.read"
+        ]
+      },
+      "post": {
+        "tags": [
+          "Expenses"
+        ],
+        "summary": "Registra un egreso (insumos, laboratorio, alquiler, servicios, etc.).",
+        "description": "**Permisos requeridos:** `payments.write`",
+        "operationId": "expensesRegister",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegisterExpenseRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegisterExpenseRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegisterExpenseRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExpenseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos inválidos (`validation_error`, con `errors` por campo).",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiProblem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No autenticado o sesión invalidada (`unauthorized`, `session_invalidated`).",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiProblem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permiso o sin consultorio activo (`forbidden`, `membership_inactive`).",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiProblem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflicto: duplicado, horario ocupado o versión desactualizada (`slot_taken`, `concurrency_conflict`, …).",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiProblem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Regla de negocio incumplida (el `detail` es apto para mostrar al usuario).",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiProblem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Demasiadas solicitudes (`rate_limited`).",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiProblem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "Bearer": [ ]
+          }
+        ],
+        "x-permissions": [
+          "payments.write"
+        ]
+      }
+    },
+    "/api/v1/expenses/{id}": {
+      "get": {
+        "tags": [
+          "Expenses"
+        ],
+        "description": "**Permisos requeridos:** `finance.read`",
+        "operationId": "expensesGet",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExpenseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No autenticado o sesión invalidada (`unauthorized`, `session_invalidated`).",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiProblem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permiso o sin consultorio activo (`forbidden`, `membership_inactive`).",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiProblem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe o pertenece a otro consultorio (`not_found`).",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiProblem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Demasiadas solicitudes (`rate_limited`).",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiProblem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "Bearer": [ ]
+          }
+        ],
+        "x-permissions": [
+          "finance.read"
+        ]
+      }
+    },
+    "/api/v1/expenses/{id}/void": {
+      "post": {
+        "tags": [
+          "Expenses"
+        ],
+        "summary": "Anulación controlada con motivo: el egreso no se elimina.",
+        "description": "**Permisos requeridos:** `payments.void`",
+        "operationId": "expensesVoid",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VoidExpenseRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VoidExpenseRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/VoidExpenseRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExpenseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos inválidos (`validation_error`, con `errors` por campo).",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiProblem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No autenticado o sesión invalidada (`unauthorized`, `session_invalidated`).",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiProblem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permiso o sin consultorio activo (`forbidden`, `membership_inactive`).",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiProblem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe o pertenece a otro consultorio (`not_found`).",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiProblem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflicto: duplicado, horario ocupado o versión desactualizada (`slot_taken`, `concurrency_conflict`, …).",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiProblem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Regla de negocio incumplida (el `detail` es apto para mostrar al usuario).",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiProblem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Demasiadas solicitudes (`rate_limited`).",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiProblem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "Bearer": [ ]
+          }
+        ],
+        "x-permissions": [
+          "payments.void"
+        ]
+      }
+    },
+    "/api/v1/finance/summary": {
+      "get": {
+        "tags": [
+          "Expenses"
+        ],
+        "summary": "Ingresos (pagos de pacientes), egresos y balance neto de un período. No incluye movimientos anulados.",
+        "description": "**Permisos requeridos:** `finance.read`",
+        "operationId": "expensesSummary",
+        "parameters": [
+          {
+            "name": "From",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          {
+            "name": "To",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FinanceSummaryDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos inválidos (`validation_error`, con `errors` por campo).",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiProblem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No autenticado o sesión invalidada (`unauthorized`, `session_invalidated`).",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiProblem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permiso o sin consultorio activo (`forbidden`, `membership_inactive`).",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiProblem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Demasiadas solicitudes (`rate_limited`).",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiProblem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "Bearer": [ ]
+          }
+        ],
+        "x-permissions": [
+          "finance.read"
+        ]
+      }
+    },
     "/api/v1/health-insurances": {
       "get": {
         "tags": [
@@ -19165,6 +19694,145 @@
         },
         "additionalProperties": false
       },
+      "ExpenseCategory": {
+        "enum": [
+          "Supplies",
+          "Laboratory",
+          "Salaries",
+          "Rent",
+          "Services",
+          "Taxes",
+          "Equipment",
+          "Maintenance",
+          "Other"
+        ],
+        "type": "string"
+      },
+      "ExpenseCategoryTotalDto": {
+        "type": "object",
+        "properties": {
+          "category": {
+            "$ref": "#/components/schemas/ExpenseCategory"
+          },
+          "total": {
+            "type": "number",
+            "format": "double"
+          }
+        },
+        "additionalProperties": false
+      },
+      "ExpenseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "description": {
+            "type": "string"
+          },
+          "category": {
+            "$ref": "#/components/schemas/ExpenseCategory"
+          },
+          "amount": {
+            "type": "number",
+            "format": "double"
+          },
+          "method": {
+            "$ref": "#/components/schemas/PaymentMethod"
+          },
+          "paidAtUtc": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "supplier": {
+            "type": "string",
+            "nullable": true
+          },
+          "reference": {
+            "type": "string",
+            "nullable": true
+          },
+          "notes": {
+            "type": "string",
+            "nullable": true
+          },
+          "laboratoryId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "laboratoryName": {
+            "type": "string",
+            "nullable": true
+          },
+          "status": {
+            "$ref": "#/components/schemas/ExpenseStatus"
+          },
+          "registeredBy": {
+            "type": "string"
+          },
+          "voidedAtUtc": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "voidReason": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "ExpenseStatus": {
+        "enum": [
+          "Registered",
+          "Voided"
+        ],
+        "type": "string"
+      },
+      "FinanceSummaryDto": {
+        "type": "object",
+        "properties": {
+          "fromUtc": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "toUtc": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "income": {
+            "type": "number",
+            "format": "double"
+          },
+          "paymentCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "expenses": {
+            "type": "number",
+            "format": "double"
+          },
+          "expenseCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "net": {
+            "type": "number",
+            "format": "double"
+          },
+          "expensesByCategory": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ExpenseCategoryTotalDto"
+            }
+          }
+        },
+        "additionalProperties": false
+      },
       "FindingDto": {
         "type": "object",
         "properties": {
@@ -20269,6 +20937,39 @@
         },
         "additionalProperties": false
       },
+      "PagedResultOfExpenseDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ExpenseDto"
+            }
+          },
+          "page": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "pageSize": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "totalCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "totalPages": {
+            "type": "integer",
+            "format": "int32",
+            "readOnly": true
+          },
+          "hasNext": {
+            "type": "boolean",
+            "readOnly": true
+          }
+        },
+        "additionalProperties": false
+      },
       "PagedResultOfLabWorkDto": {
         "type": "object",
         "properties": {
@@ -21120,6 +21821,47 @@
             "items": {
               "type": "string"
             }
+          }
+        },
+        "additionalProperties": false
+      },
+      "RegisterExpenseRequest": {
+        "type": "object",
+        "properties": {
+          "description": {
+            "type": "string"
+          },
+          "category": {
+            "$ref": "#/components/schemas/ExpenseCategory"
+          },
+          "amount": {
+            "type": "number",
+            "format": "double"
+          },
+          "method": {
+            "$ref": "#/components/schemas/PaymentMethod"
+          },
+          "paidAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "supplier": {
+            "type": "string",
+            "nullable": true
+          },
+          "reference": {
+            "type": "string",
+            "nullable": true
+          },
+          "notes": {
+            "type": "string",
+            "nullable": true
+          },
+          "laboratoryId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
           }
         },
         "additionalProperties": false
@@ -22571,6 +23313,15 @@
         },
         "additionalProperties": false
       },
+      "VoidExpenseRequest": {
+        "type": "object",
+        "properties": {
+          "reason": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
       "VoidPaymentRequest": {
         "type": "object",
         "properties": {
@@ -22719,6 +23470,9 @@
     },
     {
       "name": "Documents"
+    },
+    {
+      "name": "Expenses"
     },
     {
       "name": "HealthInsurances"

@@ -4,7 +4,7 @@ import { Observable } from 'rxjs';
 import { API, Paginado, parametros } from '../core/api';
 import {
   AccountStatementDto, AgendaDto, AppointmentDto, AppointmentStatus, ApplyConditionRequest, BudgetDto, ClinicalDashboardDto,
-  ClinicalEntryDto, ClinicalRecordDto, ConsultorioDto, CreateAppointmentRequest, CreateClinicalEntryRequest, CreatePatientRequest,
+  ClinicalEntryDto, ClinicalRecordDto, ExpenseDto, FinanceSummaryDto, RegisterExpenseRequest, ConsultorioDto, CreateAppointmentRequest, CreateClinicalEntryRequest, CreatePatientRequest,
   GabineteDto, HealthInsuranceDto, LabBoardDto, LabWorkDto, LabWorkStatus, LaboratoryDto, MemberDto, NotificationSettingsDto,
   OdontogramCatalogDto, OdontogramDto, PatientDto, PatientListItemDto, PatientStatus, PatientSummaryDto, PaymentDto,
   ProfessionalDto, ProfileDto, ReceptionDashboardDto, RegisterPaymentRequest, SaveBudgetRequest, SaveLabWorkRequest,
@@ -114,6 +114,17 @@ export class OdontiaApi {
   }
   emitirPresupuesto(id: string): Observable<BudgetDto> { return this.http.post<BudgetDto>(`${API}/budgets/${id}/issue`, null); }
   aprobarPresupuesto(id: string): Observable<BudgetDto> { return this.http.post<BudgetDto>(`${API}/budgets/${id}/approve`, null); }
+
+  // ── Egresos y resumen financiero ───────────────────────────────────────────
+  egresos(filtro: Filtro = {}): Observable<Paginado<ExpenseDto>> {
+    return this.http.get<Paginado<ExpenseDto>>(`${API}/expenses`, { params: parametros({ pageSize: 100, ...filtro }) });
+  }
+  registrarEgreso(solicitud: RegisterExpenseRequest): Observable<ExpenseDto> { return this.http.post<ExpenseDto>(`${API}/expenses`, solicitud); }
+  anularEgreso(id: string, reason: string): Observable<ExpenseDto> { return this.http.post<ExpenseDto>(`${API}/expenses/${id}/void`, { reason }); }
+  /** Ingresos, egresos y balance neto de un período, calculados por el backend. */
+  resumenFinanciero(desde: Date, hasta: Date): Observable<FinanceSummaryDto> {
+    return this.http.get<FinanceSummaryDto>(`${API}/finance/summary`, { params: parametros({ From: desde.toISOString(), To: hasta.toISOString() }) });
+  }
 
   // ── Dashboards ─────────────────────────────────────────────────────────────
   dashboardRecepcion(): Observable<ReceptionDashboardDto> { return this.http.get<ReceptionDashboardDto>(`${API}/dashboard/reception`); }

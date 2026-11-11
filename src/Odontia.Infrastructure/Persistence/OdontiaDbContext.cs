@@ -57,6 +57,7 @@ public class OdontiaDbContext(DbContextOptions<OdontiaDbContext> options, ITenan
     public DbSet<BudgetItem> BudgetItems => Set<BudgetItem>();
     public DbSet<BudgetStatusChange> BudgetStatusChanges => Set<BudgetStatusChange>();
     public DbSet<Payment> Payments => Set<Payment>();
+    public DbSet<Expense> Expenses => Set<Expense>();
     public DbSet<AccountMovement> AccountMovements => Set<AccountMovement>();
     public DbSet<Laboratory> Laboratories => Set<Laboratory>();
     public DbSet<LabWork> LabWorks => Set<LabWork>();

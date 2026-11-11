@@ -10,7 +10,7 @@ const tagTitles = {
   Auth: 'Autenticación y sesiones', Consultorio: 'Consultorio', Users: 'Usuarios, roles e invitaciones', Profile: 'Perfil',
   Audit: 'Auditoría', Patients: 'Pacientes', HealthInsurances: 'Obras sociales', Agenda: 'Agenda', Appointments: 'Turnos',
   Tasks: 'Tareas', ClinicalRecord: 'Historia clínica', OdontogramCatalog: 'Odontograma · catálogo', Odontogram: 'Odontograma',
-  Procedures: 'Prestaciones', TreatmentPlans: 'Planes de tratamiento', Budgets: 'Presupuestos', Payments: 'Pagos y cuenta corriente',
+  Procedures: 'Prestaciones', TreatmentPlans: 'Planes de tratamiento', Budgets: 'Presupuestos', Payments: 'Pagos y cuenta corriente', Expenses: 'Egresos y resumen financiero',
   Laboratories: 'Laboratorios', LabWorks: 'Trabajos de laboratorio', Documents: 'Documentos y consentimientos',
   Notifications: 'Notificaciones y mensajes', Dashboard: 'Dashboards',
 };

@@ -296,3 +296,53 @@ public static class AccountCalculator
             ? budget.Total - payments.Where(p => p.BudgetId == budget.Id && p.Status == PaymentStatus.Registered).Sum(p => p.Amount)
             : 0m;
 }
+
+/// <summary>
+/// Egreso del consultorio (insumos, laboratorio, alquiler, servicios, etc.). Igual que los pagos, no se elimina:
+/// una carga errónea se anula con motivo y queda en el historial.
+/// </summary>
+public class Expense : TenantEntity
+{
+    private Expense() { }
+
+    public Expense(Guid consultorioId, string description, ExpenseCategory category, decimal amount, PaymentMethod method, DateTime paidAtUtc,
+        string? supplier, string? reference, string? notes, Guid? laboratoryId, Guid registeredByUserId)
+    {
+        ConsultorioId = consultorioId;
+        Description = Guard.Required(description, "Concepto", 250);
+        Category = category;
+        Amount = Guard.Money(amount, "Importe", allowZero: false);
+        Method = method;
+        PaidAtUtc = DateTime.SpecifyKind(paidAtUtc, DateTimeKind.Utc);
+        Supplier = Guard.Optional(supplier, "Proveedor", 150);
+        Reference = Guard.Optional(reference, "Referencia", 100);
+        Notes = Guard.Optional(notes, "Observaciones", 500);
+        LaboratoryId = laboratoryId;
+        RegisteredByUserId = registeredByUserId;
+        Status = ExpenseStatus.Registered;
+    }
+
+    public string Description { get; private set; } = null!;
+    public ExpenseCategory Category { get; private set; }
+    public decimal Amount { get; private set; }
+    public PaymentMethod Method { get; private set; }
+    public DateTime PaidAtUtc { get; private set; }
+    public string? Supplier { get; private set; }
+    public string? Reference { get; private set; }
+    public string? Notes { get; private set; }
+    public Guid? LaboratoryId { get; private set; }
+    public Guid RegisteredByUserId { get; private set; }
+    public ExpenseStatus Status { get; private set; }
+    public DateTime? VoidedAtUtc { get; private set; }
+    public Guid? VoidedByUserId { get; private set; }
+    public string? VoidReason { get; private set; }
+
+    public void Void(string reason, Guid userId, DateTime nowUtc)
+    {
+        if (Status == ExpenseStatus.Voided) throw new DomainException("El egreso ya fue anulado.", "expense_already_voided");
+        VoidReason = Guard.Required(reason, "Motivo de anulación", 500);
+        VoidedAtUtc = nowUtc;
+        VoidedByUserId = userId;
+        Status = ExpenseStatus.Voided;
+    }
+}

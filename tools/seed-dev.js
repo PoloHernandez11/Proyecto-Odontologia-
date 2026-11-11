@@ -184,6 +184,13 @@ const dia = dias => { const fecha = new Date(); fecha.setDate(fecha.getDate() + 
     await pago(await concepto(sofia, 'Control semestral y limpieza', 30000), 30000, 'Cash');
     await concepto(paula, 'Obturaciones piezas 14 y 15', 95000);
 
+    // 7 bis. Egresos del consultorio
+    for (const [description, category, amount, method, supplier] of [
+      ['Guantes y barbijos', 'Supplies', 38500, 'DebitCard', 'Insumos Dentales SA'],
+      ['Servicio de limpieza', 'Services', 22000, 'Cash', null],
+      ['Alquiler del consultorio', 'Rent', 95000, 'BankTransfer', null]
+    ]) await intentar(`egreso ${description}`, () => api('POST', '/expenses', { description, category, amount, method, supplier }));
+
     // 8. Historia clínica y odontograma
     await intentar('evolución', () => api('POST', `/patients/${martin.id}/clinical-record/entries`, {
       type: 'Consultation', title: 'Dolor al masticar', description: 'Diagnóstico: Caries profunda en pieza 36\nTratamiento: Endodoncia · primera sesión',

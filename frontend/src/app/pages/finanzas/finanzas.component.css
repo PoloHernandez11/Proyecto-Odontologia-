@@ -8,3 +8,8 @@
 .bar i { display: block; height: 100%; border-radius: 6px; background: #0b6070; }
 .od-panel-heading a { color: #0b6070; }
 @media (max-width: 600px) { .method { grid-template-columns: 1fr auto; } .bar { grid-column: 1 / -1; order: 3; } .method small { display: none; } }
+.breakdowns { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px; }
+.bar.expense i { background: #c98a1b; }
+.od-stat.negative strong { color: #b23a34; }
+.inline-select { height: 36px; border: 1px solid #d4dfe1; border-radius: 7px; padding: 0 10px; font: inherit; font-size: 13px; background: #fff; color: #30454d; }
+.od-actions { align-items: center; margin-top: 0; }

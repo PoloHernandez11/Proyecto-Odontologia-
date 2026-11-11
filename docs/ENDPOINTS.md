@@ -1,7 +1,7 @@
 # Endpoints de la API Odontia v1
 
 > Generado automáticamente a partir del documento OpenAPI (`docs/openapi.v1.json`).
-> Total: **168 operaciones**. Base: `/api/v1`. Errores: ProblemDetails (ver `docs/FRONTEND_INTEGRATION.md`).
+> Total: **173 operaciones**. Base: `/api/v1`. Errores: ProblemDetails (ver `docs/FRONTEND_INTEGRATION.md`).
 
 Códigos comunes en todas las operaciones autenticadas: `401` (sin sesión o sesión invalidada), `403` (sin permiso / sin consultorio activo), `400` (validación), `404` (no existe **o pertenece a otro consultorio**), `409` (conflicto/concurrencia), `422` (regla de negocio), `429` (rate limit).
 
@@ -24,6 +24,7 @@ Códigos comunes en todas las operaciones autenticadas: `401` (sin sesión o ses
 - [Planes de tratamiento](#planes-de-tratamiento)
 - [Presupuestos](#presupuestos)
 - [Pagos y cuenta corriente](#pagos-y-cuenta-corriente)
+- [Egresos y resumen financiero](#egresos-y-resumen-financiero)
 - [Laboratorios](#laboratorios)
 - [Trabajos de laboratorio](#trabajos-de-laboratorio)
 - [Documentos y consentimientos](#documentos-y-consentimientos)
@@ -254,6 +255,16 @@ Códigos comunes en todas las operaciones autenticadas: `401` (sin sesión o ses
 | POST | `/payments` | `paymentsRegister` | Registra un pago (opcionalmente imputado a un presupuesto aprobado, sin exceder su saldo). | — | `RegisterPaymentRequest` | 201 `PaymentDto` | `payments.write` |
 | GET | `/payments/{id}` | `paymentsGet` | — | id (ruta) | — | 200 `PaymentDto` | `finance.read` |
 | POST | `/payments/{id}/void` | `paymentsVoid` | Anulación controlada con motivo: genera contraasiento; el pago no se elimina. | id (ruta) | `VoidPaymentRequest` | 200 `PaymentDto` | `payments.void` |
+
+## Egresos y resumen financiero
+
+| Método | Ruta | operationId | Descripción | Parámetros | Cuerpo | Respuesta | Permiso |
+|---|---|---|---|---|---|---|---|
+| GET | `/expenses` | `expensesSearch` | — | From, To, Category, IncludeVoided, Page, PageSize, Sort | — | 200 `PagedResultOfExpenseDto` | `finance.read` |
+| POST | `/expenses` | `expensesRegister` | Registra un egreso (insumos, laboratorio, alquiler, servicios, etc.). | — | `RegisterExpenseRequest` | 201 `ExpenseDto` | `payments.write` |
+| GET | `/expenses/{id}` | `expensesGet` | — | id (ruta) | — | 200 `ExpenseDto` | `finance.read` |
+| POST | `/expenses/{id}/void` | `expensesVoid` | Anulación controlada con motivo: el egreso no se elimina. | id (ruta) | `VoidExpenseRequest` | 200 `ExpenseDto` | `payments.void` |
+| GET | `/finance/summary` | `expensesSummary` | Ingresos (pagos de pacientes), egresos y balance neto de un período. No incluye movimientos anulados. | From, To | — | 200 `FinanceSummaryDto` | `finance.read` |
 
 ## Laboratorios
 

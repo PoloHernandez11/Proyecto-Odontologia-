@@ -4821,6 +4821,185 @@
       ]
     },
     {
+      "name": "Egresos y resumen financiero",
+      "item": [
+        {
+          "name": "GET /expenses",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/expenses",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "expenses"
+              ],
+              "query": [
+                {
+                  "key": "From",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "To",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "Category",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "IncludeVoided",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "Page",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "PageSize",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "Sort",
+                  "value": "",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "\n\nPermiso: finance.read"
+          },
+          "event": []
+        },
+        {
+          "name": "POST /expenses",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/expenses",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "expenses"
+              ],
+              "query": []
+            },
+            "description": "Registra un egreso (insumos, laboratorio, alquiler, servicios, etc.).\n\nPermiso: payments.write",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"description\": \"\",\n  \"category\": \"Supplies\",\n  \"amount\": 0,\n  \"method\": \"Cash\",\n  \"paidAt\": \"2026-10-20T10:30:00-03:00\",\n  \"supplier\": \"\",\n  \"reference\": \"\",\n  \"notes\": \"\",\n  \"laboratoryId\": \"{{laboratoryId}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": []
+        },
+        {
+          "name": "GET /expenses/{{id}}",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/expenses/{{id}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "expenses",
+                "{{id}}"
+              ],
+              "query": []
+            },
+            "description": "\n\nPermiso: finance.read"
+          },
+          "event": []
+        },
+        {
+          "name": "POST /expenses/{{id}}/void",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/expenses/{{id}}/void",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "expenses",
+                "{{id}}",
+                "void"
+              ],
+              "query": []
+            },
+            "description": "Anulación controlada con motivo: el egreso no se elimina.\n\nPermiso: payments.void",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": []
+        },
+        {
+          "name": "GET /finance/summary",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/finance/summary",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "finance",
+                "summary"
+              ],
+              "query": [
+                {
+                  "key": "From",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "To",
+                  "value": "",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "Ingresos (pagos de pacientes), egresos y balance neto de un período. No incluye movimientos anulados.\n\nPermiso: finance.read"
+          },
+          "event": []
+        }
+      ]
+    },
+    {
       "name": "Laboratorios",
       "item": [
         {

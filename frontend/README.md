@@ -69,7 +69,7 @@ node tools/gen-types.js
 | `/odontograma`, `/odontograma/:id` | Buscador de paciente y odontograma FDI | `odontogram.read` |
 | `/laboratorio` | Trabajos de laboratorio | `lab.read` |
 | `/pagos` | Conceptos de cobro (presupuestos aprobados) y pagos | `finance.read` |
-| `/finanzas` | Ingresos del período y saldos pendientes | `finance.read` |
+| `/finanzas` | Ingresos, egresos y balance neto del período; registro de egresos | `finance.read` (`payments.write` para registrar) |
 | `/configuracion` | Perfil, seguridad, notificaciones y datos del consultorio | sesión iniciada |
 
 El perfil (odontólogo, secretaria, administrador) no se elige en el login: lo determinan los roles del usuario. El menú y las
@@ -78,7 +78,6 @@ rutas se ajustan a sus permisos, y el backend vuelve a validar cada operación.
 ## Limitaciones conocidas
 
 - Las fechas y horas se muestran y se cargan en la zona horaria del navegador; se asume que coincide con la del consultorio.
-- Finanzas muestra sólo ingresos: el backend aún no tiene un registro de egresos.
 - Los selectores de paciente de Laboratorio y Pagos listan hasta 100 pacientes.
 
 ## Despliegue en Vercel

@@ -91,7 +91,7 @@ erDiagram
 | Clínica | `ClinicalRecords`, `ClinicalEntries`, `ClinicalEntryTeeth`, `ClinicalEntryRevisions`, `Diagnoses` | Una historia por paciente; revisión única `(ClinicalEntryId, Version)`; piezas con FK a `DentalPieces` |
 | Odontograma | `DentalPieces` (52 FDI), `DentalSurfaces` (7), `OdontogramConditions`, `Odontograms`, `ToothFindings`, `OdontogramHistory`, `ToothNotes` | Un odontograma por paciente; código de condición único por consultorio; hallazgos normalizados por pieza/superficie |
 | Tratamientos | `Procedures`, `TreatmentPlans`, `TreatmentPlanItems`, `TreatmentChanges` | Código de prestación único por consultorio; precio histórico en el ítem |
-| Finanzas | `Budgets`, `BudgetItems`, `BudgetStatusChanges`, `Payments`, `AccountMovements` | Número de presupuesto y de recibo únicos por consultorio; movimientos inmutables con contraasiento `ReversesMovementId` |
+| Finanzas | `Budgets`, `BudgetItems`, `BudgetStatusChanges`, `Payments`, `AccountMovements`, `Expenses` | Número de presupuesto y de recibo únicos por consultorio; movimientos inmutables con contraasiento `ReversesMovementId` |
 | Laboratorio | `Laboratories`, `LabWorks`, `LabWorkStatusChanges` | Nombre de laboratorio único por consultorio |
 | Documentos | `Documents`, `Consents` | `StorageKey` único; hash SHA-256; baja lógica (`IsDeleted`) |
 | Notificaciones | `Notifications`, `OutboundMessages` | Estado real de entrega (`Sent` sólo con confirmación del proveedor) |

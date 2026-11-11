@@ -84,6 +84,10 @@ public enum PaymentMethod { Cash = 1, DebitCard = 2, CreditCard = 3, BankTransfe
 
 public enum PaymentStatus { Registered = 1, Voided = 2 }
 
+public enum ExpenseCategory { Supplies = 1, Laboratory = 2, Salaries = 3, Rent = 4, Services = 5, Taxes = 6, Equipment = 7, Maintenance = 8, Other = 99 }
+
+public enum ExpenseStatus { Registered = 1, Voided = 2 }
+
 public enum MovementType
 {
     /// <summary>Cargo por presupuesto aprobado (débito).</summary>
@@ -183,5 +187,6 @@ public enum AuditAction
     DocumentDownloaded = 40,
     PaymentVoided = 50,
     BudgetStatusChanged = 51,
+    ExpenseVoided = 52,
     AccessDenied = 90,
 }

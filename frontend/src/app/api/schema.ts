@@ -634,6 +634,44 @@ export interface EnableTwoFactorRequest {
   code: string;
 }
 
+export type ExpenseCategory = "Supplies" | "Laboratory" | "Salaries" | "Rent" | "Services" | "Taxes" | "Equipment" | "Maintenance" | "Other";
+
+export interface ExpenseCategoryTotalDto {
+  category: ExpenseCategory;
+  total: number;
+}
+
+export interface ExpenseDto {
+  id: string;
+  description: string;
+  category: ExpenseCategory;
+  amount: number;
+  method: PaymentMethod;
+  paidAtUtc: string;
+  supplier?: string | null;
+  reference?: string | null;
+  notes?: string | null;
+  laboratoryId?: string | null;
+  laboratoryName?: string | null;
+  status: ExpenseStatus;
+  registeredBy: string;
+  voidedAtUtc?: string | null;
+  voidReason?: string | null;
+}
+
+export type ExpenseStatus = "Registered" | "Voided";
+
+export interface FinanceSummaryDto {
+  fromUtc?: string | null;
+  toUtc?: string | null;
+  income: number;
+  paymentCount: number;
+  expenses: number;
+  expenseCount: number;
+  net: number;
+  expensesByCategory: ExpenseCategoryTotalDto[];
+}
+
 export interface FindingDto {
   id: string;
   toothCode: number;
@@ -963,6 +1001,15 @@ export interface PagedResultOfClinicalEntryDto {
   hasNext: boolean;
 }
 
+export interface PagedResultOfExpenseDto {
+  items: ExpenseDto[];
+  page: number;
+  pageSize: number;
+  totalCount: number;
+  totalPages: number;
+  hasNext: boolean;
+}
+
 export interface PagedResultOfLabWorkDto {
   items: LabWorkDto[];
   page: number;
@@ -1203,6 +1250,18 @@ export interface RecordConsentAcceptanceRequest {
 
 export interface RecoveryCodesDto {
   recoveryCodes: string[];
+}
+
+export interface RegisterExpenseRequest {
+  description: string;
+  category: ExpenseCategory;
+  amount: number;
+  method: PaymentMethod;
+  paidAt?: string | null;
+  supplier?: string | null;
+  reference?: string | null;
+  notes?: string | null;
+  laboratoryId?: string | null;
 }
 
 export interface RegisterPaymentRequest {
@@ -1645,6 +1704,10 @@ export interface UpdatedCountDto {
 }
 
 export interface VoidClinicalEntryRequest {
+  reason: string;
+}
+
+export interface VoidExpenseRequest {
   reason: string;
 }
 

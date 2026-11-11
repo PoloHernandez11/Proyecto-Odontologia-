@@ -1,68 +1,119 @@
 <main class="od-page">
   <header class="od-topbar">
     <div><h1>Finanzas</h1><p>Control económico general del consultorio · importes en pesos argentinos (ARS)</p></div>
-    <label class="period">Período <input type="month" [(ngModel)]="periodo" (ngModelChange)="cargarPeriodo()"></label>
+    <div class="od-actions">
+      <label class="period">Período <input type="month" [(ngModel)]="periodo" (ngModelChange)="cargarPeriodo()"></label>
+      @if (puedeRegistrar) {
+        <button type="button" class="od-button" (click)="abrirFormulario()">＋ Registrar egreso</button>
+      }
+    </div>
   </header>
 
   <div class="od-content">
-    @if (error) {
-      <p class="od-feedback error" role="alert">{{ error }}</p>
-    }
+    @if (mensaje) { <p class="od-feedback" role="status">{{ mensaje }}</p> }
+    @if (error) { <p class="od-feedback error" role="alert">{{ error }}</p> }
 
     <section class="od-stats" aria-label="Resumen financiero">
-      <article class="od-stat success"><span>Ingresos de {{ tituloDelPeriodo }}</span><strong>{{ pesos(ingresos) }}</strong><small>{{ cantidadDeCobros }} cobros registrados@if (anulados) {
-      · {{ anulados }} anulados
-    }</small></article>
-    <article class="od-stat warning"><span>Pendiente por cobrar</span><strong>{{ pesos(pendientePorCobrar) }}</strong><small>Saldo de presupuestos aprobados</small></article>
-    @if (veLaboratorio) {
-      <article class="od-stat"><span>Laboratorio en curso</span><strong>{{ pesos(costoDeLaboratorio) }}</strong><small>Costo de {{ laboratorioEnCurso.length }} trabajos sin finalizar</small></article>
-    }
-  </section>
+      <article class="od-stat success"><span>Ingresos de {{ tituloDelPeriodo }}</span><strong>{{ pesos(resumen?.income ?? 0) }}</strong><small>{{ resumen?.paymentCount ?? 0 }} cobros a pacientes</small></article>
+      <article class="od-stat warning"><span>Egresos de {{ tituloDelPeriodo }}</span><strong>{{ pesos(resumen?.expenses ?? 0) }}</strong><small>{{ resumen?.expenseCount ?? 0 }} egresos registrados</small></article>
+      <article class="od-stat" [class.negative]="(resumen?.net ?? 0) < 0"><span>Balance neto</span><strong>{{ pesos(resumen?.net ?? 0) }}</strong><small>Ingresos menos egresos, sin anulados</small></article>
+      <article class="od-stat"><span>Pendiente por cobrar</span><strong>{{ pesos(pendientePorCobrar) }}</strong><small>Saldo de presupuestos aprobados</small></article>
+      @if (veLaboratorio) {
+        <article class="od-stat"><span>Laboratorio en curso</span><strong>{{ pesos(costoDeLaboratorio) }}</strong><small>Costo de {{ laboratorioEnCurso.length }} trabajos sin finalizar</small></article>
+      }
+    </section>
 
-  <section class="od-panel">
-    <div class="od-panel-heading"><div><h2>Ingresos por método de pago</h2><small>{{ tituloDelPeriodo }}</small></div></div>
-    <div class="od-panel-body">
-      @for (fila of porMetodo; track fila) {
-        <div class="method">
-          <span class="method-name">{{ fila.metodo }}</span>
-          <span class="bar" aria-hidden="true"><i [style.width.%]="fila.porcentaje"></i></span>
-          <strong>{{ pesos(fila.total) }}</strong><small>{{ fila.porcentaje }} %</small>
+    <div class="breakdowns">
+      <section class="od-panel">
+        <div class="od-panel-heading"><div><h2>Ingresos por método de pago</h2><small>{{ tituloDelPeriodo }}</small></div></div>
+        <div class="od-panel-body">
+          @for (fila of porMetodo; track fila.titulo) {
+            <div class="method"><span>{{ fila.titulo }}</span><span class="bar" aria-hidden="true"><i [style.width.%]="fila.porcentaje"></i></span><strong>{{ pesos(fila.total) }}</strong><small>{{ fila.porcentaje }} %</small></div>
+          } @empty {
+            <p class="od-note">No hay cobros registrados en este período.</p>
+          }
         </div>
-      }
-      @if (!cargando && porMetodo.length === 0) {
-        <p class="od-note">No hay cobros registrados en este período.</p>
-      }
+      </section>
+      <section class="od-panel">
+        <div class="od-panel-heading"><div><h2>Egresos por categoría</h2><small>{{ tituloDelPeriodo }}</small></div></div>
+        <div class="od-panel-body">
+          @for (fila of porCategoria; track fila.titulo) {
+            <div class="method"><span>{{ fila.titulo }}</span><span class="bar expense" aria-hidden="true"><i [style.width.%]="fila.porcentaje"></i></span><strong>{{ pesos(fila.total) }}</strong><small>{{ fila.porcentaje }} %</small></div>
+          } @empty {
+            <p class="od-note">No hay egresos registrados en este período.</p>
+          }
+        </div>
+      </section>
     </div>
-  </section>
 
-  <section class="od-panel">
-    <div class="od-panel-heading"><div><h2>Libro de ingresos</h2><small>Los cobros se incorporan automáticamente desde <a routerLink="/pagos">Pagos de pacientes</a>.</small></div></div>
-    <div class="od-table-scroll">
-      <table class="od-table">
-        <thead><tr><th>FECHA</th><th>CONCEPTO</th><th>MÉTODO</th><th>RECIBO</th><th class="num">IMPORTE</th><th>ESTADO</th></tr></thead>
-        <tbody>
-          @for (pago of pagos; track pago) {
-            <tr>
-              <td>{{ fecha(pago.paidAtUtc) }}</td>
-              <td><strong>Pago · {{ pago.patientName }}</strong>@if (pago.budgetNumber) {
-              <small>Presupuesto N.º {{ pago.budgetNumber }}</small>
-            }</td>
-            <td>{{ metodos[pago.method] }}</td><td>N.º {{ pago.receiptNumber }}</td>
-            <td class="num"><strong>{{ pesos(pago.amount) }}</strong></td>
-            <td><span class="od-chip" [ngClass]="pago.status === 'Voided' ? 'bad' : 'ok'">{{ pago.status === 'Voided' ? 'Anulado' : 'Registrado' }}</span></td>
-          </tr>
-        }
-        @if (!cargando && pagos.length === 0) {
-          <tr><td colspan="6" class="empty">No hay movimientos en {{ tituloDelPeriodo }}.</td></tr>
-        }
-        @if (cargando) {
-          <tr><td colspan="6" class="empty">Cargando…</td></tr>
-        }
-      </tbody>
-    </table>
+    <section class="od-panel">
+      <div class="od-panel-heading">
+        <div><h2>Libro de movimientos</h2><small>Los cobros se incorporan automáticamente desde <a routerLink="/pagos">Pagos de pacientes</a>.</small></div>
+        <select aria-label="Filtrar movimientos" class="inline-select" [(ngModel)]="filtro"><option value="Todos">Todos</option><option value="Ingreso">Ingresos</option><option value="Egreso">Egresos</option></select>
+      </div>
+      <div class="od-table-scroll">
+        <table class="od-table">
+          <thead><tr><th>FECHA</th><th>TIPO</th><th>CONCEPTO</th><th>MÉTODO</th><th class="num">IMPORTE</th><th>ESTADO</th>@if (puedeAnular) { <th>ACCIÓN</th> }</tr></thead>
+          <tbody>
+            @for (movimiento of movimientos; track movimiento.id) {
+              <tr>
+                <td>{{ fecha(movimiento.fecha) }}</td>
+                <td><span class="od-chip" [class.ok]="movimiento.tipo === 'Ingreso'" [class.warn]="movimiento.tipo === 'Egreso'">{{ movimiento.tipo }}</span></td>
+                <td><strong>{{ movimiento.concepto }}</strong><small>{{ movimiento.detalle }}</small></td>
+                <td>{{ metodos[movimiento.metodo] }}</td>
+                <td class="num"><strong>{{ movimiento.tipo === 'Egreso' ? '−' : '' }}{{ pesos(movimiento.importe) }}</strong></td>
+                <td><span class="od-chip" [class.bad]="movimiento.anulado">{{ movimiento.anulado ? 'Anulado' : 'Registrado' }}</span>@if (movimiento.motivo) { <small>{{ movimiento.motivo }}</small> }</td>
+                @if (puedeAnular) {
+                  <td>@if (movimiento.egreso && !movimiento.anulado) { <button type="button" class="od-button small danger" (click)="pedirAnulacion(movimiento.egreso)">Anular</button> }</td>
+                }
+              </tr>
+            } @empty {
+              <tr><td [attr.colspan]="puedeAnular ? 7 : 6" class="empty">{{ cargando ? 'Cargando…' : 'No hay movimientos en ' + tituloDelPeriodo + '.' }}</td></tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </section>
   </div>
-</section>
-
-<p class="od-note">Este resumen muestra los ingresos reales registrados en el sistema. El registro de egresos (insumos, pagos a laboratorios y otros gastos) todavía no existe en el servidor, por eso no se calcula un balance neto.</p>
-</div>
 </main>
+
+@if (mostrarFormulario) {
+  <div class="od-backdrop" (click)="mostrarFormulario = false">
+    <section class="od-modal" role="dialog" aria-modal="true" aria-labelledby="titulo-egreso" (click)="$event.stopPropagation()">
+      <header><div><h2 id="titulo-egreso">Registrar egreso</h2><p>Insumos, laboratorio, alquiler, servicios y otros gastos del consultorio.</p></div><button type="button" class="od-close" aria-label="Cerrar" (click)="mostrarFormulario = false">×</button></header>
+      <form class="od-form" [formGroup]="formulario" (ngSubmit)="guardarEgreso()">
+        <label>Concepto<input type="text" formControlName="concepto" placeholder="Ej. Compra de guantes y barbijos">@if (formulario.controls.concepto.touched && formulario.controls.concepto.invalid) { <small>Describí el egreso (mínimo 3 caracteres).</small> }</label>
+        <div class="od-form-row">
+          <label>Categoría<select formControlName="categoria">@for (categoria of listaDeCategorias; track categoria[0]) { <option [value]="categoria[0]">{{ categoria[1] }}</option> }</select></label>
+          <label>Importe ($)<input type="number" min="0.01" step="0.01" formControlName="importe" placeholder="0">@if (formulario.controls.importe.touched && formulario.controls.importe.invalid) { <small>Ingresá un importe mayor a cero.</small> }</label>
+        </div>
+        <div class="od-form-row">
+          <label>Método de pago<select formControlName="metodo">@for (metodo of listaDeMetodos; track metodo[0]) { <option [value]="metodo[0]">{{ metodo[1] }}</option> }</select></label>
+          <label>Fecha<input type="date" [max]="hoy" formControlName="fecha"></label>
+        </div>
+        @if (formulario.controls.categoria.value === 'Laboratory' && laboratorios.length) {
+          <label>Laboratorio<select formControlName="laboratorio"><option value="">Sin indicar</option>@for (laboratorio of laboratorios; track laboratorio.id) { <option [value]="laboratorio.id">{{ laboratorio.name }}</option> }</select></label>
+        } @else {
+          <label>Proveedor (opcional)<input type="text" formControlName="proveedor" placeholder="A quién se le pagó"></label>
+        }
+        <label>N.º de comprobante (opcional)<input type="text" formControlName="comprobante" placeholder="Ej. factura o transferencia"></label>
+        <label>Observaciones (opcional)<textarea rows="2" formControlName="observaciones"></textarea></label>
+        @if (errorFormulario) { <p class="od-feedback error" role="alert">{{ errorFormulario }}</p> }
+        <footer><button type="button" class="od-button secondary" (click)="mostrarFormulario = false">Cancelar</button><button type="submit" class="od-button" [disabled]="guardando">{{ guardando ? 'Guardando…' : 'Registrar egreso' }}</button></footer>
+      </form>
+    </section>
+  </div>
+}
+
+@if (egresoPorAnular; as egreso) {
+  <div class="od-backdrop" (click)="egresoPorAnular = null">
+    <section class="od-modal" role="dialog" aria-modal="true" aria-labelledby="titulo-anular-egreso" (click)="$event.stopPropagation()">
+      <header><div><h2 id="titulo-anular-egreso">Anular egreso</h2><p>{{ egreso.description }} · {{ pesos(egreso.amount) }}. Queda en el historial como anulado y deja de contarse en el balance.</p></div><button type="button" class="od-close" aria-label="Cerrar" (click)="egresoPorAnular = null">×</button></header>
+      <div class="od-form">
+        <label>Motivo de la anulación<input type="text" maxlength="500" [(ngModel)]="motivoAnulacion" placeholder="Ej. Cargado dos veces"></label>
+        @if (errorFormulario) { <p class="od-feedback error" role="alert">{{ errorFormulario }}</p> }
+        <footer><button type="button" class="od-button secondary" (click)="egresoPorAnular = null">Volver</button><button type="button" class="od-button danger" [disabled]="guardando" (click)="anular()">Anular egreso</button></footer>
+      </div>
+    </section>
+  </div>
+}
