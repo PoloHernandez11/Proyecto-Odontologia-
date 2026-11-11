@@ -43,7 +43,7 @@ Odontia/
 
 Detalle: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) · Base de datos: [docs/DATABASE.md](docs/DATABASE.md) ·
 Roles y permisos: [docs/ROLES_AND_PERMISSIONS.md](docs/ROLES_AND_PERMISSIONS.md) · Endpoints: [docs/ENDPOINTS.md](docs/ENDPOINTS.md) ·
-Seguridad: [docs/SECURITY.md](docs/SECURITY.md) · Servicios externos: [docs/EXTERNAL_SERVICES.md](docs/EXTERNAL_SERVICES.md) ·
+Despliegue: [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) · Seguridad: [docs/SECURITY.md](docs/SECURITY.md) · Servicios externos: [docs/EXTERNAL_SERVICES.md](docs/EXTERNAL_SERVICES.md) ·
 Integración **Angular**: [docs/ANGULAR_INTEGRATION.md](docs/ANGULAR_INTEGRATION.md) · Integración React: [docs/FRONTEND_INTEGRATION.md](docs/FRONTEND_INTEGRATION.md)
 
 ## Requisitos
@@ -155,7 +155,7 @@ npm --prefix frontend start
 La aplicación queda en `http://localhost:4200` y reenvía `/api` a la API mediante el proxy de Angular.
 Para cargar un consultorio de demostración con datos de prueba (sólo desarrollo local): `node tools/seed-dev.js`.
 Las credenciales generadas quedan en `tools/.seed-dev.json`, excluido de git. Más detalle en [frontend/README.md](frontend/README.md).
-El frontend se publica en Vercel como sitio estático (pasos en [frontend/README.md](frontend/README.md#despliegue-en-vercel)); la API y MySQL se alojan aparte.
+Para publicar todo sin costo (frontend en Vercel, API y MySQL en MonsterASP.NET) seguir [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
 
 ## Pruebas
 

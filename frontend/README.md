@@ -82,7 +82,8 @@ rutas se ajustan a sus permisos, y el backend vuelve a validar cada operación.
 
 ## Despliegue en Vercel
 
-Vercel aloja **sólo el frontend**, como sitio estático. La API (.NET) y MySQL tienen que estar publicadas en otro servicio con HTTPS.
+Vercel aloja **sólo el frontend**, como sitio estático. La API (.NET) y MySQL tienen que estar publicadas en otro servicio con HTTPS;
+la guía completa, con una opción gratuita para la API, está en [docs/DEPLOYMENT.md](../docs/DEPLOYMENT.md).
 La configuración está en [`vercel.json`](vercel.json): compila con `npm run build`, publica `dist/frontend/browser`, reenvía `/api/*`
 a la API y sirve `index.html` para el resto de las rutas.
 

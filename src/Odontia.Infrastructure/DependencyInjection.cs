@@ -64,7 +64,8 @@ public static class DependencyInjection
 
         var keysPath = configuration["DataProtection:KeysPath"];
         var dp = services.AddDataProtection().SetApplicationName("Odontia");
-        if (!string.IsNullOrWhiteSpace(keysPath)) dp.PersistKeysToFileSystem(new DirectoryInfo(keysPath));
+        // Una ruta relativa (p. ej. "App_Data/keys") se resuelve contra la carpeta de la aplicación.
+        if (!string.IsNullOrWhiteSpace(keysPath)) dp.PersistKeysToFileSystem(new DirectoryInfo(Path.Combine(env.ContentRootPath, keysPath)));
 
         services.AddScoped<IJwtTokenService, JwtTokenService>();
         services.AddScoped<IAuditWriter, AuditWriter>();

@@ -167,9 +167,10 @@ internal sealed class LocalFileStorage : IFileStorage
     public LocalFileStorage(Microsoft.Extensions.Options.IOptions<LocalStorageOptions> options, Microsoft.Extensions.Hosting.IHostEnvironment env)
     {
         var configured = options.Value.RootPath;
+        // Una ruta relativa (p. ej. "App_Data/documents") se resuelve contra la carpeta de la aplicación.
         _root = Path.GetFullPath(string.IsNullOrWhiteSpace(configured)
             ? Path.Combine(env.ContentRootPath, "..", "..", "storage", "documents")
-            : configured);
+            : Path.Combine(env.ContentRootPath, configured));
         Directory.CreateDirectory(_root);
     }
 

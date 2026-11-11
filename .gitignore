@@ -6,6 +6,7 @@ obj/
 .vscode/
 .idea/
 TestResults/
+publish/
 
 # Datos locales: documentos privados, bandeja de correo de desarrollo, claves
 storage/
@@ -15,6 +16,8 @@ keys/
 # Secretos
 .env
 appsettings.*.local.json
+# Configuración real de producción (contraseñas): se crea a partir de appsettings.Production.example.json
+appsettings.Production.json
 
 # Frontend (Angular)
 node_modules/
