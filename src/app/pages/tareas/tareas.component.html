@@ -1,0 +1,23 @@
+<div class="tareas-container">
+  <h2>Gestión de Tareas Administrativas</h2>
+
+  <!-- Formulario rápido para crear tarea -->
+  <form (ngSubmit)="agregarTarea()" #f="ngForm">
+    <input type="text" [(ngModel)]="nuevaTarea.titulo" name="titulo" placeholder="Ej: Pedir insumos a proveedor" required>
+    <select [(ngModel)]="nuevaTarea.prioridad" name="prioridad">
+      <option value="Baja">Baja</option>
+      <option value="Media">Media</option>
+      <option value="Alta">Alta</option>
+    </select>
+    <input type="date" [(ngModel)]="nuevaTarea.fechaLimite" name="fechaLimite" required>
+    <button type="submit" [disabled]="f.invalid">Agregar Tarea</button>
+  </form>
+
+  <!-- Lista de tareas -->
+  <ul class="lista-tareas">
+    <li *ngFor="let t of tareas" [class.completada]="t.completada">
+      <input type="checkbox" [checked]="t.completada" (change)="cambiarEstado(t)">
+      <span>{{ t.titulo }}</span> - <small>Prioridad: {{ t.prioridad }}</small>
+    </li>
+  </ul>
+</div>

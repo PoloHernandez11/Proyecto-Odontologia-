@@ -4,8 +4,9 @@ import { FormControl, FormGroup, FormsModule, ReactiveFormsModule, Validators } 
 import { RouterLink } from '@angular/router';
 import { ConceptoCobro, MetodoPago, Pago } from '../../models/pago.model';
 import { PagoService } from '../../services/pago.service';
-import { PacienteService } from '../../services/paciente.service';
-
+import { PacientesService } from '../../services/paciente.service';
+import { Paciente } from '../../models/paciente.model';
+ 
 @Component({
   selector: 'app-pagos', standalone: true,
   imports: [CommonModule, FormsModule, ReactiveFormsModule, RouterLink],
@@ -14,7 +15,7 @@ import { PacienteService } from '../../services/paciente.service';
 export class PagosComponent {
   conceptos: ConceptoCobro[] = [];
   pagos: Pago[] = [];
-  pacientes: ReturnType<PacienteService['obtenerTodos']> = [];
+  pacientes: Paciente[] = [];
   mostrarConcepto = false;
   formularioConcepto = new FormGroup({ pacienteId: new FormControl<number | null>(null, Validators.required), descripcion: new FormControl('', [Validators.required, Validators.minLength(3)]), importeTotal: new FormControl<number | null>(null, [Validators.required, Validators.min(1)]) });
   busquedaConceptos = '';
@@ -34,13 +35,16 @@ export class PagosComponent {
     comprobante: new FormControl(''),
     observaciones: new FormControl('')
   });
-
-  constructor(private pagoService: PagoService, private pacienteService: PacienteService) { this.pacientes = this.pacienteService.obtenerTodos(); this.actualizarDatos(); }
-
+ 
+  constructor(private pagoService: PagoService, private pacientesService: PacientesService) {
+    this.pacientesService.obtenerTodos().subscribe(pacientes => this.pacientes = pacientes);
+    this.actualizarDatos();
+  }
+ 
   get conceptosFiltrados(): ConceptoCobro[] {
     const texto = this.busquedaConceptos.trim().toLowerCase();
     return this.conceptos.filter(c => {
-      const paciente = this.pacienteService.obtenerTodos().find(p => p.id === c.pacienteId);
+      const paciente = this.pacientes.find(p => p.id === c.pacienteId);
       const dni = paciente?.dni || '';
       return `${c.pacienteNombre} ${c.descripcion} ${dni}`.toLowerCase().includes(texto) && (this.filtroEstado === 'Todos' || c.estado === this.filtroEstado);
     });
@@ -48,7 +52,7 @@ export class PagosComponent {
   get pagosFiltrados(): Pago[] {
     const texto = this.busquedaPagos.trim().toLowerCase();
     return this.pagos.filter(p => {
-      const paciente = this.pacienteService.obtenerTodos().find(item => item.id === p.pacienteId);
+      const paciente = this.pacientes.find(item => item.id === p.pacienteId);
       return `${p.pacienteNombre} ${p.conceptoDescripcion} ${p.comprobante} ${paciente?.dni || ''}`.toLowerCase().includes(texto) && (this.filtroMetodo === 'Todos' || p.metodo === this.filtroMetodo);
     });
   }
@@ -66,7 +70,7 @@ export class PagosComponent {
   abrirConcepto(pacienteId: number): void { this.formularioConcepto.reset({ pacienteId, descripcion: '', importeTotal: null }); this.mostrarConcepto = true; this.error = ''; }
   cerrarConcepto(): void { this.mostrarConcepto = false; }
   guardarConcepto(): void { if (this.formularioConcepto.invalid) { this.formularioConcepto.markAllAsTouched(); return; } const datos = this.formularioConcepto.getRawValue(); const paciente = this.pacientes.find(p => p.id === datos.pacienteId); if (!paciente) return; const resultado = this.pagoService.agregarConcepto(paciente.id, `${paciente.nombre} ${paciente.apellido}`, datos.descripcion || '', Number(datos.importeTotal)); if (!resultado.ok) { this.error = resultado.mensaje; return; } this.mensaje = resultado.mensaje; this.actualizarDatos(); this.mostrarConcepto = false; }
-
+ 
   abrirFormulario(conceptoId?: number): void {
     this.error = ''; this.mensaje = '';
     this.formulario.reset({ conceptoId: conceptoId ?? null, importe: null, metodo: 'Transferencia', cuotas: '1', cuotasPersonalizadas: null, comprobante: '', observaciones: '' });
@@ -91,5 +95,6 @@ export class PagosComponent {
   formatoPesos(valor: number): string { return new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 }).format(valor); }
   fechaLegible(fecha: string): string { return this.pagoService.formatoFecha(fecha); }
   claseEstado(estado: string): string { return estado.toLowerCase().replaceAll(' ', '-'); }
-  nombrePaciente(id: number): string { const p = this.pacienteService.obtenerTodos().find(item => item.id === id); return p ? `${p.nombre} ${p.apellido}` : 'Paciente'; }
+  nombrePaciente(id: number): string { const p = this.pacientes.find(item => item.id === id); return p ? `${p.nombre} ${p.apellido}` : 'Paciente'; }
 }
+ 

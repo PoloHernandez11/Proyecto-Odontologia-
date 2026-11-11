@@ -1,0 +1,32 @@
+<nav class="sidebar">
+  <ul>
+    <!-- Todos ven Inicio y Pacientes -->
+    <li><a routerLink="/dashboard">Dashboard</a></li>
+    <li><a routerLink="/pacientes">Pacientes</a></li>
+    <li><a routerLink="/agenda">Agenda de Turnos</a></li>
+
+    <!--  Nuevo módulo independiente de Tareas -->
+    <li><a routerLink="/tareas">Tareas y Pendientes</a></li>
+
+    <!-- Agenda de Turnos: Visible para Secretaria y Odontólogo/Admin -->
+    @if (authService.esOdontologo() || authService.esSecretaria()) {
+      <li>
+        <a routerLink="/agenda">Agenda de Turnos</a>
+      </li>
+    }
+
+    <!-- Historias Clínicas: Exclusivo del Odontólogo (Admin) -->
+    @if (authService.esOdontologo()) {
+      <li>
+        <a routerLink="/historia-clinica">Historias Clínicas</a>
+      </li>
+    }
+
+    <!-- Finanzas: Exclusivo del Odontólogo (Admin) -->
+    @if (authService.esOdontologo()) {
+      <li>
+        <a routerLink="/finanzas">Finanzas</a>
+      </li>
+    }
+  </ul>
+</nav>

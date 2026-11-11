@@ -2,3 +2,23 @@
   display: block;
   min-height: 100vh;
 }
+/* Estilos globales base para la aplicación Odontia */
+:root {
+  --primary-color: #0ea5e9;
+  --primary-dark: #0284c7;
+  --bg-main: #f8fafc;
+  --text-main: #1e293b;
+  --border-color: #e2e8f0;
+}
+
+body {
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  background-color: var(--bg-main);
+  color: var(--text-main);
+  margin: 0;
+  padding: 0;
+}
+
+* {
+  box-sizing: border-box;
+}

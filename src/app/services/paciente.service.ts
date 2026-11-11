@@ -1,4 +1,5 @@
-import { Injectable } from '@angular/core';
+//Guarda en memoria local 
+/*import { Injectable } from '@angular/core';
 import { Paciente } from '../models/paciente.model';
 
 // Servicio que centraliza el listado y las operaciones de pacientes.
@@ -27,5 +28,69 @@ export class PacienteService {
   actualizar(pacienteActualizado: Paciente): void {
     const indice = this.pacientes.findIndex(paciente => paciente.id === pacienteActualizado.id);
     if (indice !== -1) this.pacientes[indice] = pacienteActualizado;
+  }
+}
+*/
+
+//Implementamos API REST para que la cosnuma
+/*import { Injectable } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
+import { Observable } from 'rxjs';
+
+export interface Paciente {
+  id?: number;
+  nombre: string;
+  apellido: string;
+  dni: string;
+  telefono: string;
+}
+
+@Injectable({
+  providedIn: 'root'
+})
+export class PacienteService {
+  private apiUrl = 'http://localhost:3000/api/pacientes'; // Tu endpoint real
+
+  constructor(private http: HttpClient) {}
+
+  getPacientes(): Observable<Paciente[]> {
+    return this.http.get<Paciente[]>(this.apiUrl);
+  }
+
+  crearPaciente(paciente: Paciente): Observable<Paciente> {
+    return this.http.post<Paciente>(this.apiUrl, paciente);
+  }
+}*/
+import { Injectable } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
+import { Observable } from 'rxjs';
+import { Paciente } from '../models/paciente.model'; // Ajustá la ruta a tu modelo
+
+@Injectable({
+  providedIn: 'root'
+})
+export class PacientesService {
+  private apiUrl = 'http://localhost:3000/api/pacientes'; // Ajustá el puerto/ruta de tu API backend
+
+  constructor(private http: HttpClient) {}
+
+  obtenerTodos(): Observable<Paciente[]> {
+    return this.http.get<Paciente[]>(this.apiUrl);
+  }
+
+  obtenerPorId(id: number): Observable<Paciente> {
+    return this.http.get<Paciente>(`${this.apiUrl}/${id}`);
+  }
+
+  crearPaciente(paciente: Omit<Paciente, 'id'>): Observable<Paciente> {
+    return this.http.post<Paciente>(this.apiUrl, paciente);
+  }
+
+  actualizar(id: number, paciente: Partial<Paciente>): Observable<Paciente> {
+    return this.http.put<Paciente>(`${this.apiUrl}/${id}`, paciente);
+  }
+
+  eliminar(id: number): Observable<void> {
+    return this.http.delete<void>(`${this.apiUrl}/${id}`);
   }
 }

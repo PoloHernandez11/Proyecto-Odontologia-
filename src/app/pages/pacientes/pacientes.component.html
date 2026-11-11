@@ -20,7 +20,7 @@
     <div class="user-box"><span class="user-avatar">{{ perfil === 'odontologo' ? 'LM' : 'CS' }}</span><span class="user-info"><strong>{{ nombreUsuario }}</strong><small>{{ perfil === 'odontologo' ? 'Odontóloga' : 'Secretaria · Recepción' }}</small></span><a routerLink="/login" title="Cerrar sesión">↪</a></div>
   </aside>
 
-  <main class="main-content">
+  <main class="main-content"> 
     <header class="topbar">
       <div><h1>Pacientes</h1><p>Administrá la información de tus pacientes</p></div>
       <span class="top-user">{{ nombreUsuario }}</span>
@@ -52,6 +52,16 @@
             <table>
               <thead><tr><th>PACIENTE</th><th>DNI</th><th>TELÉFONO</th><th>OBRA SOCIAL</th><th>ÚLTIMA VISITA</th><th>PRÓXIMO TURNO</th><th>ESTADO</th></tr></thead>
               <tbody>
+                <!-- cARGADO IMPLICITAMENTE -->
+                <tr>
+                    <td>Ana Martínez</td>
+                    <td>35.489.123</td>
+                    <td>+54 9 11 2345-6789</td>
+                    <td>OSDE</td>
+                    <td>10/11/2026</td>
+                    <td>01/02/2027</td>
+                    <td>ACTIVO</td>
+                </tr>
                 <tr *ngFor="let paciente of pacientesFiltrados" (click)="seleccionarPaciente(paciente)" [class.selected-row]="pacienteSeleccionado?.id === paciente.id">
                   <td><div class="patient-cell"><span class="avatar">{{ iniciales(paciente) }}</span><strong>{{ paciente.nombre }} {{ paciente.apellido }}</strong></div></td>
                   <td>{{ paciente.dni }}</td><td>{{ paciente.telefono }}</td><td>{{ paciente.obraSocial }}</td><td>{{ paciente.ultimaVisita }}</td><td>{{ paciente.proximoTurno }}</td>

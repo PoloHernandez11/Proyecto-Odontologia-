@@ -4,3 +4,4 @@
 @media(max-width:600px){.sidebar{display:none}.topbar{height:auto;min-height:70px;padding:13px 15px}.page-content{padding:18px 12px}.page-heading{align-items:flex-start;flex-direction:column}.page-heading .primary-button{width:100%}.filters-panel{flex-direction:column}.filters-panel select{width:100%}.content-grid{gap:12px}.detail-panel{display:block}.form-row{grid-template-columns:1fr}.patient-modal form{padding:17px}.patient-modal>header{padding:18px}.top-user{font-size:11px}}
 
 .clinical-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:14px 0}.clinical-actions a{background:#e8f4f4;color:#167b83;text-decoration:none;text-align:center;padding:11px 7px;border-radius:7px;font-size:12px;font-weight:700}.clinical-actions a:hover{background:#d8ebeb}
+

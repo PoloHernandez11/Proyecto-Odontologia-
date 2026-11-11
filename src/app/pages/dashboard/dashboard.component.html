@@ -9,7 +9,7 @@
       <p class="navigation-heading">PRINCIPAL</p>
       <a class="navigation-link active" routerLink="/dashboard"><span class="nav-icon">⌂</span>Inicio</a>
       <a class="navigation-link" routerLink="/agenda" [queryParams]="{ perfil: perfil }"><span class="nav-icon">▦</span>Agenda <span class="nav-count">12</span></a>
-      <a class="navigation-link" routerLink="/turnos-tareas" [queryParams]="{ perfil: perfil }"><span class="nav-icon">☑</span>Turnos y tareas <span class="nav-count">5</span></a>
+      <a class="navigation-link" routerLink="/turnos" [queryParams]="{ perfil: perfil }"><span class="nav-icon">☑</span>Turnos y tareas <span class="nav-count">5</span></a>
       <a class="navigation-link" routerLink="/pacientes" [queryParams]="{ perfil: perfil }"><span class="nav-icon">♧</span>Pacientes</a>
 
       <p class="navigation-heading">CLÍNICA</p>
@@ -43,7 +43,7 @@
           <span aria-hidden="true">⌕</span>
           <input type="search" placeholder="Buscar paciente, DNI o teléfono..." (input)="buscarPaciente($event)">
         </label>
-        <button class="notification-button" type="button" aria-label="Notificaciones" (click)="alternarNotificaciones()">♧<i></i></button><div class="notification-popover" *ngIf="mostrarNotificaciones"><strong>Notificaciones</strong><p>Tenés 2 pacientes en sala de espera.</p><p>Hay 3 trabajos de laboratorio en seguimiento.</p><button type="button" (click)="mostrarNotificaciones = false">Cerrar</button></div>
+        <button class="notification-button" type="button" aria-label="Notificaciones" (click)="alternarNotificaciones()">🕭<i></i></button><div class="notification-popover" *ngIf="mostrarNotificaciones"><strong>Notificaciones</strong><p>Tenés 2 pacientes en sala de espera.</p><p>Hay 3 trabajos de laboratorio en seguimiento.</p><button type="button" (click)="mostrarNotificaciones = false">Cerrar</button></div>
       </div>
     </header>
 
@@ -126,7 +126,7 @@
           </section>
 
           <section class="panel tasks-panel" id="tareas" *ngIf="perfil === 'secretaria'">
-            <header class="panel-header"><h2>Tareas pendientes</h2><a routerLink="/turnos-tareas" [queryParams]="{ perfil: perfil }">Ver todas</a></header>
+            <header class="panel-header"><h2>Tareas pendientes</h2><a routerLink="/turnos" [queryParams]="{ perfil: perfil }">Ver todas</a></header>
             <div class="task-list">
               <label class="task-item" *ngFor="let tarea of tareas" [class.completed]="tarea.completada">
                 <input type="checkbox" [checked]="tarea.completada" (change)="completarTarea(tarea)">

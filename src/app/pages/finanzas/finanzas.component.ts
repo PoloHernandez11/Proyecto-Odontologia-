@@ -1,11 +1,12 @@
 import { CommonModule } from '@angular/common';
-import { Component } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { FormControl, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
-import { RouterLink } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { CategoriaFinanciera, MovimientoVista, TipoMovimiento } from '../../models/finanza.model';
 import { TrabajoLaboratorio } from '../../models/trabajo-laboratorio.model';
 import { FinanzasService } from '../../services/finanzas.service';
 import { LaboratorioService } from '../../services/laboratorio.service';
+import { AuthService } from '../../services/auth.service';
 
 @Component({
   selector: 'app-finanzas', standalone: true,
@@ -39,10 +40,20 @@ export class FinanzasComponent {
     metodo: new FormControl('Transferencia', Validators.required)
   });
 
-  constructor(private finanzas: FinanzasService, private laboratorio: LaboratorioService) {
+  constructor(private finanzas: FinanzasService, 
+    private laboratorio: LaboratorioService,
+    private authService : AuthService,
+    private router: Router)
+  {
     this.categorias = this.finanzas.categorias();
     this.trabajos = this.laboratorio.obtenerTodos();
     this.actualizar();
+  }
+  ngOnInit(): void{
+    if(!this.authService.puedeVerFinanzas()){
+      alert('Acceso Restringido: El modulo de Finanzas es exclusivo del Odontologo')
+      this.router.navigate(['/agenda'])
+    }
   }
 
   private hoy(): string { const d = new Date(); return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10); }

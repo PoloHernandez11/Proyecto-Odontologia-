@@ -1,0 +1,101 @@
+<main class="turnos-page">
+  <header class="page-header">
+    <h1>Gestión de Turnos</h1>
+    <p>Asignación de citas, registro rápido de pacientes y tareas operativas.</p>
+  </header>
+
+  <div class="turnos-grid">
+    <!-- Panel 1: Agendar Turno -->
+    <section class="card shadow-sm">
+      <div class="card-header">
+        <h2>Agendar Nuevo Turno</h2>
+      </div>
+      <form [formGroup]="formTurno" (ngSubmit)="agendarTurno()" novalidate>
+        <div class="form-group">
+          <label for="pacienteSelect">Paciente</label>
+          <select id="pacienteSelect" formControlName="pacienteId" class="form-control">
+            <option value="" disabled>Seleccione un paciente</option>
+            <option *ngFor="let p of pacientes" [value]="p.id">
+              {{ p.nombre }} {{ p.apellido }} (DNI: {{ p.dni }})
+            </option>
+          </select>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group col">
+            <label for="fecha">Fecha</label>
+            <input id="fecha" type="date" formControlName="fecha" class="form-control" />
+          </div>
+          <div class="form-group col">
+            <label for="hora">Hora</label>
+            <input id="hora" type="time" formControlName="hora" class="form-control" />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="motivo">Motivo de la consulta</label>
+          <input id="motivo" type="text" formControlName="motivo" placeholder="Ej: Consulta general, Limpieza" class="form-control" />
+        </div>
+
+        <button type="submit" class="btn btn-primary" [disabled]="formTurno.invalid">
+          Confirmar Turno
+        </button>
+      </form>
+    </section>
+
+    <!-- Panel 2: Registrar Nuevo Paciente -->
+    <section class="card shadow-sm">
+      <div class="card-header">
+        <h2>Registrar Nuevo Paciente</h2>
+      </div>
+      <form [formGroup]="formPaciente" (ngSubmit)="registrarPaciente()" novalidate>
+        <div class="form-row">
+          <div class="form-group col">
+            <label for="nombre">Nombre</label>
+            <input id="nombre" type="text" formControlName="nombre" class="form-control" placeholder="Nombre" />
+          </div>
+          <div class="form-group col">
+            <label for="apellido">Apellido</label>
+            <input id="apellido" type="text" formControlName="apellido" class="form-control" placeholder="Apellido" />
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group col">
+            <label for="dni">DNI</label>
+            <input id="dni" type="text" formControlName="dni" class="form-control" placeholder="DNI" />
+          </div>
+          <div class="form-group col">
+            <label for="telefono">Teléfono</label>
+            <input id="telefono" type="tel" formControlName="telefono" class="form-control" placeholder="Teléfono" />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="email">Correo Electrónico</label>
+          <input id="email" type="email" formControlName="email" class="form-control" placeholder="correo@ejemplo.com" />
+        </div>
+
+        <button type="submit" class="btn btn-secondary" [disabled]="formPaciente.invalid">
+          Registrar Paciente
+        </button>
+      </form>
+    </section>
+
+    <!-- Panel 3: Lista de Tareas Operativas -->
+    <section class="card shadow-sm full-width">
+      <div class="card-header">
+        <h2>Tareas Pendientes del Día</h2>
+      </div>
+      <ul class="tareas-list">
+        <li *ngFor="let tarea of tareas" [class.completada]="tarea.completada" class="tarea-item">
+          <label>
+            <input type="checkbox" [checked]="tarea.completada" (change)="toggleTarea(tarea)" />
+            <span class="tarea-titulo">{{ tarea.titulo }}</span>
+          </label>
+          <span class="badge" [ngClass]="tarea.prioridad">{{ tarea.prioridad }}</span>
+        </li>
+      </ul>
+    </section>
+  </div>
+</main>

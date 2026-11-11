@@ -1,7 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
-import { PacienteService } from '../../services/paciente.service';
+import { PacientesService } from '../../services/paciente.service';
 import { PerfilService } from '../../services/perfil.service';
 
 interface Turno {
@@ -71,12 +71,22 @@ export class DashboardComponent {
 
   get fechaHoyTexto(): string { return new Intl.DateTimeFormat('es-AR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }).format(new Date()); }
 
-  constructor(private route: ActivatedRoute, private pacientes: PacienteService, private perfilService: PerfilService) {
-    this.pacienteId = this.pacientes.obtenerTodos()[0]?.id ?? 1;
+  constructor(private route: ActivatedRoute, private pacientes: PacientesService, private perfilService: PerfilService) {
     this.route.queryParamMap.subscribe(parametros => {
       const guardado = this.perfilService.obtener();
       this.perfil = parametros.get('perfil') || guardado.perfil;
       this.nombreUsuario = guardado.nombre || (this.perfil === 'odontologo' ? 'Dra. Méndez' : 'Carla');
+    });
+  }
+  ngOnIt(): void{
+    this.pacientes.obtenerTodos().subscribe({
+      next: (data) => {
+        // Tomamos el ID del primer paciente si existe, sino por defecto 1
+        this.pacienteId = data[0]?.id ?? 1;
+      },
+      error: (err) => {
+        console.error('Error al cargar pacientes:', err);
+      }
     });
   }
 

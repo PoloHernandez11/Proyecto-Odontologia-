@@ -1,11 +1,13 @@
 import { CommonModule } from '@angular/common';
-import { Component } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { Paciente } from '../../models/paciente.model';
 import { RegistroClinico } from '../../models/historia-clinica.model';
-import { PacienteService } from '../../services/paciente.service';
+import { PacientesService } from '../../services/paciente.service';
 import { HistoriaClinicaService } from '../../services/historia-clinica.service';
+import { Router } from '@angular/router';
+import { AuthService } from '../../services/auth.service';
 
 @Component({
   selector: 'app-historia-clinica', standalone: true,
@@ -25,11 +27,23 @@ export class HistoriaClinicaComponent {
     observaciones: new FormControl('')
   });
 
-  constructor(private route: ActivatedRoute, private pacientes: PacienteService, private historias: HistoriaClinicaService) {
+  constructor(private route: ActivatedRoute, 
+    private pacientes: PacientesService, 
+    private historias: HistoriaClinicaService,
+    private authService: AuthService,
+    private router: Router) 
+  {
     const id = Number(this.route.snapshot.paramMap.get('id'));
-    this.paciente = this.pacientes.obtenerTodos().find(item => item.id === id);
+    //this.paciente = this.pacientes.obtenerTodos().find(item => item.id === id);
     this.perfil = this.route.snapshot.queryParamMap.get('perfil') || 'odontologo';
     if (this.paciente) this.registros = this.historias.obtenerRegistros(this.paciente.id);
+  }
+  ngOnInit(): void{
+    if(!this.authService.puedeVerHistorialClinico()){
+      alert('Acceso Restringido: El historial clinico es exclusivo del odontologo.');
+      this.router.navigate(['/pacientes']);
+    }
+
   }
 
   guardarRegistro(): void {

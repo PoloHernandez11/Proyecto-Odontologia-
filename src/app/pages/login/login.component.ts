@@ -51,11 +51,22 @@ export class LoginComponent {
       return;
     }
 
-    // Por ahora mostramos una confirmación de prueba: todavía no hay servidor de autenticación.
-    const actual = this.perfilService.obtener();
-    this.perfilService.guardar({ ...actual, perfil: this.perfilSeleccionado as 'secretaria' | 'odontologo' });
-    const nombrePerfil = this.perfilSeleccionado === 'odontologo' ? 'Odontólogo' : 'Secretaria';
-    // Navegación de demostración: todavía no existe autenticación con servidor.
-    this.router.navigate(['/dashboard'], { queryParams: { perfil: this.perfilSeleccionado } });
+    try {
+      // 1. Guardamos el token que exige el authGuard
+      localStorage.setItem('token', 'mock-jwt-token-123456');
+
+      // 2. Guardamos el perfil y rol para los permisos de roles (Odontólogo / Secretaria)
+      localStorage.setItem('perfil', this.perfilSeleccionado);
+      localStorage.setItem('rol', this.perfilSeleccionado);
+
+      const actual = this.perfilService.obtener();
+      this.perfilService.guardar({ ...actual, perfil: this.perfilSeleccionado as 'secretaria' | 'odontologo' });
+
+      // 3. Redirigimos al dashboard
+      this.router.navigate(['/dashboard'], { queryParams: { perfil: this.perfilSeleccionado } });
+
+    } catch (e) {
+      console.error('Error en el login:', e);
+    }
   }
 }
