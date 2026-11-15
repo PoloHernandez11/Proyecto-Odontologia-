@@ -1,0 +1,108 @@
+# Odontia en el servidor compartido (Oracle Linux ARM).
+# - Caddy (miaula-web-1) termina TLS y enruta por la red externa "miaula_default".
+# - Ningún servicio publica puertos en el host.
+# - MySQL solo está en la red privada "interna" (sin salida a internet).
+# - Los nombres de servicio llevan el prefijo "odontia-" porque Docker los registra como
+#   alias DNS en cada red: en miaula_default ya existen api, mysql, web, campo y agraria.
+# Uso (desde ~/odontia/deploy): docker compose up -d --build
+name: odontia
+
+services:
+  odontia-mysql:
+    image: mysql:8.4
+    restart: unless-stopped
+    mem_limit: 640m
+    environment:
+      MYSQL_DATABASE: odontia
+      MYSQL_USER: odontia_app
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?Falta MYSQL_PASSWORD en .env}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?Falta MYSQL_ROOT_PASSWORD en .env}
+      TZ: America/Argentina/Buenos_Aires
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_0900_ai_ci
+      - --innodb-buffer-pool-size=128M
+      - --innodb-log-buffer-size=8M
+      - --max-connections=60
+      - --performance-schema=OFF
+      - --skip-name-resolve
+    volumes:
+      - mysql-datos:/var/lib/mysql
+    networks:
+      - interna
+    healthcheck:
+      # La contraseña se toma de la variable del contenedor dentro del shell ($$ evita que
+      # compose la expanda): no aparece en la definición del healthcheck ni en la línea de comandos.
+      test: ["CMD-SHELL", "MYSQL_PWD=\"$$MYSQL_ROOT_PASSWORD\" mysqladmin ping -h 127.0.0.1 -u root --silent"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
+
+  odontia-api:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.api
+    image: odontia-api:latest
+    restart: unless-stopped
+    mem_limit: 512m
+    depends_on:
+      odontia-mysql:
+        condition: service_healthy
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ASPNETCORE_URLS: http://+:8080
+      TZ: America/Argentina/Buenos_Aires
+      ConnectionStrings__Default: server=odontia-mysql;port=3306;database=odontia;user=odontia_app;password=${MYSQL_PASSWORD:?Falta MYSQL_PASSWORD en .env}
+      Jwt__SigningKey: ${JWT_SIGNING_KEY:?Falta JWT_SIGNING_KEY en .env}
+      Frontend__BaseUrl: https://${DOMINIO:?Falta DOMINIO en .env}
+      Auth__AllowPublicRegistration: ${PERMITIR_REGISTRO:-true}
+      Database__ApplyMigrationsOnStartup: "true"
+      DataProtection__KeysPath: /data/keys
+      Storage__Local__RootPath: /data/documents
+      Email__Provider: Smtp
+      Email__FromAddress: ${SMTP_REMITENTE:?Falta SMTP_REMITENTE en .env}
+      Email__FromName: Odontia
+      Email__Smtp__Host: ${SMTP_HOST:?Falta SMTP_HOST en .env}
+      Email__Smtp__Port: ${SMTP_PORT:-587}
+      Email__Smtp__EnableSsl: "true"
+      Email__Smtp__UserName: ${SMTP_USUARIO:?Falta SMTP_USUARIO en .env}
+      Email__Smtp__Password: ${SMTP_CLAVE:?Falta SMTP_CLAVE en .env}
+      ReverseProxy__Enabled: "true"
+      ReverseProxy__KnownNetworks__0: 172.18.0.0/16
+      Swagger__Enabled: "false"
+      RateLimiting__AuthPermitPerMinute: "20"
+    volumes:
+      - api-datos:/data
+    networks:
+      interna:
+      miaula_default:
+        aliases:
+          - odontia-api
+
+  odontia-web:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.web
+    image: odontia-web:latest
+    restart: unless-stopped
+    mem_limit: 64m
+    environment:
+      TZ: America/Argentina/Buenos_Aires
+    networks:
+      miaula_default:
+        aliases:
+          - odontia-web
+
+networks:
+  # Red privada entre la API y MySQL, sin salida a internet.
+  interna:
+    internal: true
+  # Red del proyecto "miaula", donde vive Caddy. Ya existe en el servidor.
+  miaula_default:
+    external: true
+
+volumes:
+  # Se crean como odontia_mysql-datos y odontia_api-datos.
+  mysql-datos:
+  api-datos:

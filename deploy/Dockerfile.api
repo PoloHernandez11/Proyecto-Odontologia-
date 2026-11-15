@@ -1,0 +1,52 @@
+# syntax=docker/dockerfile:1
+# Imagen de la API de Odontia (ASP.NET Core 10).
+# Se construye con contexto en la raíz del repositorio:
+#   docker build -f deploy/Dockerfile.api .
+# El archivo deploy/Dockerfile.api.dockerignore limita lo que entra al contexto.
+
+# ---------- Etapa 1: restaurar y publicar ----------
+FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
+WORKDIR /src
+
+# Primero solo la configuración central y los .csproj: así la capa de "restore"
+# queda en caché mientras no cambien las dependencias.
+COPY Directory.Build.props Directory.Packages.props ./
+COPY src/Odontia.Domain/Odontia.Domain.csproj                 src/Odontia.Domain/
+COPY src/Odontia.Application/Odontia.Application.csproj       src/Odontia.Application/
+COPY src/Odontia.Infrastructure/Odontia.Infrastructure.csproj src/Odontia.Infrastructure/
+COPY src/Odontia.Api/Odontia.Api.csproj                       src/Odontia.Api/
+RUN dotnet restore src/Odontia.Api/Odontia.Api.csproj
+
+# Luego el código fuente y la publicación en Release.
+COPY src/ src/
+RUN dotnet publish src/Odontia.Api/Odontia.Api.csproj \
+      --configuration Release \
+      --no-restore \
+      --output /app/publish \
+      /p:UseAppHost=false
+
+# ---------- Etapa 2: ejecución ----------
+FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS runtime
+WORKDIR /app
+
+# Carpeta de datos persistentes (claves de Data Protection y documentos).
+# Se crea con dueño "app" para que el volumen nombrado herede esos permisos.
+RUN mkdir -p /data/keys /data/documents \
+ && chown -R app:app /data
+
+COPY --from=build --chown=app:app /app/publish ./
+
+ENV ASPNETCORE_URLS=http://+:8080 \
+    DOTNET_NOLOGO=1 \
+    DOTNET_CLI_TELEMETRY_OPTOUT=1
+
+USER app
+EXPOSE 8080
+VOLUME ["/data"]
+
+# La imagen aspnet no trae curl: se usa /dev/tcp de bash para pedir /health/ready
+# (incluye la verificación de la base de datos). Solo se acepta un 200.
+HEALTHCHECK --interval=15s --timeout=5s --start-period=90s --retries=5 \
+  CMD ["bash", "-c", "exec 3<>/dev/tcp/127.0.0.1/8080 && printf 'GET /health/ready HTTP/1.0\\r\\nHost: localhost\\r\\n\\r\\n' >&3 && head -n 1 <&3 | grep -q ' 200'"]
+
+ENTRYPOINT ["dotnet", "Odontia.Api.dll"]

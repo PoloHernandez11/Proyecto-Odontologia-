@@ -1,0 +1,23 @@
+# Contexto de la imagen de la API: solo se permite lo necesario (lista blanca).
+*
+!Directory.Build.props
+!Directory.Packages.props
+!src/
+
+# Dentro de lo permitido, se excluyen artefactos locales y archivos con secretos.
+**/bin
+**/obj
+**/node_modules
+**/.angular
+**/dist
+**/storage
+**/.git
+**/.vs
+**/*.user
+**/.env
+**/*.env
+**/appsettings.Production.json
+**/appsettings.*.local.json
+**/keys
+tests
+tools/.seed-dev.json

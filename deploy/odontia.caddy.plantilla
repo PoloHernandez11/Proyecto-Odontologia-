@@ -1,0 +1,14 @@
+# Plantilla del sitio de Odontia para el Caddy compartido (miaula-web-1).
+# actualizar-servidor.sh reemplaza __DOMINIO__ y la escribe en ~/sitios-caddy/odontia.caddy.
+__DOMINIO__ {
+	encode gzip
+
+	@api path /api/* /health/*
+	handle @api {
+		reverse_proxy odontia-api:8080
+	}
+
+	handle {
+		reverse_proxy odontia-web:80
+	}
+}

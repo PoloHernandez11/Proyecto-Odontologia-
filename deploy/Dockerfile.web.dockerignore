@@ -1,0 +1,16 @@
+# Contexto de la imagen web: solo el frontend y la configuración de nginx (lista blanca).
+*
+!frontend/
+!deploy/nginx.conf
+
+# Dentro de lo permitido, se excluyen artefactos locales y archivos con secretos.
+**/node_modules
+**/.angular
+**/dist
+**/bin
+**/obj
+**/.git
+**/.env
+**/*.env
+frontend/vercel.json
+frontend/proxy.conf.json
