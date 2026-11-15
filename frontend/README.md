@@ -80,20 +80,13 @@ rutas se ajustan a sus permisos, y el backend vuelve a validar cada operación.
 - Las fechas y horas se muestran y se cargan en la zona horaria del navegador; se asume que coincide con la del consultorio.
 - Los selectores de paciente de Laboratorio y Pagos listan hasta 100 pacientes.
 
-## Despliegue en Vercel
+## Despliegue
 
-Vercel aloja **sólo el frontend**, como sitio estático. La API (.NET) y MySQL tienen que estar publicadas en otro servicio con HTTPS;
-la guía completa, con una opción gratuita para la API, está en [docs/DEPLOYMENT.md](../docs/DEPLOYMENT.md).
-La configuración está en [`vercel.json`](vercel.json): compila con `npm run build`, publica `dist/frontend/browser`, reenvía `/api/*`
-a la API y sirve `index.html` para el resto de las rutas.
+En producción el build de Angular se sirve con nginx dentro de Docker, detrás del mismo dominio que la API
+(ver [`deploy/`](../deploy/README.md) y [docs/DEPLOYMENT.md](../docs/DEPLOYMENT.md)).
 
-1. En Vercel, crear el proyecto desde este repositorio con **Root Directory** = `frontend`.
-2. Definir la variable de entorno `ODONTIA_API_URL` con la dirección pública de la API, sin barra final (por ejemplo `https://api.midominio.com`).
-3. En la API, configurar `Frontend__BaseUrl` con la dirección del sitio en Vercel, para que los enlaces de los correos lleven al frontend.
-
-Como el navegador ve el sitio y la API en el mismo origen, no hace falta configurar CORS y las cookies de sesión funcionan con los
-valores por defecto (`Secure`, `SameSite=Strict`). A tener en cuenta: la API recibe todas las solicitudes desde los servidores de
-Vercel, así que sus límites de solicitudes por IP se comparten entre todos los usuarios; conviene revisarlos (`RateLimiting`) al publicar.
+Vercel sigue disponible como alternativa sin servidor propio, con la configuración de [`vercel.json`](vercel.json) y la variable
+`ODONTIA_API_URL`; los pasos y sus limitaciones están en [docs/DEPLOYMENT.md](../docs/DEPLOYMENT.md).
 
 ## Pruebas y compilación
 

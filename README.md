@@ -155,7 +155,9 @@ npm --prefix frontend start
 La aplicación queda en `http://localhost:4200` y reenvía `/api` a la API mediante el proxy de Angular.
 Para cargar un consultorio de demostración con datos de prueba (sólo desarrollo local): `node tools/seed-dev.js`.
 Las credenciales generadas quedan en `tools/.seed-dev.json`, excluido de git. Más detalle en [frontend/README.md](frontend/README.md).
-Para publicar todo sin costo (frontend en Vercel, API y MySQL en MonsterASP.NET) seguir [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
+En producción Odontia corre con Docker Compose en un servidor propio y se publica en https://odentix.duckdns.org: la arquitectura
+está en [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) y el paso a paso de instalación y operación en [deploy/README.md](deploy/README.md).
+La misma guía describe una alternativa sin servidor propio (Vercel + MonsterASP.NET).
 
 ## Pruebas
 

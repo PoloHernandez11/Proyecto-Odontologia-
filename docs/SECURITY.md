@@ -103,7 +103,7 @@ la supresión puede estar limitada por la obligación legal de conservar la hist
 - [ ] `DataProtection__KeysPath` en un volumen persistente y protegido (sin esto, los enlaces de reset/confirmación se invalidan al reiniciar).
 - [ ] `Storage__Local__RootPath` en un volumen privado con backup cifrado, o implementar `IFileStorage` sobre S3/Azure Blob privado.
 - [ ] `Cors__AllowedOrigins` con el dominio real del frontend; cookies `Secure=true` y `SameSite` según el despliegue.
-- [ ] HTTPS terminado en el proxy con HSTS; `ReverseProxy__Enabled=true` y `KnownProxies` configurados.
+- [ ] HTTPS terminado en el proxy con HSTS; `ReverseProxy__Enabled=true` y `KnownProxies` (IP fijas) o `KnownNetworks` (redes CIDR, p. ej. la red de Docker del proxy) configurados.
 - [ ] `Auth__AllowPublicRegistration=false` salvo que el alta pública de consultorios sea deseada.
 - [ ] Proveedor de correo real (`Email__Provider=Smtp`); SPF/DKIM/DMARC en el dominio remitente.
 - [ ] `Swagger__Enabled=false` (o protegido) en producción.
