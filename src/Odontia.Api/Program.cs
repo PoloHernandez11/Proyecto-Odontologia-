@@ -154,6 +154,10 @@ builder.Services.Configure<ForwardedHeadersOptions>(o =>
     o.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
     foreach (var proxy in config.GetSection("ReverseProxy:KnownProxies").Get<string[]>() ?? [])
         if (System.Net.IPAddress.TryParse(proxy, out var ip)) o.KnownProxies.Add(ip);
+    // Redes completas de proxys de confianza en notación CIDR (p. ej. la red interna de Docker "172.18.0.0/16"),
+    // para cuando el proxy no tiene una IP fija.
+    foreach (var network in config.GetSection("ReverseProxy:KnownNetworks").Get<string[]>() ?? [])
+        if (System.Net.IPNetwork.TryParse(network, out var net)) o.KnownIPNetworks.Add(net);
 });
 
 builder.Services.AddTransient<IConfigureOptions<SwaggerGenOptions>, ConfigureSwaggerOptions>();
