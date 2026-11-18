@@ -1,13 +1,20 @@
 
 import { Component, inject, ChangeDetectionStrategy } from '@angular/core';
-import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import { FormControl, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import { OdontiaApi } from '../../api/odontia-api.service';
-import { ConsultorioDto, NotificationSettingsDto, ProfileDto } from '../../api/schema';
+import { ConsultorioDto, DayOfWeek, NotificationSettingsDto, ProfileDto, WorkingHoursDto } from '../../api/schema';
 import { iniciales, mensajeDeError } from '../../core/api';
 import { AuthService } from '../../core/auth.service';
 
-type Seccion = 'datos' | 'profesional' | 'seguridad' | 'notificaciones' | 'consultorio';
+type Seccion = 'datos' | 'profesional' | 'horario' | 'seguridad' | 'notificaciones' | 'consultorio';
+interface Franja { inicio: string; fin: string; }
+interface DiaDeAtencion { dia: DayOfWeek; nombre: string; franjas: Franja[]; }
+const DIAS: { dia: DayOfWeek; nombre: string }[] = [
+  { dia: 'Monday', nombre: 'Lunes' }, { dia: 'Tuesday', nombre: 'Martes' }, { dia: 'Wednesday', nombre: 'Miércoles' },
+  { dia: 'Thursday', nombre: 'Jueves' }, { dia: 'Friday', nombre: 'Viernes' }, { dia: 'Saturday', nombre: 'Sábado' }, { dia: 'Sunday', nombre: 'Domingo' }
+];
+const DIAS_HABILES: DayOfWeek[] = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
 const texto = (maximo: number, ...extra: ((control: FormControl<string>) => unknown)[]) =>
   new FormControl('', { nonNullable: true, validators: [Validators.maxLength(maximo), ...(extra as [])] });
 
@@ -23,7 +30,7 @@ const NOTIFICACIONES: { clave: keyof NotificationSettingsDto; titulo: string; de
 
 @Component({
   selector: 'app-configuracion', standalone: true,
-  imports: [ReactiveFormsModule],
+  imports: [ReactiveFormsModule, FormsModule],
   templateUrl: './configuracion.component.html',
   changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './configuracion.component.css'
@@ -39,7 +46,11 @@ export class ConfiguracionComponent {
   readonly nombreConsultorio = this.auth.consultorio;
   readonly puedeEditarConsultorio = this.auth.tiene('consultorio.manage');
   readonly veConsultorio = this.auth.tiene('consultorio.read');
+  readonly puedeConfigurarHorario = this.auth.tiene('agenda.manage');
 
+  /** Horario semanal de atención del profesional: la agenda sólo acepta turnos dentro de estas franjas. */
+  horario: DiaDeAtencion[] = DIAS.map(d => ({ ...d, franjas: [] }));
+  horarioCargado = false;
   seccion: Seccion = 'datos';
   perfil: ProfileDto | null = null;
   consultorio: ConsultorioDto | null = null;
@@ -77,6 +88,43 @@ export class ConfiguracionComponent {
       error: error => { this.cargando = false; this.error = mensajeDeError(error, 'No se pudo cargar tu perfil.'); }
     });
     if (this.veConsultorio) this.api.consultorio().subscribe({ next: consultorio => this.aplicarConsultorio(consultorio) });
+    const usuario = this.auth.userId;
+    if (this.esProfesional() && this.puedeConfigurarHorario && usuario) {
+      this.api.horarioDeAtencion(usuario).subscribe({ next: franjas => this.aplicarHorario(franjas) });
+    }
+  }
+
+  private aplicarHorario(franjas: WorkingHoursDto[]): void {
+    this.horario = DIAS.map(d => ({
+      ...d,
+      franjas: franjas.filter(f => f.dayOfWeek === d.dia).map(f => ({ inicio: f.startTime.slice(0, 5), fin: f.endTime.slice(0, 5) }))
+    }));
+    this.horarioCargado = true;
+  }
+
+  get sinHorario(): boolean { return this.horarioCargado && this.horario.every(d => d.franjas.length === 0); }
+  agregarFranja(dia: DiaDeAtencion): void {
+    const ultima = dia.franjas[dia.franjas.length - 1];
+    dia.franjas.push(ultima ? { inicio: ultima.fin, fin: ultima.fin < '20:00' ? '20:00' : '23:00' } : { inicio: '09:00', fin: '18:00' });
+  }
+  quitarFranja(dia: DiaDeAtencion, indice: number): void { dia.franjas.splice(indice, 1); }
+  /** Copia las franjas del lunes al resto de los días hábiles. */
+  copiarLunesASemana(): void {
+    const lunes = this.horario.find(d => d.dia === 'Monday')!;
+    for (const dia of this.horario) if (dia !== lunes && DIAS_HABILES.includes(dia.dia)) dia.franjas = lunes.franjas.map(f => ({ ...f }));
+  }
+
+  guardarHorario(): void {
+    const usuario = this.auth.userId;
+    if (!usuario) return;
+    const invalida = this.horario.find(d => d.franjas.some(f => !f.inicio || !f.fin || f.fin <= f.inicio));
+    if (invalida) { this.mensaje = ''; this.error = `Revisá las franjas del ${invalida.nombre.toLowerCase()}: la hora de fin debe ser posterior a la de inicio.`; return; }
+    this.guardando = true;
+    const slots = this.horario.flatMap(d => d.franjas.map(f => ({ dayOfWeek: d.dia, startTime: `${f.inicio}:00`, endTime: `${f.fin}:00`, gabineteId: null })));
+    this.api.guardarHorarioDeAtencion(usuario, slots).subscribe({
+      next: franjas => { this.aplicarHorario(franjas); this.exito('Tu horario de atención se guardó. La agenda ya acepta turnos en esas franjas.'); },
+      error: error => this.fallo(error, 'No se pudo guardar el horario de atención.')
+    });
   }
 
   private aplicarPerfil(perfil: ProfileDto): void {

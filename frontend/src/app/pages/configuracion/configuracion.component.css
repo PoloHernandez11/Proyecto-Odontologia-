@@ -25,7 +25,18 @@
 .switch i { position: absolute; top: 3px; left: 3px; width: 18px; height: 18px; border-radius: 50%; background: #fff; transition: left .15s; }
 .switch.on { background: #0b6070; }
 .switch.on i { left: 23px; }
+.pending-dot { display: inline-block; width: 7px; height: 7px; margin-left: 6px; border-radius: 50%; background: #d9534f; vertical-align: middle; }
+.week { list-style: none; margin: 10px 0 0; padding: 0; }
+.week li { display: grid; grid-template-columns: 110px minmax(0, 1fr); gap: 12px; align-items: start; padding: 12px 0; border-top: 1px solid #edf1f2; }
+.week li > strong { font-size: 14px; padding-top: 8px; }
+.slots { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; }
+.slot { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.slot input { width: 120px; }
+.slot span, .off { color: #6f8188; font-size: 13px; }
+.off { padding-top: 8px; }
+.od-form footer { flex-wrap: wrap; gap: 10px; }
 @media (max-width: 800px) {
+  .week li { grid-template-columns: 1fr; gap: 6px; }
   .settings { grid-template-columns: 1fr; }
   .sections { flex-direction: row; flex-wrap: wrap; }
 }

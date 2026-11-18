@@ -112,13 +112,34 @@ export class OdontogramaComponent {
   get nombreDeLaPieza(): string { return this.piezaSeleccionada ? this.dientes.get(this.piezaSeleccionada)?.name ?? '' : ''; }
   get hallazgosDeLaPieza(): FindingDto[] { return this.piezaSeleccionada ? this.estados.get(this.piezaSeleccionada)?.findings ?? [] : []; }
   get notasDeLaPieza() { return this.piezaSeleccionada ? this.estados.get(this.piezaSeleccionada)?.notes ?? [] : []; }
-  /** Condiciones aplicables según se haya elegido la pieza completa o una cara. */
+  /**
+   * Se ofrecen siempre todas las condiciones activas, ordenadas según la ubicación elegida
+   * (primero las que aplican a la cara o a la pieza completa). Si se elige una condición que no
+   * corresponde a la ubicación actual, la ubicación se ajusta sola (ver alCambiarCondicion).
+   */
   get condicionesAplicables(): ConditionDto[] {
-    const alcance = this.caraElegida === PIEZA_COMPLETA ? 'Tooth' : 'Surface';
-    return this.condiciones.filter(condicion => condicion.scope === 'Both' || condicion.scope === alcance);
+    return [...this.condiciones.filter(c => this.aplicaALaUbicacion(c)), ...this.condiciones.filter(c => !this.aplicaALaUbicacion(c))];
   }
+  /** Indica, en la lista, dónde se registra una condición que no corresponde a la ubicación actual. */
+  etiquetaDeCondicion(condicion: ConditionDto): string {
+    if (condicion.scope === 'Tooth' && this.caraElegida !== PIEZA_COMPLETA) return `${condicion.name} (pieza completa)`;
+    if (condicion.scope === 'Surface' && this.caraElegida === PIEZA_COMPLETA) return `${condicion.name} (por cara)`;
+    return condicion.name;
+  }
+  private aplicaALaUbicacion(condicion: ConditionDto): boolean {
+    return condicion.scope === 'Both' || condicion.scope === (this.caraElegida === PIEZA_COMPLETA ? 'Tooth' : 'Surface');
+  }
+  /** Al cambiar la ubicación, si la condición elegida no corresponde, se propone la primera que sí. */
   ajustarCondicion(): void {
-    if (!this.condicionesAplicables.some(condicion => condicion.id === this.condicionElegida)) this.condicionElegida = this.condicionesAplicables[0]?.id ?? '';
+    const actual = this.condiciones.find(condicion => condicion.id === this.condicionElegida);
+    if (!actual || !this.aplicaALaUbicacion(actual)) this.condicionElegida = this.condicionesAplicables[0]?.id ?? '';
+  }
+  /** Lleva la ubicación a una compatible con la condición: pieza completa o, si exige cara, la primera cara de la pieza. */
+  alCambiarCondicion(): void {
+    const condicion = this.condiciones.find(c => c.id === this.condicionElegida);
+    if (!condicion) return;
+    if (condicion.scope === 'Tooth' && this.caraElegida !== PIEZA_COMPLETA) this.caraElegida = PIEZA_COMPLETA;
+    else if (condicion.scope === 'Surface' && this.caraElegida === PIEZA_COMPLETA) this.caraElegida = this.carasDeLaPieza[0] ?? PIEZA_COMPLETA;
   }
 
   // ── Cambios ────────────────────────────────────────────────────────────────

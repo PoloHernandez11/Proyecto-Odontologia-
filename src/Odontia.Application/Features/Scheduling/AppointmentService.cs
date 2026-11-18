@@ -31,6 +31,8 @@ internal sealed class AppointmentService(
     INotificationService notifications,
     IPatientService patients) : IAppointmentService
 {
+    private static readonly string[] DayNames = ["domingos", "lunes", "martes", "miércoles", "jueves", "viernes", "sábados"];
+
     private static readonly IReadOnlyDictionary<string, Expression<Func<Appointment, object?>>> Sorts = new Dictionary<string, Expression<Func<Appointment, object?>>>
     {
         ["start"] = a => a.StartUtc,
@@ -199,7 +201,16 @@ internal sealed class AppointmentService(
         var input = await availability.BuildInputAsync(date, professional, gabinete, excludeId, ct);
         var requested = new TimeRange(start, end);
         if (!AvailabilityCalculator.IsWithinWorkingHours(input, requested))
-            throw new BusinessRuleException("El horario solicitado está fuera de la disponibilidad del profesional.", "outside_availability");
+        {
+            var ranges = AvailabilityCalculator.WorkingRanges(input);
+            if (ranges.Count == 0)
+                throw new BusinessRuleException(
+                    $"El profesional no atiende los {DayNames[(int)date.DayOfWeek]} (no tiene horario de atención cargado para ese día). " +
+                    "Puede configurarlo en Perfil y configuración › Horario de atención.", "outside_availability");
+            var franjas = string.Join(", ", ranges.Select(r => $"{tz.UtcToLocal(r.Start):HH\\:mm} a {tz.UtcToLocal(r.End):HH\\:mm}"));
+            throw new BusinessRuleException(
+                $"El horario solicitado está fuera de la disponibilidad del profesional. Ese día atiende de {franjas}.", "outside_availability");
+        }
 
         if (!overbooking && input.BusyRanges.Any(b => b.Overlaps(requested)))
             throw new ConflictException("El horario ya está ocupado por otro turno.", "slot_taken");

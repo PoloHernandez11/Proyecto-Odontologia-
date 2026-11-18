@@ -81,8 +81,8 @@
             <label>Ubicación<select [(ngModel)]="caraElegida" (ngModelChange)="ajustarCondicion()"><option [value]="piezaCompleta">Pieza completa</option>@for (cara of carasDeLaPieza; track cara) {
             <option [value]="cara">Cara {{ nombresDeCara[cara].toLowerCase() }}</option>
           }</select></label>
-          <label>Condición<select [(ngModel)]="condicionElegida">@for (condicion of condicionesAplicables; track condicion) {
-            <option [value]="condicion.id">{{ condicion.name }}</option>
+          <label>Condición<select [(ngModel)]="condicionElegida" (ngModelChange)="alCambiarCondicion()">@for (condicion of condicionesAplicables; track condicion.id) {
+            <option [value]="condicion.id">{{ etiquetaDeCondicion(condicion) }}</option>
           }</select></label>
           <label>Situación<select [(ngModel)]="estadoElegido"><option value="Existing">Existente</option><option value="Planned">Planificado</option></select></label>
           <label class="wide">Detalle (opcional)<input [(ngModel)]="notaDelHallazgo" maxlength="500" placeholder="Ej. Caries profunda"></label>

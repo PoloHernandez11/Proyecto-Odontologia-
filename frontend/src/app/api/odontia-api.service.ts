@@ -8,7 +8,8 @@ import {
   GabineteDto, HealthInsuranceDto, LabBoardDto, LabWorkDto, LabWorkStatus, LaboratoryDto, MemberDto, NotificationSettingsDto,
   OdontogramCatalogDto, OdontogramDto, PatientDto, PatientListItemDto, PatientStatus, PatientSummaryDto, PaymentDto,
   ProfessionalDto, ProfileDto, ReceptionDashboardDto, RegisterPaymentRequest, SaveBudgetRequest, SaveLabWorkRequest,
-  SavePatientRequest, SaveTaskRequest, TaskDto, TaskItemStatus, ToothNoteDto, UpdateConsultorioRequest, UpdateProfessionalProfileRequest, UpdateProfileRequest
+  SavePatientRequest, SaveTaskRequest, TaskDto, TaskItemStatus, ToothNoteDto, UpdateConsultorioRequest, UpdateProfessionalProfileRequest, UpdateProfileRequest,
+  WorkingHoursDto, WorkingHoursSlotRequest
 } from './schema';
 
 type Filtro = Record<string, string | number | boolean | null | undefined>;
@@ -48,6 +49,12 @@ export class OdontiaApi {
     return this.http.get<AgendaDto>(`${API}/agenda`, {
       params: parametros({ From: desde, To: hasta, ProfessionalUserId: professionalUserId, IncludeCancelled: true })
     });
+  }
+  horarioDeAtencion(professionalUserId: string): Observable<WorkingHoursDto[]> {
+    return this.http.get<WorkingHoursDto[]>(`${API}/agenda/professionals/${professionalUserId}/working-hours`);
+  }
+  guardarHorarioDeAtencion(professionalUserId: string, slots: WorkingHoursSlotRequest[]): Observable<WorkingHoursDto[]> {
+    return this.http.put<WorkingHoursDto[]>(`${API}/agenda/professionals/${professionalUserId}/working-hours`, { slots });
   }
   turnos(filtro: Filtro = {}): Observable<Paginado<AppointmentDto>> {
     return this.http.get<Paginado<AppointmentDto>>(`${API}/appointments`, { params: parametros({ pageSize: 100, ...filtro }) });
