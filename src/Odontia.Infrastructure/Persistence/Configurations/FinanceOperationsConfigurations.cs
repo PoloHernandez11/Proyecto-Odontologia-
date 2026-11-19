@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using Odontia.Domain.Entities;
 
@@ -178,6 +179,15 @@ internal sealed class LabWorkConfiguration : IEntityTypeConfiguration<LabWork>
         b.HasProfessionalReference(nameof(LabWork.ProfessionalUserId));
         b.HasTenantReference<LabWork, TreatmentPlanItem>(nameof(LabWork.TreatmentPlanItemId), required: false);
         b.HasOne<DentalPiece>().WithMany().HasForeignKey(x => x.ToothCode).OnDelete(DeleteBehavior.Restrict);
+        // Piezas como texto delimitado ("11,12,21"): portable entre MySQL y SQLite, sin consultas por pieza.
+        b.Property(x => x.ToothCodes)
+            .HasConversion(
+                v => string.Join(',', v),
+                v => string.IsNullOrEmpty(v) ? new List<int>() : v.Split(',', StringSplitOptions.RemoveEmptyEntries).Select(int.Parse).ToList(),
+                new ValueComparer<IReadOnlyList<int>>((a, c) => a!.SequenceEqual(c!), v => v.Aggregate(0, (h, t) => HashCode.Combine(h, t)), v => v.ToList()))
+            .HasMaxLength(200).IsRequired();
+        // Turno de entrega: debe ser del mismo consultorio (FK compuesta); los turnos no se borran físicamente.
+        b.HasTenantReference<LabWork, Appointment>(nameof(LabWork.AppointmentId), required: false);
         b.HasIndex(x => new { x.ConsultorioId, x.Status, x.EstimatedDeliveryDate });
         b.HasIndex(x => new { x.ConsultorioId, x.PatientId });
         b.HasMany(x => x.Changes).WithOne().HasForeignKey(nameof(LabWorkStatusChange.ConsultorioId), nameof(LabWorkStatusChange.LabWorkId))

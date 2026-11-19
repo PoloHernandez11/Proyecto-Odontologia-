@@ -17805,6 +17805,12 @@
           },
           "isOverbooking": {
             "type": "boolean"
+          },
+          "labWorks": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AgendaLabWorkDto"
+            }
           }
         },
         "additionalProperties": false
@@ -17840,6 +17846,32 @@
             "items": {
               "$ref": "#/components/schemas/WorkingHoursDto"
             }
+          }
+        },
+        "additionalProperties": false
+      },
+      "AgendaLabWorkDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "workType": {
+            "type": "string"
+          },
+          "toothCodes": {
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          "laboratoryName": {
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/LabWorkStatus"
           }
         },
         "additionalProperties": false
@@ -18132,6 +18164,12 @@
           "createdAtUtc": {
             "type": "string",
             "format": "date-time"
+          },
+          "labWorks": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AgendaLabWorkDto"
+            }
           }
         },
         "additionalProperties": false
@@ -20184,6 +20222,23 @@
           "createdAtUtc": {
             "type": "string",
             "format": "date-time"
+          },
+          "appointmentId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "appointmentStartUtc": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "toothCodes": {
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "format": "int32"
+            }
           }
         },
         "additionalProperties": false
@@ -22241,6 +22296,19 @@
           "treatmentPlanItemId": {
             "type": "string",
             "format": "uuid",
+            "nullable": true
+          },
+          "appointmentId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "toothCodes": {
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "format": "int32"
+            },
             "nullable": true
           }
         },

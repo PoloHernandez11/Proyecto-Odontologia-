@@ -286,8 +286,9 @@ public sealed class ClinicalTests(ClinicScenario s) : IClassFixture<ClinicScenar
             items = new object[]
             {
                 new { toothCode = 36, surface = "Occlusal", conditionId = Cond("CARIES"), status = "Existing" },
-                new { toothCode = 36, conditionId = Cond("ROOT_CANAL"), status = "Planned", notes = "Endodoncia indicada" },
+                new { toothCode = 36, conditionId = Cond("CROWN"), status = "Planned", notes = "Corona indicada" },
                 new { toothCode = 46, conditionId = Cond("MISSING"), status = "Existing" },
+                new { toothCode = 47, conditionId = Cond("EXTRACTION"), status = "Existing", notes = "Pieza a extraer" },
             },
         });
         var state = await s.Doctor.PostOk($"/api/v1/patients/{s.PatientA}/odontogram/findings", new
@@ -299,6 +300,10 @@ public sealed class ClinicalTests(ClinicScenario s) : IClassFixture<ClinicScenar
         Assert.DoesNotContain("CARIES", codes);
         Assert.Contains("FILLING", codes);
         Assert.True(state["teeth"]!.AsArray().First(t => t!["toothCode"]!.GetValue<int>() == 46)!["isAbsent"]!.GetValue<bool>());
+        // "Extraer" es una indicación: la pieza sigue presente.
+        Assert.False(state["teeth"]!.AsArray().First(t => t!["toothCode"]!.GetValue<int>() == 47)!["isAbsent"]!.GetValue<bool>());
+        var active = catalog["conditions"]!.AsArray().Where(c => c!["isActive"]!.GetValue<bool>()).Select(c => c!["code"]!.GetValue<string>()).Order().ToList();
+        Assert.Equal(["CARIES", "CROWN", "EXTRACTION", "FILLING", "IMPLANT", "MISSING"], active);
 
         var invalid = await s.Doctor.Post($"/api/v1/patients/{s.PatientA}/odontogram/findings", new
         {

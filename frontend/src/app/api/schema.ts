@@ -72,6 +72,7 @@ export interface AgendaAppointmentDto {
   gabineteName?: string | null;
   reason?: string | null;
   isOverbooking: boolean;
+  labWorks: AgendaLabWorkDto[];
 }
 
 export interface AgendaDto {
@@ -81,6 +82,14 @@ export interface AgendaDto {
   appointments: AgendaAppointmentDto[];
   blocks: ScheduleBlockDto[];
   workingHours: WorkingHoursDto[];
+}
+
+export interface AgendaLabWorkDto {
+  id: string;
+  workType: string;
+  toothCodes: number[];
+  laboratoryName: string;
+  status: LabWorkStatus;
 }
 
 export interface AgendaMonthDto {
@@ -163,6 +172,7 @@ export interface AppointmentDto {
   alerts: string[];
   version: string;
   createdAtUtc: string;
+  labWorks: AgendaLabWorkDto[];
 }
 
 export interface AppointmentHistoryDto {
@@ -778,6 +788,9 @@ export interface LabWorkDto {
   isOverdue: boolean;
   treatmentPlanItemId?: string | null;
   createdAtUtc: string;
+  appointmentId?: string | null;
+  appointmentStartUtc?: string | null;
+  toothCodes: number[];
 }
 
 export type LabWorkStatus = "Pending" | "Sent" | "InProduction" | "ReadyForPickup" | "Received" | "Placed" | "Cancelled";
@@ -1384,6 +1397,8 @@ export interface SaveLabWorkRequest {
   cost?: number | null;
   notes?: string | null;
   treatmentPlanItemId?: string | null;
+  appointmentId?: string | null;
+  toothCodes?: number[] | null;
 }
 
 export interface SaveLaboratoryRequest {

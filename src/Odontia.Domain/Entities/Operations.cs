@@ -55,23 +55,33 @@ public class LabWork : TenantEntity
 
     private LabWork() { }
 
-    public LabWork(Guid consultorioId, Guid patientId, Guid professionalUserId, Guid laboratoryId, string workType, int? toothCode,
-        string? description, DateOnly? estimatedDeliveryDate, decimal? cost, string? notes, Guid? treatmentPlanItemId)
+    /// <summary>Máximo de piezas por trabajo (una arcada permanente completa).</summary>
+    public const int MaxTeeth = 32;
+
+    public LabWork(Guid consultorioId, Guid patientId, Guid professionalUserId, Guid laboratoryId, string workType,
+        IReadOnlyCollection<int> toothCodes, string? description, DateOnly? estimatedDeliveryDate, decimal? cost, string? notes,
+        Guid? treatmentPlanItemId, Guid? appointmentId = null)
     {
         ConsultorioId = consultorioId;
         PatientId = patientId;
         ProfessionalUserId = professionalUserId;
         LaboratoryId = laboratoryId;
         Status = LabWorkStatus.Pending;
-        Update(workType, toothCode, description, estimatedDeliveryDate, cost, notes);
+        Update(workType, toothCodes, description, estimatedDeliveryDate, cost, notes);
         TreatmentPlanItemId = treatmentPlanItemId;
+        AppointmentId = appointmentId;
     }
 
     public Guid PatientId { get; private set; }
     public Guid ProfessionalUserId { get; private set; }
     public Guid LaboratoryId { get; private set; }
     public string WorkType { get; private set; } = default!;
+    /// <summary>Primera pieza de <see cref="ToothCodes"/> (compatibilidad con clientes de una sola pieza).</summary>
     public int? ToothCode { get; private set; }
+    /// <summary>Piezas FDI que abarca el trabajo (sin duplicados, en el orden indicado).</summary>
+    public IReadOnlyList<int> ToothCodes { get; private set; } = [];
+    /// <summary>Turno de entrega/colocación del mismo paciente (opcional).</summary>
+    public Guid? AppointmentId { get; private set; }
     public string? Description { get; private set; }
     public LabWorkStatus Status { get; private set; }
     public DateOnly? SentDate { get; private set; }
@@ -94,13 +104,24 @@ public class LabWork : TenantEntity
     public static bool CanTransition(LabWorkStatus from, LabWorkStatus to) =>
         Transitions.TryGetValue(from, out var allowed) && allowed.Contains(to);
 
-    public void Update(string workType, int? toothCode, string? description, DateOnly? estimatedDeliveryDate, decimal? cost, string? notes)
+    /// <summary>Vincula (o desvincula) el turno de entrega. Que el turno sea del mismo paciente se valida en la capa de aplicación.</summary>
+    public void LinkAppointment(Guid? appointmentId)
+    {
+        if (Status is LabWorkStatus.Placed or LabWorkStatus.Cancelled)
+            throw new DomainException("El trabajo está cerrado.", "lab_work_closed");
+        AppointmentId = appointmentId;
+    }
+
+    public void Update(string workType, IReadOnlyCollection<int> toothCodes, string? description, DateOnly? estimatedDeliveryDate, decimal? cost, string? notes)
     {
         if (Status is LabWorkStatus.Placed or LabWorkStatus.Cancelled)
             throw new DomainException("El trabajo está cerrado.", "lab_work_closed");
         WorkType = Guard.Required(workType, "Tipo de trabajo", 120);
-        if (toothCode is not null) Fdi.Get(toothCode.Value);
-        ToothCode = toothCode;
+        var teeth = toothCodes.Distinct().ToList();
+        if (teeth.Count > MaxTeeth) throw new DomainException($"Un trabajo puede abarcar como máximo {MaxTeeth} piezas.", "too_many_teeth");
+        foreach (var t in teeth) Fdi.Get(t);
+        ToothCodes = teeth;
+        ToothCode = teeth.Count > 0 ? teeth[0] : null;
         Description = Guard.Optional(description, "Descripción", 1000);
         EstimatedDeliveryDate = estimatedDeliveryDate;
         Cost = cost is null ? null : Guard.Money(cost.Value, "Costo");

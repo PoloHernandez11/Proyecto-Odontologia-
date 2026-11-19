@@ -46,7 +46,12 @@
                   <div class="block" [ngStyle]="estilo(bloqueo)">{{ bloqueo.reason || 'Horario bloqueado' }}</div>
                 }
                 @for (turno of turnosDe(profesional); track turno) {
-                  <button type="button" class="slot" [ngStyle]="estilo(turno)" [ngClass]="clases[turno.status]" [class.selected-slot]="turnoSeleccionado?.id === turno.id" (click)="seleccionarTurno(turno)">
+                  <button type="button" class="slot" [ngStyle]="estilo(turno)" [ngClass]="clases[turno.status]" [class.selected-slot]="turnoSeleccionado?.id === turno.id" [class.has-lab]="trabajosDe(turno).length > 0" (click)="seleccionarTurno(turno)"
+                    (mouseenter)="mostrarDetalle(turno, $event)" (mouseleave)="ocultarDetalle()" (focus)="mostrarDetalle(turno, $event)" (blur)="ocultarDetalle()" (keydown.escape)="ocultarDetalle()"
+                    [attr.aria-describedby]="turnoEnDetalle?.id === turno.id ? 'detalle-turno' : null">
+                    @if (trabajosDe(turno).length) {
+                      <i class="lab-badge" role="img" [attr.aria-label]="resumenDeTrabajos(turno)" [title]="resumenDeTrabajos(turno)">T</i>
+                    }
                     <strong>{{ hora(turno.startUtc) }} · {{ turno.patientName }}</strong><span>{{ turno.reason || 'Turno' }}@if (turno.isOverbooking) {
                     · Sobreturno
                   }</span>
@@ -70,9 +75,13 @@
         <div class="alternate-view">
           <div class="alternate-title">{{ vista === 'semana' ? 'Turnos de la semana' : 'Turnos del mes' }}</div>
           @for (turno of turnosFiltrados; track turno) {
-            <article class="list-appointment" tabindex="0" (click)="seleccionarTurno(turno)" (keydown.enter)="seleccionarTurno(turno)">
+            <article class="list-appointment" tabindex="0" (click)="seleccionarTurno(turno)" (keydown.enter)="seleccionarTurno(turno)"
+              (mouseenter)="mostrarDetalle(turno, $event)" (mouseleave)="ocultarDetalle()" (focus)="mostrarDetalle(turno, $event)" (blur)="ocultarDetalle()" (keydown.escape)="ocultarDetalle()"
+              [attr.aria-describedby]="turnoEnDetalle?.id === turno.id ? 'detalle-turno' : null">
               <span class="date-chip">{{ fecha(turno.startUtc).slice(0, 5) }}</span>
-              <span><strong>{{ hora(turno.startUtc) }} · {{ turno.patientName }}</strong><small>{{ turno.reason || 'Turno' }} · {{ turno.professionalName }}</small></span>
+              <span><strong>{{ hora(turno.startUtc) }} · {{ turno.patientName }}@if (trabajosDe(turno).length) {
+                <i class="lab-badge inline" role="img" [attr.aria-label]="resumenDeTrabajos(turno)" [title]="resumenDeTrabajos(turno)">T</i>
+              }</strong><small>{{ turno.reason || 'Turno' }} · {{ turno.professionalName }}</small></span>
               <em class="status" [ngClass]="clases[turno.status]">{{ estados[turno.status] }}</em>
             </article>
           }
@@ -100,6 +109,13 @@
         }</p>
         @if (turno.patientPhone) {
           <p>☎ {{ turno.patientPhone }}</p>
+        }
+        @if (trabajosDe(turno).length) {
+          <div class="lab-works"><h3><i class="lab-badge inline" aria-hidden="true">T</i> Trabajos de laboratorio</h3>
+            <ul>@for (trabajo of trabajosDe(turno); track trabajo.id) {
+              <li><strong>{{ piezas(trabajo) }} · {{ trabajo.workType }}</strong><small>Mecánico dental: {{ trabajo.laboratoryName }} · {{ estadoDeTrabajo(trabajo) }}</small></li>
+            }</ul>
+          </div>
         }
         @if (!cancelando) {
           <div class="action-buttons">
@@ -134,6 +150,27 @@
 </aside>
 </div>
 </main>
+
+@if (turnoEnDetalle; as detalle) {
+  <div id="detalle-turno" class="hover-card" role="tooltip" [style.top.px]="posicionDetalle.top" [style.left.px]="posicionDetalle.left">
+    <header><strong>{{ detalle.patientName }}</strong><span class="status" [ngClass]="clases[detalle.status]">{{ estados[detalle.status] }}</span></header>
+    <p>◷ {{ fecha(detalle.startUtc) }} · {{ hora(detalle.startUtc) }} a {{ hora(detalle.endUtc) }} ({{ detalle.durationMinutes }} min)</p>
+    <p>▤ {{ detalle.reason || 'Sin motivo indicado' }}@if (detalle.isOverbooking) {
+      · Sobreturno
+    }</p>
+    <p>♙ {{ detalle.professionalName }}@if (detalle.gabineteName) {
+      · {{ detalle.gabineteName }}
+    }</p>
+    <p>☎ {{ detalle.patientPhone || 'Sin teléfono cargado' }}</p>
+    @if (trabajosDe(detalle).length) {
+      <div class="lab-works"><h3><i class="lab-badge inline" aria-hidden="true">T</i> Trabajos de laboratorio</h3>
+        <ul>@for (trabajo of trabajosDe(detalle); track trabajo.id) {
+          <li><strong>{{ piezas(trabajo) }} · {{ trabajo.workType }}</strong><small>Mecánico dental: {{ trabajo.laboratoryName }} · {{ estadoDeTrabajo(trabajo) }}</small></li>
+        }</ul>
+      </div>
+    }
+  </div>
+}
 
 @if (mostrarFormulario) {
   <div class="modal-backdrop" (click)="cerrarFormulario()">

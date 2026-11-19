@@ -1,10 +1,11 @@
 import { CommonModule } from '@angular/common';
 import { Component, inject, ChangeDetectionStrategy } from '@angular/core';
-import { FormControl, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
-import { Observable, of, switchMap } from 'rxjs';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { AbstractControl, FormControl, FormGroup, FormsModule, ReactiveFormsModule, ValidationErrors, Validators } from '@angular/forms';
+import { Observable, catchError, map, of, switchMap } from 'rxjs';
 import { OdontiaApi } from '../../api/odontia-api.service';
-import { LabBoardDto, LabWorkDto, LabWorkStatus, LaboratoryDto, PatientListItemDto, ProfessionalDto } from '../../api/schema';
-import { fechaCorta, mensajeDeError, pesos } from '../../core/api';
+import { AppointmentDto, LabBoardDto, LabWorkDto, LabWorkStatus, LaboratoryDto, PatientListItemDto, ProfessionalDto } from '../../api/schema';
+import { fechaCorta, horaLocal, mensajeDeError, pesos } from '../../core/api';
 import { AuthService } from '../../core/auth.service';
 
 const ESTADOS: Record<LabWorkStatus, string> = {
@@ -16,6 +17,25 @@ const CLASES: Record<LabWorkStatus, string> = {
 };
 const CERRADOS: LabWorkStatus[] = ['Placed', 'Cancelled'];
 const NUEVO_LABORATORIO = '__nuevo__';
+/** Turnos que no sirven como turno de entrega. */
+const TURNOS_DESCARTADOS = ['Cancelled', 'NoShow'];
+
+/** Convierte "11, 21" en [11, 21]. Devuelve null si alguna pieza no es un número FDI válido. */
+function piezasFdi(texto: string): number[] | null {
+  const piezas: number[] = [];
+  for (const parte of texto.split(/[\s,;]+/).filter(Boolean)) {
+    if (!/^\d{2}$/.test(parte)) return null;
+    const cuadrante = Number(parte[0]), numero = Number(parte[1]);
+    const permanente = cuadrante >= 1 && cuadrante <= 4 && numero >= 1 && numero <= 8;
+    const temporal = cuadrante >= 5 && cuadrante <= 8 && numero >= 1 && numero <= 5;
+    if (!permanente && !temporal) return null;
+    if (!piezas.includes(Number(parte))) piezas.push(Number(parte));
+  }
+  return piezas;
+}
+function validarPiezas(control: AbstractControl<string>): ValidationErrors | null {
+  return piezasFdi(control.value ?? '') ? null : { piezas: true };
+}
 
 @Component({
   selector: 'app-laboratorio',
@@ -55,7 +75,8 @@ export class LaboratorioComponent {
   formulario = new FormGroup({
     pacienteId: new FormControl('', { nonNullable: true, validators: [Validators.required] }),
     tipoTrabajo: new FormControl('', { nonNullable: true, validators: [Validators.required, Validators.minLength(3), Validators.maxLength(120)] }),
-    piezaDental: new FormControl('', { nonNullable: true, validators: [Validators.pattern(/^\d{0,2}$/)] }),
+    piezaDental: new FormControl('', { nonNullable: true, validators: [validarPiezas] }),
+    turnoId: new FormControl('', { nonNullable: true }),
     laboratorioId: new FormControl('', { nonNullable: true, validators: [Validators.required] }),
     laboratorioNuevo: new FormControl('', { nonNullable: true, validators: [Validators.maxLength(150)] }),
     profesionalId: new FormControl('', { nonNullable: true }),
@@ -64,9 +85,37 @@ export class LaboratorioComponent {
     observaciones: new FormControl('', { nonNullable: true, validators: [Validators.maxLength(1000)] })
   });
 
+  /** Turnos del paciente elegido en el formulario, para vincular el turno de entrega. */
+  turnosDelPaciente: AppointmentDto[] = [];
+  cargandoTurnos = false;
+  private readonly veTurnos = this.auth.tiene('appointments.read');
+
   constructor() {
     this.cargar();
     this.api.laboratorios().subscribe({ next: laboratorios => (this.laboratorios = laboratorios.filter(l => l.isActive)) });
+    // Al cambiar de paciente se recargan sus turnos; switchMap descarta la respuesta del paciente anterior.
+    this.formulario.controls.pacienteId.valueChanges.pipe(
+      switchMap(pacienteId => {
+        this.formulario.controls.turnoId.setValue('');
+        this.turnosDelPaciente = [];
+        if (!pacienteId || !this.veTurnos) return of<AppointmentDto[]>([]);
+        this.cargandoTurnos = true;
+        return this.api.turnos({ PatientId: pacienteId, pageSize: 100 }).pipe(map(pagina => pagina.items), catchError(() => of<AppointmentDto[]>([])));
+      }),
+      takeUntilDestroyed()
+    ).subscribe(turnos => { this.cargandoTurnos = false; this.turnosDelPaciente = this.ordenarTurnos(turnos); });
+  }
+
+  /** Primero los próximos (del más cercano al más lejano) y después los pasados (del más reciente al más antiguo). */
+  private ordenarTurnos(turnos: AppointmentDto[]): AppointmentDto[] {
+    const ahora = new Date().toISOString();
+    const vigentes = turnos.filter(turno => !TURNOS_DESCARTADOS.includes(turno.status));
+    const proximos = vigentes.filter(turno => turno.endUtc >= ahora).sort((a, b) => a.startUtc.localeCompare(b.startUtc));
+    const pasados = vigentes.filter(turno => turno.endUtc < ahora).sort((a, b) => b.startUtc.localeCompare(a.startUtc));
+    return [...proximos, ...pasados];
+  }
+  etiquetaDeTurno(turno: AppointmentDto): string {
+    return `${fechaCorta(turno.startUtc)} · ${horaLocal(turno.startUtc)} · ${turno.reason || 'Turno'}`;
   }
 
   cargar(): void {
@@ -97,7 +146,7 @@ export class LaboratorioComponent {
     this.mensaje = '';
     this.errorFormulario = '';
     this.formulario.reset({
-      pacienteId: '', tipoTrabajo: '', piezaDental: '', laboratorioId: '', laboratorioNuevo: '',
+      pacienteId: '', tipoTrabajo: '', piezaDental: '', turnoId: '', laboratorioId: '', laboratorioNuevo: '',
       profesionalId: this.auth.esProfesional() ? this.auth.userId ?? '' : '', fechaEntrega: '', costo: null, observaciones: ''
     });
     this.mostrarFormulario = true;
@@ -111,18 +160,20 @@ export class LaboratorioComponent {
     const creaLaboratorio = datos.laboratorioId === NUEVO_LABORATORIO;
     if (this.formulario.invalid || (creaLaboratorio && datos.laboratorioNuevo.trim().length < 2)) {
       this.formulario.markAllAsTouched();
-      if (creaLaboratorio && datos.laboratorioNuevo.trim().length < 2) this.errorFormulario = 'Escribí el nombre del laboratorio nuevo.';
+      if (creaLaboratorio && datos.laboratorioNuevo.trim().length < 2) this.errorFormulario = 'Escribí el nombre del mecánico dental o laboratorio nuevo.';
       return;
     }
     this.guardando = true;
     this.errorFormulario = '';
+    const piezas = piezasFdi(datos.piezaDental) ?? [];
     const laboratorio$: Observable<LaboratoryDto | null> = creaLaboratorio ? this.api.crearLaboratorio(datos.laboratorioNuevo.trim()) : of(null);
     laboratorio$.pipe(
       switchMap(nuevo => {
         if (nuevo) this.laboratorios = [...this.laboratorios, nuevo];
         return this.api.crearTrabajoDeLaboratorio({
           patientId: datos.pacienteId, laboratoryId: nuevo ? nuevo.id : datos.laboratorioId, professionalUserId: datos.profesionalId || null,
-          workType: datos.tipoTrabajo.trim(), toothCode: datos.piezaDental ? Number(datos.piezaDental) : null,
+          workType: datos.tipoTrabajo.trim(), toothCode: piezas[0] ?? null, toothCodes: piezas.length ? piezas : null,
+          appointmentId: datos.turnoId || null,
           estimatedDeliveryDate: datos.fechaEntrega, cost: datos.costo, notes: datos.observaciones.trim() || null
         });
       })
@@ -144,6 +195,16 @@ export class LaboratorioComponent {
       // Si el backend rechaza el cambio (transición inválida o falta de permiso), se vuelve a mostrar el estado real.
       error: error => { this.error = mensajeDeError(error, 'No se pudo actualizar el estado del trabajo.'); this.cargar(); }
     });
+  }
+
+  /** Piezas del trabajo; si el backend todavía no envía `toothCodes`, se usa `toothCode`. */
+  piezasDe(trabajo: LabWorkDto): string {
+    const piezas = trabajo.toothCodes?.length ? trabajo.toothCodes : trabajo.toothCode ? [trabajo.toothCode] : [];
+    if (!piezas.length) return 'Sin pieza indicada';
+    return `${piezas.length === 1 ? 'Pieza' : 'Piezas'} ${piezas.join(', ')}`;
+  }
+  turnoDe(trabajo: LabWorkDto): string {
+    return trabajo.appointmentStartUtc ? `${fechaCorta(trabajo.appointmentStartUtc)} · ${horaLocal(trabajo.appointmentStartUtc)}` : '';
   }
 
   fechaLegible(fecha: string | null | undefined): string { return fecha ? fechaCorta(fecha) : 'Sin fecha'; }

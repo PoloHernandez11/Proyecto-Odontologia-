@@ -13,15 +13,24 @@ public sealed record LaboratoryDto(Guid Id, string Name, string? ContactName, st
 
 public sealed record SaveLaboratoryRequest(string Name, string? ContactName, string? Phone, string? Email, string? AddressLine, string? Notes, bool IsActive = true);
 
+/// <summary>
+/// Alta/edición de un trabajo de laboratorio. <c>ToothCodes</c> (varias piezas) tiene prioridad; si no se envía se usa
+/// <c>ToothCode</c>. <c>AppointmentId</c> es el turno de entrega: debe ser del mismo paciente (null = sin turno).
+/// </summary>
 public sealed record SaveLabWorkRequest(Guid PatientId, Guid LaboratoryId, Guid? ProfessionalUserId, string WorkType, int? ToothCode,
-    string? Description, DateOnly? EstimatedDeliveryDate, decimal? Cost, string? Notes, Guid? TreatmentPlanItemId);
+    string? Description, DateOnly? EstimatedDeliveryDate, decimal? Cost, string? Notes, Guid? TreatmentPlanItemId,
+    Guid? AppointmentId = null, IReadOnlyList<int>? ToothCodes = null)
+{
+    /// <summary>Piezas efectivas del pedido.</summary>
+    public IReadOnlyList<int> ResolveToothCodes() => ToothCodes ?? (ToothCode is { } t ? [t] : []);
+}
 
 public sealed record ChangeLabWorkStatusRequest(LabWorkStatus Status, DateOnly? Date, string? Note, DateOnly? NewEstimatedDeliveryDate);
 
 public sealed record LabWorkDto(Guid Id, Guid PatientId, string PatientName, Guid LaboratoryId, string LaboratoryName, Guid ProfessionalUserId,
     string ProfessionalName, string WorkType, int? ToothCode, string? Description, LabWorkStatus Status, DateOnly? SentDate,
     DateOnly? EstimatedDeliveryDate, DateOnly? ActualDeliveryDate, DateOnly? PlacementDate, decimal? Cost, string? Notes, bool IsOverdue,
-    Guid? TreatmentPlanItemId, DateTime CreatedAtUtc);
+    Guid? TreatmentPlanItemId, DateTime CreatedAtUtc, Guid? AppointmentId, DateTime? AppointmentStartUtc, IReadOnlyList<int> ToothCodes);
 
 public sealed record LabWorkChangeDto(DateTime ChangedAtUtc, LabWorkStatus FromStatus, LabWorkStatus ToStatus, string? Note, string ChangedBy);
 
@@ -133,8 +142,8 @@ internal sealed class LabService(IApplicationDbContext db, ITenantContext tenant
         tenant.Require(Permissions.LabWrite);
         var professional = r.ProfessionalUserId ?? tenant.UserId;
         await ValidateAsync(r, professional, ct);
-        var w = new LabWork(tenant.ConsultorioId, r.PatientId, professional, r.LaboratoryId, r.WorkType, r.ToothCode, r.Description,
-            r.EstimatedDeliveryDate, r.Cost, r.Notes, r.TreatmentPlanItemId);
+        var w = new LabWork(tenant.ConsultorioId, r.PatientId, professional, r.LaboratoryId, r.WorkType, r.ResolveToothCodes(), r.Description,
+            r.EstimatedDeliveryDate, r.Cost, r.Notes, r.TreatmentPlanItemId, r.AppointmentId);
         db.LabWorks.Add(w);
         await db.SaveChangesAsync(ct);
         return await GetAsync(w.Id, ct);
@@ -147,7 +156,8 @@ internal sealed class LabService(IApplicationDbContext db, ITenantContext tenant
         if (r.PatientId != w.PatientId) throw new RequestValidationException("patientId", "No puede cambiarse el paciente de un trabajo.");
         await ValidateAsync(r, w.ProfessionalUserId, ct);
         if (r.LaboratoryId != w.LaboratoryId) throw new RequestValidationException("laboratoryId", "Para cambiar de laboratorio cancele y cree un nuevo trabajo.");
-        w.Update(r.WorkType, r.ToothCode, r.Description, r.EstimatedDeliveryDate, r.Cost, r.Notes);
+        w.Update(r.WorkType, r.ResolveToothCodes(), r.Description, r.EstimatedDeliveryDate, r.Cost, r.Notes);
+        if (r.AppointmentId != w.AppointmentId) w.LinkAppointment(r.AppointmentId);
         await db.SaveChangesAsync(ct);
         return await GetAsync(id, ct);
     }
@@ -163,7 +173,7 @@ internal sealed class LabService(IApplicationDbContext db, ITenantContext tenant
         if (date > today) throw new RequestValidationException("date", "La fecha no puede ser futura.");
         w.ChangeStatus(r.Status, date, r.Note, tenant.UserId, clock.UtcNow);
         if (r.NewEstimatedDeliveryDate is not null)
-            w.Update(w.WorkType, w.ToothCode, w.Description, r.NewEstimatedDeliveryDate, w.Cost, w.Notes);
+            w.Update(w.WorkType, w.ToothCodes, w.Description, r.NewEstimatedDeliveryDate, w.Cost, w.Notes);
         await db.SaveChangesAsync(ct);
         if (r.Status is LabWorkStatus.ReadyForPickup or LabWorkStatus.Received && w.ProfessionalUserId != tenant.UserId)
             await notifications.NotifyAsync(w.ProfessionalUserId, NotificationType.LabWorkUpdate,
@@ -205,14 +215,22 @@ internal sealed class LabService(IApplicationDbContext db, ITenantContext tenant
             throw new RequestValidationException("professionalUserId", "El profesional no pertenece al consultorio.");
         if (r.TreatmentPlanItemId is { } tpi && !await db.TreatmentPlanItems.AnyAsync(i => i.Id == tpi && db.TreatmentPlans.Any(p => p.Id == i.TreatmentPlanId && p.PatientId == r.PatientId), ct))
             throw new RequestValidationException("treatmentPlanItemId", "La prestación no corresponde al paciente.");
+        // El filtro global por consultorio de db.Appointments garantiza que el turno sea del mismo consultorio.
+        if (r.AppointmentId is { } aid && !await db.Appointments.AnyAsync(a => a.Id == aid && a.PatientId == r.PatientId, ct))
+            throw new RequestValidationException("appointmentId", "El turno de entrega no existe o no corresponde al paciente.");
     }
 
     private async Task<List<LabWorkDto>> ToDtosAsync(IReadOnlyList<LabWork> items, DateOnly today, CancellationToken ct)
     {
         var names = await UserNames.LoadAsync(db, items.Select(w => w.ProfessionalUserId), ct);
+        var appointmentIds = items.Where(w => w.AppointmentId != null).Select(w => w.AppointmentId!.Value).Distinct().ToList();
+        var starts = appointmentIds.Count == 0
+            ? new Dictionary<Guid, DateTime>()
+            : await db.Appointments.AsNoTracking().Where(a => appointmentIds.Contains(a.Id)).Select(a => new { a.Id, a.StartUtc }).ToDictionaryAsync(a => a.Id, a => a.StartUtc, ct);
         return items.Select(w => new LabWorkDto(w.Id, w.PatientId, $"{w.Patient?.FirstName} {w.Patient?.LastName}", w.LaboratoryId, w.Laboratory?.Name ?? "?",
             w.ProfessionalUserId, names.GetValueOrDefault(w.ProfessionalUserId, "?"), w.WorkType, w.ToothCode, w.Description, w.Status, w.SentDate,
-            w.EstimatedDeliveryDate, w.ActualDeliveryDate, w.PlacementDate, w.Cost, w.Notes, w.IsOverdue(today), w.TreatmentPlanItemId, w.CreatedAtUtc)).ToList();
+            w.EstimatedDeliveryDate, w.ActualDeliveryDate, w.PlacementDate, w.Cost, w.Notes, w.IsOverdue(today), w.TreatmentPlanItemId, w.CreatedAtUtc,
+            w.AppointmentId, w.AppointmentId is { } id && starts.TryGetValue(id, out var s) ? s : null, w.ToothCodes)).ToList();
     }
 
     private static LaboratoryDto ToDto(Domain.Entities.Laboratory l) => new(l.Id, l.Name, l.ContactName, l.Phone, l.Email, l.AddressLine, l.Notes, l.IsActive);

@@ -105,20 +105,31 @@ public class OdontogramCondition : AuditableEntity
 
     public static Guid SystemId(int n) => Guid.Parse($"6c1d3e0a-7b2f-4e11-8a55-{n:D12}");
 
+    /// <summary>
+    /// Odontograma simplificado: Caries, Arreglo, Extraer, Implante, Ausente y Corona activas.
+    /// "Extraer" indica una pieza a extraer (sigue presente), por eso no la marca como ausente.
+    /// Las demás condiciones de sistema quedan inactivas (no se borran: puede haber hallazgos históricos que las usen).
+    /// </summary>
     public static IReadOnlyList<OdontogramCondition> SystemSeed =>
     [
         new(null, Caries, "Caries", ConditionScope.Both, "#E5484D", false, true, SystemId(1)),
-        new(null, Filling, "Obturación", ConditionScope.Surface, "#3E63DD", false, true, SystemId(2)),
-        new(null, Sealant, "Sellante", ConditionScope.Surface, "#12A594", false, true, SystemId(3)),
+        new(null, Filling, "Arreglo", ConditionScope.Surface, "#3E63DD", false, true, SystemId(2)),
+        Inactive(new(null, Sealant, "Sellante", ConditionScope.Surface, "#12A594", false, true, SystemId(3))),
         new(null, Crown, "Corona", ConditionScope.Tooth, "#F5A524", false, true, SystemId(4)),
-        new(null, RootCanal, "Endodoncia", ConditionScope.Tooth, "#8E4EC6", false, true, SystemId(5)),
-        new(null, Extraction, "Extracción", ConditionScope.Tooth, "#E5484D", true, true, SystemId(6)),
+        Inactive(new(null, RootCanal, "Endodoncia", ConditionScope.Tooth, "#8E4EC6", false, true, SystemId(5))),
+        new(null, Extraction, "Extraer", ConditionScope.Tooth, "#E5484D", false, true, SystemId(6)),
         new(null, Missing, "Ausente", ConditionScope.Tooth, "#8B8D98", true, true, SystemId(7)),
         new(null, Implant, "Implante", ConditionScope.Tooth, "#0090FF", false, true, SystemId(8)),
-        new(null, Fracture, "Fractura", ConditionScope.Both, "#D6409F", false, true, SystemId(9)),
-        new(null, Prosthesis, "Prótesis", ConditionScope.Tooth, "#AD7F58", false, true, SystemId(10)),
-        new(null, RootRemnant, "Resto radicular", ConditionScope.Tooth, "#BD4B00", false, true, SystemId(11)),
+        Inactive(new(null, Fracture, "Fractura", ConditionScope.Both, "#D6409F", false, true, SystemId(9))),
+        Inactive(new(null, Prosthesis, "Prótesis", ConditionScope.Tooth, "#AD7F58", false, true, SystemId(10))),
+        Inactive(new(null, RootRemnant, "Resto radicular", ConditionScope.Tooth, "#BD4B00", false, true, SystemId(11))),
     ];
+
+    private static OdontogramCondition Inactive(OdontogramCondition c)
+    {
+        c.SetActive(false);
+        return c;
+    }
 }
 
 /// <summary>

@@ -294,6 +294,7 @@ internal sealed class AppointmentService(
     {
         var names = await UserNames.LoadAsync(db, items.Select(a => a.ProfessionalUserId), ct);
         var today = await clock.TodayAsync(ct);
+        var labWorks = await AppointmentLabWorks.LoadAsync(db, tenant, items.Select(a => a.Id).ToList(), ct);
         var result = new List<AppointmentDto>();
         foreach (var a in items)
         {
@@ -305,7 +306,8 @@ internal sealed class AppointmentService(
                 p.HealthInsurance is null ? null : $"{p.HealthInsurance.Name} {p.InsurancePlan}".Trim(),
                 a.ProfessionalUserId, names.GetValueOrDefault(a.ProfessionalUserId, "?"), a.GabineteId, a.Gabinete?.Name,
                 a.StartUtc, a.EndUtc, a.DurationMinutes, a.Status, a.Reason, a.AdministrativeNotes, a.IsOverbooking, a.ConfirmedAtUtc,
-                a.ArrivedAtUtc, a.AttendedAtUtc, a.CancelledAtUtc, a.CancellationReason, a.RescheduleCount, alerts, a.Version, a.CreatedAtUtc));
+                a.ArrivedAtUtc, a.AttendedAtUtc, a.CancelledAtUtc, a.CancellationReason, a.RescheduleCount, alerts, a.Version, a.CreatedAtUtc,
+                labWorks.GetValueOrDefault(a.Id, [])));
         }
         return result;
     }

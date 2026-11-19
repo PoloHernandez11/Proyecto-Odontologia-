@@ -5187,7 +5187,7 @@
             "description": "\n\nPermiso: lab.write",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"patientId\": \"{{patientId}}\",\n  \"laboratoryId\": \"{{laboratoryId}}\",\n  \"professionalUserId\": \"{{professionalUserId}}\",\n  \"workType\": \"\",\n  \"toothCode\": 0,\n  \"description\": \"\",\n  \"estimatedDeliveryDate\": \"2026-10-20\",\n  \"cost\": 0,\n  \"notes\": \"\",\n  \"treatmentPlanItemId\": \"{{treatmentPlanItemId}}\"\n}",
+              "raw": "{\n  \"patientId\": \"{{patientId}}\",\n  \"laboratoryId\": \"{{laboratoryId}}\",\n  \"professionalUserId\": \"{{professionalUserId}}\",\n  \"workType\": \"\",\n  \"toothCode\": 0,\n  \"description\": \"\",\n  \"estimatedDeliveryDate\": \"2026-10-20\",\n  \"cost\": 0,\n  \"notes\": \"\",\n  \"treatmentPlanItemId\": \"{{treatmentPlanItemId}}\",\n  \"appointmentId\": \"{{appointmentId}}\",\n  \"toothCodes\": [\n    0\n  ]\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -5251,7 +5251,7 @@
             "description": "\n\nPermiso: lab.write",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"patientId\": \"{{patientId}}\",\n  \"laboratoryId\": \"{{laboratoryId}}\",\n  \"professionalUserId\": \"{{professionalUserId}}\",\n  \"workType\": \"\",\n  \"toothCode\": 0,\n  \"description\": \"\",\n  \"estimatedDeliveryDate\": \"2026-10-20\",\n  \"cost\": 0,\n  \"notes\": \"\",\n  \"treatmentPlanItemId\": \"{{treatmentPlanItemId}}\"\n}",
+              "raw": "{\n  \"patientId\": \"{{patientId}}\",\n  \"laboratoryId\": \"{{laboratoryId}}\",\n  \"professionalUserId\": \"{{professionalUserId}}\",\n  \"workType\": \"\",\n  \"toothCode\": 0,\n  \"description\": \"\",\n  \"estimatedDeliveryDate\": \"2026-10-20\",\n  \"cost\": 0,\n  \"notes\": \"\",\n  \"treatmentPlanItemId\": \"{{treatmentPlanItemId}}\",\n  \"appointmentId\": \"{{appointmentId}}\",\n  \"toothCodes\": [\n    0\n  ]\n}",
               "options": {
                 "raw": {
                   "language": "json"

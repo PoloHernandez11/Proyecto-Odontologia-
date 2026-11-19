@@ -17,28 +17,63 @@
             <div class="jaw-label">{{ fila.titulo }}</div>
             <div class="teeth-row" [class.temporary-row]="fila.temporal" [style.grid-template-columns]="'repeat(' + fila.piezas.length + ', minmax(0, 1fr))'">
               @for (numero of fila.piezas; track numero) {
-                <button type="button" class="tooth" [class.absent]="ausente(numero)" [class.selected]="piezaSeleccionada === numero"
-                  [style.border-color]="hallazgoDePieza(numero) ? color(hallazgoDePieza(numero)!) : null" [attr.aria-label]="descripcion(numero)" [title]="descripcion(numero)" (click)="seleccionarPieza(numero)">
+                @let d = dibujo(numero);
+                <button type="button" class="tooth" [class.absent]="d.ausente" [class.selected]="piezaSeleccionada === numero"
+                  [attr.aria-label]="descripcion(numero)" [title]="descripcion(numero)" (click)="seleccionarPieza(numero)">
                   <svg class="tooth-diagram" viewBox="0 0 40 40" aria-hidden="true">
-                    @for (zona of zonas; track zona) {
-                      <polygon [attr.points]="zona.puntos" [attr.fill]="colorDeZona(numero, zona.zona)" (click)="seleccionarPieza(numero, zona.zona); $event.stopPropagation()"/>
+                    @for (zona of zonas; track zona.zona) {
+                      <polygon [attr.points]="zona.puntos" [attr.fill]="d.ausente ? '#e9eef0' : '#f8fbfc'" (click)="seleccionarPieza(numero, zona.zona); $event.stopPropagation()"/>
                     }
                     <path d="M2 2H38V38H2Z M13 13H27V27H13Z" fill="none" stroke="#82949d" stroke-width="1"/>
-                    @if (ausente(numero)) {
-                      <path d="M4 4L36 36M36 4L4 36" fill="none" stroke="#7a8b94" stroke-width="2"/>
-                    }
+                    <g class="marks">
+                      @for (r of d.rayitas; track $index) {
+                        <line class="stroke-mark" [class.planned]="r.planificado" [attr.x1]="r.x1" [attr.y1]="r.y1" [attr.x2]="r.x2" [attr.y2]="r.y2" [attr.stroke]="r.color"/>
+                      }
+                      @for (s of d.simbolos; track $index) {
+                        <g class="symbol" [class.planned]="s.planificado">
+                          @if (s.trazos) {
+                            <path [attr.d]="s.trazos"/>
+                          }
+                          @if (s.circulo) {
+                            <circle cx="20" cy="20" r="23"/>
+                          }
+                          @if (s.letra) {
+                            <text x="20" y="21">{{ s.letra }}</text>
+                          }
+                        </g>
+                      }
+                    </g>
                   </svg>
                   <small>{{ numero }}</small>
-                  @if (hallazgoDePieza(numero); as completo) {
+                  @if (d.otro; as completo) {
                     <i class="whole-mark" [style.background]="color(completo)"></i>
                   }
                 </button>
               }
             </div>
           }
-          <div class="legend"><span><i style="background:#f8fbfc"></i>Sana</span>@for (condicion of condiciones; track condicion) {
-          <span><i [style.background]="condicion.color || '#f4a477'"></i>{{ condicion.name }}</span>
-        }</div>
+          <div class="legend">@for (condicion of condiciones; track condicion.id) {
+            <span><ng-container [ngTemplateOutlet]="mini" [ngTemplateOutletContext]="{ $implicit: condicion.code, color: colorDeCondicion(condicion) }"/>{{ nombre(condicion) }}</span>
+          }<span class="legend-note">Trazo claro: planificado</span></div>
+          <ng-template #mini let-cod let-color="color">
+            <svg class="mini-symbol" viewBox="0 0 40 40" aria-hidden="true">
+              @if (simboloDe(cod); as s) {
+                <g class="symbol">
+                  @if (s.trazos) {
+                    <path [attr.d]="s.trazos"/>
+                  }
+                  @if (s.circulo) {
+                    <circle cx="20" cy="20" r="17"/>
+                  }
+                  @if (s.letra) {
+                    <text x="20" y="21">{{ s.letra }}</text>
+                  }
+                </g>
+              } @else {
+                <circle cx="20" cy="20" r="13" [attr.fill]="color"/>
+              }
+            </svg>
+          </ng-template>
       </section>
       @if (mensaje) {
         <p class="feedback" role="status">{{ mensaje }}</p>
@@ -57,8 +92,8 @@
             <ul class="finding-list">
               @for (hallazgo of hallazgosDeLaPieza; track hallazgo) {
                 <li>
-                  <i [style.background]="color(hallazgo)"></i>
-                  <span><strong>{{ hallazgo.conditionName }}</strong> · {{ hallazgo.surface ? 'Cara ' + nombresDeCara[hallazgo.surface].toLowerCase() : 'Pieza completa' }}@if (hallazgo.status === 'Planned') {
+                  <ng-container [ngTemplateOutlet]="mini" [ngTemplateOutletContext]="{ $implicit: hallazgo.conditionCode, color: color(hallazgo) }"/>
+                  <span><strong>{{ nombreDeHallazgo(hallazgo) }}</strong> · {{ hallazgo.surface ? 'Cara ' + nombresDeCara[hallazgo.surface].toLowerCase() : 'Pieza completa' }}@if (hallazgo.status === 'Planned') {
                   <em> · Planificado</em>
                 }
                 <small>{{ fecha(hallazgo.recordedAtUtc) }} · {{ hallazgo.recordedBy }}@if (hallazgo.notes) {

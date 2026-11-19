@@ -1953,6 +1953,9 @@ namespace Odontia.Infrastructure.Persistence.Migrations
                     b.Property<DateTime?>("ActualDeliveryDate")
                         .HasColumnType("date");
 
+                    b.Property<Guid?>("AppointmentId")
+                        .HasColumnType("char(36)");
+
                     b.Property<Guid>("ConsultorioId")
                         .HasColumnType("char(36)");
 
@@ -1998,6 +2001,11 @@ namespace Odontia.Infrastructure.Persistence.Migrations
                     b.Property<int?>("ToothCode")
                         .HasColumnType("int");
 
+                    b.Property<string>("ToothCodes")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("varchar(200)");
+
                     b.Property<Guid?>("TreatmentPlanItemId")
                         .HasColumnType("char(36)");
 
@@ -2015,6 +2023,8 @@ namespace Odontia.Infrastructure.Persistence.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("ToothCode");
+
+                    b.HasIndex("ConsultorioId", "AppointmentId");
 
                     b.HasIndex("ConsultorioId", "LaboratoryId");
 
@@ -2380,7 +2390,7 @@ namespace Odontia.Infrastructure.Persistence.Migrations
                             IsActive = true,
                             IsSystem = true,
                             MarksToothAbsent = false,
-                            Name = "Obturación",
+                            Name = "Arreglo",
                             Scope = 2
                         },
                         new
@@ -2389,7 +2399,7 @@ namespace Odontia.Infrastructure.Persistence.Migrations
                             Code = "SEALANT",
                             Color = "#12A594",
                             CreatedAtUtc = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            IsActive = true,
+                            IsActive = false,
                             IsSystem = true,
                             MarksToothAbsent = false,
                             Name = "Sellante",
@@ -2413,7 +2423,7 @@ namespace Odontia.Infrastructure.Persistence.Migrations
                             Code = "ROOT_CANAL",
                             Color = "#8E4EC6",
                             CreatedAtUtc = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            IsActive = true,
+                            IsActive = false,
                             IsSystem = true,
                             MarksToothAbsent = false,
                             Name = "Endodoncia",
@@ -2427,8 +2437,8 @@ namespace Odontia.Infrastructure.Persistence.Migrations
                             CreatedAtUtc = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             IsActive = true,
                             IsSystem = true,
-                            MarksToothAbsent = true,
-                            Name = "Extracción",
+                            MarksToothAbsent = false,
+                            Name = "Extraer",
                             Scope = 1
                         },
                         new
@@ -2461,7 +2471,7 @@ namespace Odontia.Infrastructure.Persistence.Migrations
                             Code = "FRACTURE",
                             Color = "#D6409F",
                             CreatedAtUtc = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            IsActive = true,
+                            IsActive = false,
                             IsSystem = true,
                             MarksToothAbsent = false,
                             Name = "Fractura",
@@ -2473,7 +2483,7 @@ namespace Odontia.Infrastructure.Persistence.Migrations
                             Code = "PROSTHESIS",
                             Color = "#AD7F58",
                             CreatedAtUtc = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            IsActive = true,
+                            IsActive = false,
                             IsSystem = true,
                             MarksToothAbsent = false,
                             Name = "Prótesis",
@@ -2485,7 +2495,7 @@ namespace Odontia.Infrastructure.Persistence.Migrations
                             Code = "ROOT_REMNANT",
                             Color = "#BD4B00",
                             CreatedAtUtc = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            IsActive = true,
+                            IsActive = false,
                             IsSystem = true,
                             MarksToothAbsent = false,
                             Name = "Resto radicular",
@@ -4552,6 +4562,12 @@ namespace Odontia.Infrastructure.Persistence.Migrations
                     b.HasOne("Odontia.Domain.Entities.DentalPiece", null)
                         .WithMany()
                         .HasForeignKey("ToothCode")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("Odontia.Domain.Entities.Appointment", null)
+                        .WithMany()
+                        .HasForeignKey("ConsultorioId", "AppointmentId")
+                        .HasPrincipalKey("ConsultorioId", "Id")
                         .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("Odontia.Domain.Entities.Laboratory", "Laboratory")

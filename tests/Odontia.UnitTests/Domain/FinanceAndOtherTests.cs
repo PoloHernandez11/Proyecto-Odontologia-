@@ -122,8 +122,36 @@ public class PaymentAndAccountTests
 
 public class LabWorkTests
 {
-    private static LabWork New() => new(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), "Corona de zirconio", 21, null,
+    private static LabWork New() => new(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), "Corona de zirconio", [21], null,
         new DateOnly(2026, 10, 22), 85_000, null, null);
+
+    [Fact]
+    public void Multiple_teeth_are_deduplicated_and_first_is_kept_as_tooth_code()
+    {
+        var w = new LabWork(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), "Puente", [14, 15, 16, 15], null, null, null, null, null,
+            Guid.NewGuid());
+        Assert.Equal([14, 15, 16], w.ToothCodes);
+        Assert.Equal(14, w.ToothCode);
+        Assert.NotNull(w.AppointmentId);
+        w.Update("Puente", [], null, null, null, null);
+        Assert.Empty(w.ToothCodes);
+        Assert.Null(w.ToothCode);
+    }
+
+    [Fact]
+    public void Invalid_tooth_in_list_is_rejected()
+    {
+        var ex = Assert.Throws<DomainException>(() => New().Update("Puente", [14, 19], null, null, null, null));
+        Assert.Equal("invalid_tooth", ex.Code);
+    }
+
+    [Fact]
+    public void Changing_estimated_date_keeps_all_teeth()
+    {
+        var w = new LabWork(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), "Puente", [34, 35, 36], null, null, null, null, null);
+        w.Update(w.WorkType, w.ToothCodes, w.Description, new DateOnly(2026, 12, 1), w.Cost, w.Notes);
+        Assert.Equal([34, 35, 36], w.ToothCodes);
+    }
 
     [Fact]
     public void Delivery_flow_records_dates_and_history()

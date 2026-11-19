@@ -76,20 +76,53 @@ public class OdontogramTests
     public void Planned_treatment_is_completed_when_recorded_as_existing()
     {
         var o = New();
-        var planned = Apply(o, 36, null, OdontogramCondition.RootCanal, FindingStatus.Planned);
-        Apply(o, 36, null, OdontogramCondition.RootCanal, FindingStatus.Existing);
+        var planned = Apply(o, 36, null, OdontogramCondition.Crown, FindingStatus.Planned);
+        Apply(o, 36, null, OdontogramCondition.Crown, FindingStatus.Existing);
         Assert.False(planned.IsCurrent);
         Assert.Equal("Realizado", planned.ClosedReason);
     }
 
     [Fact]
-    public void Extraction_marks_tooth_absent_and_closes_other_findings()
+    public void Extraer_does_not_mark_tooth_absent_nor_close_other_findings()
     {
         var o = New();
         var caries = Apply(o, 48, ToothSurface.Occlusal, OdontogramCondition.Caries);
         Apply(o, 48, null, OdontogramCondition.Extraction, FindingStatus.Existing);
+        Assert.True(caries.IsCurrent);
+        Assert.False(o.IsToothAbsent(48, Lookup));
+    }
+
+    [Fact]
+    public void Missing_marks_tooth_absent_and_closes_other_findings()
+    {
+        var o = New();
+        var caries = Apply(o, 48, ToothSurface.Occlusal, OdontogramCondition.Caries);
+        Apply(o, 48, null, OdontogramCondition.Missing, FindingStatus.Existing);
         Assert.False(caries.IsCurrent);
         Assert.True(o.IsToothAbsent(48, Lookup));
+    }
+
+    [Fact]
+    public void Simplified_catalog_has_six_active_conditions()
+    {
+        var active = OdontogramCondition.SystemSeed.Where(c => c.IsActive).ToDictionary(c => c.Code);
+        Assert.Equal(
+            new[] { OdontogramCondition.Caries, OdontogramCondition.Crown, OdontogramCondition.Extraction, OdontogramCondition.Filling,
+                OdontogramCondition.Implant, OdontogramCondition.Missing }.Order(),
+            active.Keys.Order());
+        Assert.Equal("Arreglo", active[OdontogramCondition.Filling].Name);
+        Assert.Equal("#3E63DD", active[OdontogramCondition.Filling].Color);
+        Assert.Equal("Extraer", active[OdontogramCondition.Extraction].Name);
+        Assert.False(active[OdontogramCondition.Extraction].MarksToothAbsent);
+        Assert.True(active[OdontogramCondition.Missing].MarksToothAbsent);
+        Assert.Equal("#E5484D", active[OdontogramCondition.Caries].Color);
+    }
+
+    [Fact]
+    public void Inactive_system_condition_cannot_be_applied()
+    {
+        var ex = Assert.Throws<DomainException>(() => Apply(New(), 36, null, OdontogramCondition.RootCanal));
+        Assert.Equal("condition_inactive", ex.Code);
     }
 
     [Fact]
@@ -121,8 +154,8 @@ public class OdontogramTests
     public void Duplicate_condition_is_rejected()
     {
         var o = New();
-        Apply(o, 16, ToothSurface.Mesial, OdontogramCondition.Sealant);
-        Assert.Equal("duplicate_finding", Assert.Throws<DomainException>(() => Apply(o, 16, ToothSurface.Mesial, OdontogramCondition.Sealant)).Code);
+        Apply(o, 16, ToothSurface.Mesial, OdontogramCondition.Filling);
+        Assert.Equal("duplicate_finding", Assert.Throws<DomainException>(() => Apply(o, 16, ToothSurface.Mesial, OdontogramCondition.Filling)).Code);
     }
 
     [Fact]

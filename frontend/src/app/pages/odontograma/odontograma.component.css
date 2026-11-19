@@ -14,7 +14,7 @@
 .heading{display:flex;justify-content:space-between;align-items:flex-start;gap:16px}
 .change-patient{color:#167b83;font-weight:600;font-size:13px;text-decoration:none;white-space:nowrap;margin-top:12px}
 .tooth{position:relative}
-.tooth.absent{opacity:.65}
+.tooth.absent{background:#f1f4f5}
 .tooth.selected{border-color:#16858b!important;box-shadow:0 0 0 2px #b9e1df}
 .tooth:focus-visible{outline:2px solid #16858b;outline-offset:2px}
 .whole-mark{position:absolute;top:4px;right:4px;width:8px;height:8px;border-radius:50%;border:1px solid #fff}
@@ -43,3 +43,13 @@
 .hint-inline{margin:0;font-size:13px;color:#7a8b94}
 .error-feedback{background:#fdecec;color:#a12626}
 @media(max-width:700px){.finding-form{grid-template-columns:1fr}.finding-form label.wide{grid-column:auto}.teeth-row{gap:2px}.tooth-diagram{width:100%;height:auto}}
+
+/* Marcas como en la ficha en papel: rayitas de color por cara y símbolos de pieza completa */
+.tooth-diagram .marks{pointer-events:none}
+.stroke-mark{stroke-width:3.6;stroke-linecap:round}
+.symbol{fill:none;stroke:#22323c;stroke-width:3;stroke-linecap:round}
+.symbol text{fill:#22323c;stroke:#fff;stroke-width:3;paint-order:stroke;font:700 15px Arial,sans-serif;text-anchor:middle;dominant-baseline:central}
+.planned{opacity:.45}
+.mini-symbol{width:16px;height:16px;flex:0 0 16px;overflow:visible}
+.mini-symbol .symbol text{font-size:19px}
+.legend-note{color:#8a9ba3;font-style:italic}

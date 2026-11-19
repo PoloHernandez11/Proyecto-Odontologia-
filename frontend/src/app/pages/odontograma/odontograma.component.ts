@@ -1,5 +1,6 @@
 
 import { Component, inject, ChangeDetectionStrategy } from '@angular/core';
+import { NgTemplateOutlet } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { forkJoin } from 'rxjs';
@@ -18,7 +19,40 @@ const NOMBRE_DE_CARA: Record<ToothSurface, string> = {
 };
 const PIEZA_COMPLETA = 'completa';
 
-@Component({ selector: 'app-odontograma', standalone: true, imports: [FormsModule, RouterLink], templateUrl: './odontograma.component.html', changeDetection: ChangeDetectionStrategy.Eager,
+/**
+ * Únicas condiciones que se ofrecen, en el orden de la ficha en papel del consultorio.
+ * Los nombres se fijan acá aunque el catálogo del backend use otros.
+ */
+const CODIGOS = ['EXTRACTION', 'CARIES', 'FILLING', 'IMPLANT', 'MISSING', 'CROWN'];
+const NOMBRE_DE_CODIGO: Record<string, string> = {
+  EXTRACTION: 'Extraer', CARIES: 'Caries', FILLING: 'Arreglo', IMPLANT: 'Implante', MISSING: 'Ausente', CROWN: 'Corona'
+};
+/** Caries y arreglos se marcan con una rayita del color correspondiente sobre la cara. */
+const COLOR_DE_CODIGO: Record<string, string> = { CARIES: '#d62828', FILLING: '#1f5fcc' };
+const COLOR_POR_DEFECTO = '#f4a477';
+/** Trazo corto en el centro de cada zona, a lo largo de la zona. */
+const RAYITA: Record<Zona, { x1: number; y1: number; x2: number; y2: number; vertical: boolean }> = {
+  arriba: { x1: 15, y1: 7.5, x2: 25, y2: 7.5, vertical: false }, abajo: { x1: 15, y1: 32.5, x2: 25, y2: 32.5, vertical: false },
+  izquierda: { x1: 7.5, y1: 15, x2: 7.5, y2: 25, vertical: true }, derecha: { x1: 32.5, y1: 15, x2: 32.5, y2: 25, vertical: true },
+  centro: { x1: 15, y1: 20, x2: 25, y2: 20, vertical: false }
+};
+/** Símbolos de pieza completa, dibujados sobre el diente (viewBox 0 0 40 40). */
+export interface Simbolo { trazos: string; circulo?: boolean; letra?: string; }
+const SIMBOLOS: Record<string, Simbolo> = {
+  EXTRACTION: { trazos: 'M5 15H35M5 25H35' },
+  IMPLANT: { trazos: 'M20 5V35M13 5H27M13 35H27' },
+  MISSING: { trazos: 'M5 5L35 35M35 5L5 35' },
+  CROWN: { trazos: '', circulo: true, letra: 'C' }
+};
+
+interface Rayita { x1: number; y1: number; x2: number; y2: number; color: string; planificado: boolean; }
+interface SimboloDePieza extends Simbolo { planificado: boolean; }
+/** Lo que se dibuja de cada pieza, calculado una vez por cada carga del odontograma. */
+interface Dibujo { rayitas: Rayita[]; simbolos: SimboloDePieza[]; ausente: boolean; otro?: FindingDto; }
+
+const codigo = (valor: string | null | undefined): string => (valor ?? '').toUpperCase();
+
+@Component({ selector: 'app-odontograma', standalone: true, imports: [FormsModule, NgTemplateOutlet, RouterLink], templateUrl: './odontograma.component.html', changeDetection: ChangeDetectionStrategy.Eager,
  styleUrl: './odontograma.component.css' })
 export class OdontogramaComponent {
   private readonly api = inject(OdontiaApi);
@@ -75,26 +109,60 @@ export class OdontogramaComponent {
 
   private aplicar(odontograma: OdontogramDto): void {
     this.estados = new Map(odontograma.teeth.map(pieza => [pieza.toothCode, pieza]));
+    this.dibujos = new Map(odontograma.teeth.map(pieza => [pieza.toothCode, this.dibujar(pieza)]));
     this.ultimaModificacion = odontograma.lastChangeUtc ? `${fechaCorta(odontograma.lastChangeUtc)} · ${odontograma.lastChangeBy ?? ''}` : '';
   }
 
   // ── Dibujo ─────────────────────────────────────────────────────────────────
-  get condiciones(): ConditionDto[] { return this.catalogo?.conditions.filter(condicion => condicion.isActive) ?? []; }
-  estado(pieza: number): ToothStateDto | undefined { return this.estados.get(pieza); }
-  ausente(pieza: number): boolean { return this.estados.get(pieza)?.isAbsent ?? false; }
-  private hallazgoDeZona(pieza: number, zona: Zona): FindingDto | undefined {
-    return this.estados.get(pieza)?.findings.find(hallazgo => hallazgo.surface && CARAS_POR_ZONA[zona].includes(hallazgo.surface));
+  private dibujos = new Map<number, Dibujo>();
+  private static readonly SIN_DIBUJO: Dibujo = { rayitas: [], simbolos: [], ausente: false };
+
+  /** Traduce los hallazgos de una pieza a rayitas por cara y símbolos de pieza completa. */
+  private dibujar(estado: ToothStateDto): Dibujo {
+    const porZona = new Map<Zona, { color: string; planificado: boolean }[]>();
+    const simbolos: SimboloDePieza[] = [];
+    let otro: FindingDto | undefined;
+    for (const hallazgo of estado.findings) {
+      const cod = codigo(hallazgo.conditionCode);
+      const planificado = hallazgo.status === 'Planned';
+      const simbolo = SIMBOLOS[cod];
+      if (simbolo) { simbolos.push({ ...simbolo, planificado }); continue; }
+      // Caries, arreglos (y condiciones anteriores por cara): rayita en la cara; sin cara, en el centro.
+      const zona = hallazgo.surface ? this.zonaDeCara(hallazgo.surface) : COLOR_DE_CODIGO[cod] ? 'centro' : undefined;
+      if (!zona) { otro ??= hallazgo; continue; }
+      porZona.set(zona, [...(porZona.get(zona) ?? []), { color: this.color(hallazgo), planificado }]);
+    }
+    const rayitas: Rayita[] = [];
+    for (const [zona, marcas] of porZona) {
+      const base = RAYITA[zona];
+      // Si hay más de una marca en la misma cara, se dibujan en paralelo para que se vean todas.
+      marcas.forEach((marca, indice) => {
+        const desplazamiento = (indice - (marcas.length - 1) / 2) * 4;
+        const dx = base.vertical ? desplazamiento : 0, dy = base.vertical ? 0 : desplazamiento;
+        rayitas.push({ x1: base.x1 + dx, y1: base.y1 + dy, x2: base.x2 + dx, y2: base.y2 + dy, ...marca });
+      });
+    }
+    return { rayitas, simbolos, otro, ausente: estado.findings.some(h => codigo(h.conditionCode) === 'MISSING') };
   }
-  hallazgoDePieza(pieza: number): FindingDto | undefined { return this.estados.get(pieza)?.findings.find(hallazgo => !hallazgo.surface); }
-  colorDeZona(pieza: number, zona: Zona): string {
-    if (this.ausente(pieza)) return '#d7e1e5';
-    const hallazgo = this.hallazgoDeZona(pieza, zona);
-    return hallazgo ? this.color(hallazgo) : '#f8fbfc';
+  private zonaDeCara(cara: ToothSurface): Zona | undefined {
+    return (Object.keys(CARAS_POR_ZONA) as Zona[]).find(zona => CARAS_POR_ZONA[zona].includes(cara));
   }
-  color(hallazgo: FindingDto): string { return hallazgo.color || '#f4a477'; }
+
+  get condiciones(): ConditionDto[] {
+    const activas = this.catalogo?.conditions.filter(condicion => condicion.isActive && CODIGOS.includes(codigo(condicion.code))) ?? [];
+    return activas.sort((a, b) => CODIGOS.indexOf(codigo(a.code)) - CODIGOS.indexOf(codigo(b.code)));
+  }
+  dibujo(pieza: number): Dibujo { return this.dibujos.get(pieza) ?? OdontogramaComponent.SIN_DIBUJO; }
+  /** Sólo "Ausente" deja la pieza tachada; "Extraer" indica que la pieza todavía está. */
+  ausente(pieza: number): boolean { return this.dibujo(pieza).ausente; }
+  nombre(condicion: ConditionDto): string { return NOMBRE_DE_CODIGO[codigo(condicion.code)] ?? condicion.name; }
+  nombreDeHallazgo(hallazgo: FindingDto): string { return NOMBRE_DE_CODIGO[codigo(hallazgo.conditionCode)] ?? hallazgo.conditionName; }
+  simboloDe(valor: string): Simbolo | undefined { return SIMBOLOS[codigo(valor)]; }
+  color(hallazgo: FindingDto): string { return COLOR_DE_CODIGO[codigo(hallazgo.conditionCode)] ?? (hallazgo.color || COLOR_POR_DEFECTO); }
+  colorDeCondicion(condicion: ConditionDto): string { return COLOR_DE_CODIGO[codigo(condicion.code)] ?? (condicion.color || COLOR_POR_DEFECTO); }
   descripcion(pieza: number): string {
     const estado = this.estados.get(pieza);
-    const hallazgos = estado?.findings.map(h => `${h.conditionName}${h.surface ? ' (' + NOMBRE_DE_CARA[h.surface] + ')' : ''}`) ?? [];
+    const hallazgos = estado?.findings.map(h => `${this.nombreDeHallazgo(h)}${h.surface ? ' (' + NOMBRE_DE_CARA[h.surface] + ')' : ''}${h.status === 'Planned' ? ' [planificado]' : ''}`) ?? [];
     return `Pieza ${pieza}: ${hallazgos.length ? hallazgos.join(', ') : 'sin hallazgos'}`;
   }
 
@@ -122,9 +190,9 @@ export class OdontogramaComponent {
   }
   /** Indica, en la lista, dónde se registra una condición que no corresponde a la ubicación actual. */
   etiquetaDeCondicion(condicion: ConditionDto): string {
-    if (condicion.scope === 'Tooth' && this.caraElegida !== PIEZA_COMPLETA) return `${condicion.name} (pieza completa)`;
-    if (condicion.scope === 'Surface' && this.caraElegida === PIEZA_COMPLETA) return `${condicion.name} (por cara)`;
-    return condicion.name;
+    if (condicion.scope === 'Tooth' && this.caraElegida !== PIEZA_COMPLETA) return `${this.nombre(condicion)} (pieza completa)`;
+    if (condicion.scope === 'Surface' && this.caraElegida === PIEZA_COMPLETA) return `${this.nombre(condicion)} (por cara)`;
+    return this.nombre(condicion);
   }
   private aplicaALaUbicacion(condicion: ConditionDto): boolean {
     return condicion.scope === 'Both' || condicion.scope === (this.caraElegida === PIEZA_COMPLETA ? 'Tooth' : 'Surface');
@@ -162,7 +230,7 @@ export class OdontogramaComponent {
     this.guardando = true;
     this.error = '';
     this.api.quitarHallazgo(this.pacienteId, hallazgo.id, 'Corrección del registro').subscribe({
-      next: odontograma => { this.guardando = false; this.aplicar(odontograma); this.mensaje = `Se quitó "${hallazgo.conditionName}" de la pieza ${hallazgo.toothCode}.`; },
+      next: odontograma => { this.guardando = false; this.aplicar(odontograma); this.mensaje = `Se quitó "${this.nombreDeHallazgo(hallazgo)}" de la pieza ${hallazgo.toothCode}.`; },
       error: error => { this.guardando = false; this.error = mensajeDeError(error, 'No se pudo quitar el hallazgo.'); }
     });
   }

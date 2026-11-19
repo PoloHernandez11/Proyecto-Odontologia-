@@ -4,14 +4,20 @@ import { FormControl, FormGroup, FormsModule, ReactiveFormsModule, Validators } 
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { Subject, Subscription, debounceTime, of, switchMap } from 'rxjs';
 import { AccionTurno, ESTADOS_DE_TURNO, OdontiaApi } from '../../api/odontia-api.service';
-import { AgendaAppointmentDto, AppointmentStatus, GabineteDto, PatientListItemDto, ProfessionalDto, ScheduleBlockDto } from '../../api/schema';
+import { AgendaAppointmentDto, AgendaLabWorkDto, AppointmentStatus, LabWorkStatus, GabineteDto, PatientListItemDto, ProfessionalDto, ScheduleBlockDto } from '../../api/schema';
 import { fechaCorta, fechaIso, horaLocal, iniciales, mensajeDeError } from '../../core/api';
 import { AuthService } from '../../core/auth.service';
 
 type Vista = 'dia' | 'semana' | 'mes';
 interface Accion { titulo: string; accion: AccionTurno; }
 
-const ALTO_HORA = 64; // píxeles por hora en la vista de día
+const ALTO_HORA = 64;
+const ANCHO_TARJETA = 300; // ancho de la tarjeta de detalle al pasar el mouse
+
+const ESTADOS_DE_TRABAJO: Record<LabWorkStatus, string> = {
+  Pending: 'Solicitado', Sent: 'Enviado', InProduction: 'En proceso', ReadyForPickup: 'Listo para retirar',
+  Received: 'Recibido', Placed: 'Colocado al paciente', Cancelled: 'Cancelado'
+}; // píxeles por hora en la vista de día
 
 const ACCIONES: Partial<Record<AppointmentStatus, Accion[]>> = {
   Pending: [{ titulo: '✓ Confirmar', accion: 'confirm' }, { titulo: 'Registrar llegada', accion: 'check-in' }, { titulo: 'No asistió', accion: 'no-show' }],
@@ -31,6 +37,7 @@ const CLASE_DE_ESTADO: Record<AppointmentStatus, string> = {
   standalone: true,
   imports: [CommonModule, FormsModule, ReactiveFormsModule, RouterLink],
   templateUrl: './agenda.component.html',
+  host: { '(window:scroll)': 'ocultarDetalle()', '(window:resize)': 'ocultarDetalle()' },
   changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './agenda.component.css'
 })
@@ -139,6 +146,7 @@ export class AgendaComponent implements OnDestroy {
         this.error = '';
         this.turnos = [...agenda.appointments].sort((a, b) => a.startUtc.localeCompare(b.startUtc));
         this.bloqueos = agenda.blocks;
+        this.turnoEnDetalle = null;
         if (this.turnoSeleccionado) this.turnoSeleccionado = this.turnos.find(turno => turno.id === this.turnoSeleccionado!.id) ?? null;
       },
       error: error => { this.cargando = false; this.error = mensajeDeError(error, 'No se pudo cargar la agenda.'); }
@@ -211,6 +219,35 @@ export class AgendaComponent implements OnDestroy {
   get puedeCancelar(): boolean {
     return this.puedeEscribir && !!this.turnoSeleccionado && ['Pending', 'Confirmed', 'Arrived', 'InWaitingRoom'].includes(this.turnoSeleccionado.status);
   }
+
+  // ── Trabajos de laboratorio del turno ──────────────────────────────────────
+  trabajosDe(turno: AgendaAppointmentDto): AgendaLabWorkDto[] { return turno.labWorks ?? []; }
+  piezas(trabajo: AgendaLabWorkDto): string {
+    const piezas = trabajo.toothCodes ?? [];
+    return piezas.length ? `${piezas.length === 1 ? 'Pieza' : 'Piezas'} ${piezas.join(', ')}` : 'Sin pieza indicada';
+  }
+  estadoDeTrabajo(trabajo: AgendaLabWorkDto): string { return ESTADOS_DE_TRABAJO[trabajo.status] ?? trabajo.status; }
+  /** Texto para el aria-label y el title de la marca "T". */
+  resumenDeTrabajos(turno: AgendaAppointmentDto): string {
+    const trabajos = this.trabajosDe(turno).map(t => `${this.piezas(t)} · ${t.workType} · Mecánico dental: ${t.laboratoryName}`);
+    return `Trabajos de laboratorio: ${trabajos.join('; ')}`;
+  }
+
+  // ── Tarjeta de detalle al pasar el mouse o enfocar un turno ────────────────
+  turnoEnDetalle: AgendaAppointmentDto | null = null;
+  posicionDetalle = { top: 0, left: 0 };
+  mostrarDetalle(turno: AgendaAppointmentDto, evento: Event): void {
+    const elemento = evento.currentTarget as HTMLElement | null;
+    if (!elemento) return;
+    const caja = elemento.getBoundingClientRect();
+    // Se ubica a la derecha del turno; si no entra, a la izquierda. Verticalmente, dentro de la ventana.
+    const entraALaDerecha = caja.right + 8 + ANCHO_TARJETA <= window.innerWidth;
+    const left = entraALaDerecha ? caja.right + 8 : Math.max(8, caja.left - 8 - ANCHO_TARJETA);
+    const top = Math.min(Math.max(8, caja.top), Math.max(8, window.innerHeight - 280));
+    this.posicionDetalle = { top, left };
+    this.turnoEnDetalle = turno;
+  }
+  ocultarDetalle(): void { this.turnoEnDetalle = null; }
 
   // ── Acciones sobre un turno ────────────────────────────────────────────────
   seleccionarTurno(turno: AgendaAppointmentDto): void { this.turnoSeleccionado = turno; this.mensaje = ''; this.cancelando = false; this.motivoCancelacion = ''; }

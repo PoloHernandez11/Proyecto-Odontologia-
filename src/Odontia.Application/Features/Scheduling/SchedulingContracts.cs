@@ -32,7 +32,10 @@ public sealed class AgendaQuery
 
 public sealed record AgendaAppointmentDto(Guid Id, DateTime StartUtc, DateTime EndUtc, int DurationMinutes, AppointmentStatus Status,
     Guid PatientId, string PatientName, string? PatientPhone, Guid ProfessionalUserId, string ProfessionalName, Guid? GabineteId,
-    string? GabineteName, string? Reason, bool IsOverbooking);
+    string? GabineteName, string? Reason, bool IsOverbooking, IReadOnlyList<AgendaLabWorkDto> LabWorks);
+
+/// <summary>Trabajo de laboratorio vinculado a un turno (como turno de entrega). Excluye cancelados.</summary>
+public sealed record AgendaLabWorkDto(Guid Id, string WorkType, IReadOnlyList<int> ToothCodes, string LaboratoryName, LabWorkStatus Status);
 
 public sealed record AgendaDto(DateOnly From, DateOnly To, string TimeZoneId, IReadOnlyList<AgendaAppointmentDto> Appointments,
     IReadOnlyList<ScheduleBlockDto> Blocks, IReadOnlyList<WorkingHoursDto> WorkingHours);
@@ -78,7 +81,8 @@ public sealed record AppointmentDto(Guid Id, Guid PatientId, string PatientName,
     string? PatientInsurance, Guid ProfessionalUserId, string ProfessionalName, Guid? GabineteId, string? GabineteName,
     DateTime StartUtc, DateTime EndUtc, int DurationMinutes, AppointmentStatus Status, string? Reason, string? AdministrativeNotes,
     bool IsOverbooking, DateTime? ConfirmedAtUtc, DateTime? ArrivedAtUtc, DateTime? AttendedAtUtc, DateTime? CancelledAtUtc,
-    string? CancellationReason, int RescheduleCount, IReadOnlyList<string> Alerts, Guid Version, DateTime CreatedAtUtc);
+    string? CancellationReason, int RescheduleCount, IReadOnlyList<string> Alerts, Guid Version, DateTime CreatedAtUtc,
+    IReadOnlyList<AgendaLabWorkDto> LabWorks);
 
 public sealed record AppointmentHistoryDto(DateTime ChangedAtUtc, string Action, AppointmentStatus? FromStatus, AppointmentStatus? ToStatus,
     string? Details, string? ChangedBy);

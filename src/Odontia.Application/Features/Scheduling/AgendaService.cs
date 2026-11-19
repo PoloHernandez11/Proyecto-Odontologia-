@@ -36,6 +36,7 @@ internal sealed class AgendaService(IApplicationDbContext db, ITenantContext ten
 
         var appts = await AgendaAppointmentsQuery(start, end, professional, q.GabineteId, q.IncludeCancelled).ToListAsync(ct);
         var names = await UserNames.LoadAsync(db, appts.Select(a => a.ProfessionalUserId), ct);
+        var labWorks = await LabWorksByAppointmentAsync(appts.Select(a => a.Id).ToList(), ct);
         var blocks = await BlocksQuery(start, end, professional).ToListAsync(ct);
         var hours = await db.WorkingHours.AsNoTracking()
             .Where(w => professional == null || w.ProfessionalUserId == professional)
@@ -47,7 +48,7 @@ internal sealed class AgendaService(IApplicationDbContext db, ITenantContext ten
         return new AgendaDto(q.From, q.To, tz.Id,
             appts.Select(a => new AgendaAppointmentDto(a.Id, a.StartUtc, a.EndUtc, (int)(a.EndUtc - a.StartUtc).TotalMinutes, a.Status, a.PatientId,
                 a.PatientName, a.PatientPhone, a.ProfessionalUserId, names.GetValueOrDefault(a.ProfessionalUserId, "?"), a.GabineteId, a.GabineteName,
-                a.Reason, a.IsOverbooking)).ToList(),
+                a.Reason, a.IsOverbooking, labWorks.GetValueOrDefault(a.Id, []))).ToList(),
             blocks.Select(ToDto).ToList(), hours.Select(ToDto).ToList());
     }
 
@@ -244,6 +245,9 @@ internal sealed class AgendaService(IApplicationDbContext db, ITenantContext ten
                 a.Patient.FirstName, a.Patient.LastName, a.Patient.Phone, a.ProfessionalUserId, a.GabineteId,
                 a.Gabinete != null ? a.Gabinete.Name : null, a.Reason, a.IsOverbooking));
 
+    private Task<Dictionary<Guid, IReadOnlyList<AgendaLabWorkDto>>> LabWorksByAppointmentAsync(List<Guid> appointmentIds, CancellationToken ct) =>
+        AppointmentLabWorks.LoadAsync(db, tenant, appointmentIds, ct);
+
     private IQueryable<ScheduleBlock> BlocksQuery(DateTime start, DateTime end, Guid? professional) =>
         db.ScheduleBlocks.AsNoTracking()
             .Where(b => b.StartUtc < end && b.EndUtc > start)
@@ -254,6 +258,27 @@ internal sealed class AgendaService(IApplicationDbContext db, ITenantContext ten
 
     internal static ScheduleBlockDto ToDto(ScheduleBlock b) => new(b.Id, b.Kind, b.StartUtc, b.EndUtc, b.ProfessionalUserId, b.GabineteId, b.Reason);
     private static WorkingHoursDto ToDto(WorkingHours w) => new(w.Id, w.ProfessionalUserId, w.DayOfWeek, w.StartTime, w.EndTime, w.GabineteId);
+}
+
+/// <summary>
+/// Trabajos de laboratorio (no cancelados) vinculados a turnos como turno de entrega, en una sola consulta.
+/// Sólo se exponen a quien tiene lab.read (p. ej. el rol Administrador no ve datos de laboratorio).
+/// </summary>
+internal static class AppointmentLabWorks
+{
+    public static async Task<Dictionary<Guid, IReadOnlyList<AgendaLabWorkDto>>> LoadAsync(IApplicationDbContext db, ITenantContext tenant,
+        IReadOnlyCollection<Guid> appointmentIds, CancellationToken ct)
+    {
+        if (appointmentIds.Count == 0 || !tenant.Has(Permissions.LabRead)) return new();
+        var ids = appointmentIds.Distinct().ToList();
+        var rows = await db.LabWorks.AsNoTracking()
+            .Where(w => w.AppointmentId != null && ids.Contains(w.AppointmentId.Value) && w.Status != LabWorkStatus.Cancelled)
+            .OrderBy(w => w.CreatedAtUtc)
+            .Select(w => new { AppointmentId = w.AppointmentId!.Value, w.Id, w.WorkType, w.ToothCodes, LaboratoryName = w.Laboratory!.Name, w.Status })
+            .ToListAsync(ct);
+        return rows.GroupBy(r => r.AppointmentId).ToDictionary(g => g.Key,
+            g => (IReadOnlyList<AgendaLabWorkDto>)g.Select(r => new AgendaLabWorkDto(r.Id, r.WorkType, r.ToothCodes, r.LaboratoryName, r.Status)).ToList());
+    }
 }
 
 /// <summary>Carga de datos de disponibilidad (compartido entre consulta y validación al reservar).</summary>
