@@ -20,7 +20,7 @@ const texto = (maximo: number, ...extra: ((control: FormControl<string>) => unkn
 
 const NOTIFICACIONES: { clave: keyof NotificationSettingsDto; titulo: string; detalle: string }[] = [
   { clave: 'emailEnabled', titulo: 'Avisos por correo electrónico', detalle: 'Recibir las notificaciones también en tu casilla de correo.' },
-  { clave: 'inAppEnabled', titulo: 'Avisos dentro de Odontia', detalle: 'Mostrar las notificaciones en la aplicación.' },
+  { clave: 'inAppEnabled', titulo: 'Avisos dentro de Odentix', detalle: 'Mostrar las notificaciones en la aplicación.' },
   { clave: 'notifyTaskAssigned', titulo: 'Tareas asignadas', detalle: 'Cuando alguien te asigna una tarea.' },
   { clave: 'notifyTaskDue', titulo: 'Tareas por vencer', detalle: 'Cuando una tarea tuya está por vencer o ya venció.' },
   { clave: 'notifyLabUpdates', titulo: 'Novedades de laboratorio', detalle: 'Cuando un trabajo cambia de estado o se atrasa.' },

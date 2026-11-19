@@ -312,9 +312,9 @@ internal sealed class MemberService(
         var consultorio = await db.Consultorios.Where(c => c.Id == tenant.ConsultorioId).Select(c => c.Name).FirstAsync(ct);
         var f = frontendOptions.Value;
         var link = $"{f.BaseUrl.TrimEnd('/')}{f.AcceptInvitationPath}?token={Uri.EscapeDataString(raw)}";
-        await messages.SendEmailAsync(tenant.ConsultorioId, email, $"Invitación a {consultorio} - Odontia",
-            $"<p>Fue invitado/a a sumarse a <strong>{HtmlEncoder.Default.Encode(consultorio)}</strong> en Odontia. Acepte la invitación aquí: <a href=\"{HtmlEncoder.Default.Encode(link)}\">aceptar invitación</a>.</p>",
-            $"Fue invitado/a a sumarse a {consultorio} en Odontia. Acepte la invitación: {link}", "invitation", true, nameof(Invitation), inv.Id, ct);
+        await messages.SendEmailAsync(tenant.ConsultorioId, email, $"Invitación a {consultorio} - Odentix",
+            $"<p>Fue invitado/a a sumarse a <strong>{HtmlEncoder.Default.Encode(consultorio)}</strong> en Odentix. Acepte la invitación aquí: <a href=\"{HtmlEncoder.Default.Encode(link)}\">aceptar invitación</a>.</p>",
+            $"Fue invitado/a a sumarse a {consultorio} en Odentix. Acepte la invitación: {link}", "invitation", true, nameof(Invitation), inv.Id, ct);
         audit.Write(AuditAction.InvitationSent, nameof(Invitation), inv.Id.ToString(), $"Roles: {string.Join(", ", roles.Select(x => x.Name))}");
         return (await ToInvitationDtosAsync([inv], ct))[0];
     }
@@ -424,7 +424,7 @@ internal sealed class ProfileService(UserManager<ApplicationUser> users, IApplic
         var confirm = await users.GenerateEmailConfirmationTokenAsync(user);
         var enc = Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(confirm)).TrimEnd('=').Replace('+', '-').Replace('/', '_');
         var link = $"{front.Value.BaseUrl.TrimEnd('/')}{front.Value.ConfirmEmailPath}?userId={user.Id}&token={Uri.EscapeDataString(enc)}";
-        await messages.SendEmailAsync(null, newEmail, "Confirme su nuevo correo - Odontia", $"<p>Confirme su nuevo correo: <a href=\"{HtmlEncoder.Default.Encode(link)}\">confirmar</a></p>",
+        await messages.SendEmailAsync(null, newEmail, "Confirme su nuevo correo - Odentix", $"<p>Confirme su nuevo correo: <a href=\"{HtmlEncoder.Default.Encode(link)}\">confirmar</a></p>",
             $"Confirme su nuevo correo: {link}", "email_change", true, "User", user.Id, ct);
         return new MessageResponse(msg);
     }

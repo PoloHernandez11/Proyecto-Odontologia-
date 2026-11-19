@@ -21,7 +21,7 @@ const obligatorio = (maximo: number) => new FormControl('', { nonNullable: true,
   template: `
     <main class="od-auth">
       <section class="od-auth-card">
-        <a class="od-auth-brand" routerLink="/login">Odontia</a>
+        <a class="od-auth-brand" routerLink="/login">Odentix</a>
         <h1>{{ titulo }}</h1>
         <ng-content />
         @if (mensaje) {
@@ -145,7 +145,7 @@ export class RestablecerContrasenaComponent {
               <label>Apellido<input type="text" autocomplete="family-name" formControlName="apellido"></label>
             </div>
           }
-          <label>{{ i.userExists ? 'Tu contraseña actual de Odontia' : 'Elegí una contraseña' }}<input type="password" [attr.autocomplete]="i.userExists ? 'current-password' : 'new-password'" formControlName="contrasena"></label>
+          <label>{{ i.userExists ? 'Tu contraseña actual de Odentix' : 'Elegí una contraseña' }}<input type="password" [attr.autocomplete]="i.userExists ? 'current-password' : 'new-password'" formControlName="contrasena"></label>
           @if (!i.userExists) {
             <p class="od-note">{{ ayuda }}</p>
           }

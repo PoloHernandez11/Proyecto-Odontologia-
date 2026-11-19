@@ -15,7 +15,7 @@ public sealed class EmailOptions
     /// <summary>"Smtp" para envío real; "DevelopmentFile" (sólo desarrollo) guarda .eml locales sin enviar; "None" no envía.</summary>
     public string Provider { get; set; } = "None";
     public string FromAddress { get; set; } = "no-reply@odontia.local";
-    public string FromName { get; set; } = "Odontia";
+    public string FromName { get; set; } = "Odentix";
     public SmtpOptions Smtp { get; set; } = new();
     /// <summary>Carpeta privada para el modo DevelopmentFile.</summary>
     public string DevelopmentOutboxPath { get; set; } = "";

@@ -62,7 +62,7 @@ internal sealed class AuthService(
         if (await users.FindByEmailAsync(email) is not null)
         {
             // Protección contra enumeración: misma respuesta; se avisa al titular real.
-            await messages.SendEmailAsync(null, email, "Intento de registro en Odontia",
+            await messages.SendEmailAsync(null, email, "Intento de registro en Odentix",
                 "<p>Se intentó registrar una cuenta con su correo. Si fue usted, inicie sesión o recupere su contraseña.</p>",
                 "Se intentó registrar una cuenta con su correo. Si fue usted, inicie sesión o recupere su contraseña.",
                 "registration_duplicate", false, null, null, ct);
@@ -384,7 +384,7 @@ internal sealed class AuthService(
         if (user is null || !user.IsActive || (_opt.RequireConfirmedEmail && !user.EmailConfirmed)) return; // respuesta idéntica
         var token = await users.GeneratePasswordResetTokenAsync(user);
         var link = BuildLink(_front.ResetPasswordPath, ("email", user.Email!), ("token", Encode(token)));
-        await messages.SendEmailAsync(null, user.Email!, "Restablecer contraseña - Odontia",
+        await messages.SendEmailAsync(null, user.Email!, "Restablecer contraseña - Odentix",
             $"<p>Para restablecer su contraseña ingrese a: <a href=\"{HtmlEncoder.Default.Encode(link)}\">restablecer contraseña</a>. El enlace vence en 2 horas.</p>",
             $"Para restablecer su contraseña ingrese a: {link} (vence en 2 horas).", "password_reset", true, "User", user.Id, ct);
     }
@@ -425,9 +425,9 @@ internal sealed class AuthService(
     {
         var token = await users.GenerateEmailConfirmationTokenAsync(user);
         var link = BuildLink(_front.ConfirmEmailPath, ("userId", user.Id.ToString()), ("token", Encode(token)));
-        await messages.SendEmailAsync(null, user.Email!, "Confirme su correo - Odontia",
-            $"<p>Bienvenido/a a Odontia. Confirme su correo ingresando a: <a href=\"{HtmlEncoder.Default.Encode(link)}\">confirmar correo</a>.</p>",
-            $"Bienvenido/a a Odontia. Confirme su correo: {link}", "email_confirmation", true, "User", user.Id, ct);
+        await messages.SendEmailAsync(null, user.Email!, "Confirme su correo - Odentix",
+            $"<p>Bienvenido/a a Odentix. Confirme su correo ingresando a: <a href=\"{HtmlEncoder.Default.Encode(link)}\">confirmar correo</a>.</p>",
+            $"Bienvenido/a a Odentix. Confirme su correo: {link}", "email_confirmation", true, "User", user.Id, ct);
     }
 
     public async Task ChangePasswordAsync(ChangePasswordRequest request, Guid currentSessionId, CancellationToken ct)
@@ -455,7 +455,7 @@ internal sealed class AuthService(
             await users.ResetAuthenticatorKeyAsync(user);
             key = await users.GetAuthenticatorKeyAsync(user);
         }
-        var uri = $"otpauth://totp/{UrlEncoder.Default.Encode("Odontia")}:{UrlEncoder.Default.Encode(user.Email!)}?secret={key}&issuer=Odontia&digits=6";
+        var uri = $"otpauth://totp/{UrlEncoder.Default.Encode("Odentix")}:{UrlEncoder.Default.Encode(user.Email!)}?secret={key}&issuer=Odentix&digits=6";
         return new AuthenticatorSetupDto(key!, uri);
     }
 

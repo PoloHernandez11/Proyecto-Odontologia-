@@ -62,7 +62,7 @@ services:
       Storage__Local__RootPath: /data/documents
       Email__Provider: Smtp
       Email__FromAddress: ${SMTP_REMITENTE:?Falta SMTP_REMITENTE en .env}
-      Email__FromName: Odontia
+      Email__FromName: Odentix
       Email__Smtp__Host: ${SMTP_HOST:?Falta SMTP_HOST en .env}
       Email__Smtp__Port: ${SMTP_PORT:-587}
       Email__Smtp__EnableSsl: "true"
