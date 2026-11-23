@@ -3,7 +3,7 @@
 # Se ejecuta EN EL SERVIDOR desde ~/odontia/deploy, después de copiar el código en ~/odontia:
 #   cd ~/odontia/deploy && bash actualizar-servidor.sh
 # Es idempotente: se puede correr las veces que haga falta.
-# Solo toca: ~/odontia, ~/sitios-caddy/odontia.caddy y "caddy validate/reload" en miaula-web-1.
+# Solo toca: ~/odontia, ~/respaldos/odontia-db-*, ~/sitios-caddy/odontia.caddy y "caddy validate/reload" en miaula-web-1.
 # No detiene, borra ni modifica contenedores, volúmenes o archivos de otros proyectos.
 set -euo pipefail
 
@@ -16,6 +16,8 @@ SITIO_CADDY="$DIR_CADDY/odontia.caddy"
 CONTENEDOR_CADDY="miaula-web-1"
 RED_COMPARTIDA="miaula_default"
 ESPERA_MAXIMA=420   # segundos para que la API quede "healthy" (la 1.ª vez aplica migraciones)
+DIR_RESPALDOS="$HOME/respaldos"
+RESPALDOS_A_CONSERVAR=10   # respaldos automáticos de la base previos a cada actualización
 
 compose() { docker compose -f "$ARCHIVO_COMPOSE" --env-file "$ARCHIVO_ENV" "$@"; }
 falla() { echo "ERROR: $*" >&2; exit 1; }
@@ -66,12 +68,43 @@ DOMINIO="$(leer_env DOMINIO)"
 [[ "$(leer_env MYSQL_PASSWORD)" =~ ^[A-Za-z0-9]+$ ]] || falla "MYSQL_PASSWORD debe tener solo letras y números."
 [ "$(leer_env JWT_SIGNING_KEY | tr -d '\n' | wc -c)" -ge 32 ] || falla "JWT_SIGNING_KEY debe tener al menos 32 caracteres."
 
-# ---------- 3. Construir y levantar ----------
+# ---------- 3. Respaldo de la base antes de actualizar ----------
+# La API aplica las migraciones al iniciar y no se revierten solas: si la base ya existe y MySQL está
+# corriendo, se respalda antes de levantar la versión nueva. Si el respaldo falla, no se actualiza.
 compose config --quiet || falla "docker-compose.yml o .env inválidos."
+id_mysql="$(compose ps -q --status running odontia-mysql 2>/dev/null || true)"
+if [ -n "$id_mysql" ]; then
+  mkdir -p "$DIR_RESPALDOS"
+  chmod 700 "$DIR_RESPALDOS"
+  respaldo_db="$DIR_RESPALDOS/odontia-db-$(date +%F-%H%M%S)-pre-actualizacion.sql.gz"
+  parcial="$respaldo_db.parcial"
+  echo "Respaldando la base en $respaldo_db ..."
+  # La contraseña se lee dentro del contenedor: no aparece en la línea de comandos ni en la salida.
+  if ! ( umask 077; compose exec -T odontia-mysql sh -c 'export MYSQL_PWD="$MYSQL_ROOT_PASSWORD"; exec mysqldump -uroot --single-transaction --routines --triggers --set-gtid-purged=OFF --databases odontia' \
+         | gzip > "$parcial" ); then
+    rm -f "$parcial"
+    falla "falló el respaldo de la base; no se actualizó nada."
+  fi
+  # Un volcado completo termina con "-- Dump completed"; un archivo vacío o cortado no se acepta.
+  if ! gzip -t "$parcial" 2>/dev/null || ! gzip -dc "$parcial" | tail -n 1 | grep -q '^-- Dump completed' \
+     || ! gzip -dc "$parcial" | grep -c 'CREATE TABLE' >/dev/null; then
+    rm -f "$parcial"
+    falla "el respaldo de la base quedó vacío o incompleto; no se actualizó nada."
+  fi
+  mv "$parcial" "$respaldo_db"
+  echo "  respaldo OK ($(du -h "$respaldo_db" | cut -f1))."
+  # Se conservan solo los últimos $RESPALDOS_A_CONSERVAR respaldos automáticos (los manuales no se tocan).
+  { ls -1 "$DIR_RESPALDOS" | grep -E '^odontia-db-[0-9-]+-pre-actualizacion\.sql\.gz$' || true; } | sort -r \
+    | tail -n +$((RESPALDOS_A_CONSERVAR + 1)) | while IFS= read -r viejo; do rm -f -- "$DIR_RESPALDOS/$viejo"; done
+else
+  echo "MySQL de Odontia no está corriendo (¿primera instalación?): no se hace respaldo previo."
+fi
+
+# ---------- 4. Construir y levantar ----------
 echo "Construyendo y levantando Odontia (puede tardar varios minutos en ARM)..."
 compose up -d --build --remove-orphans
 
-# ---------- 4. Esperar a que los contenedores estén sanos ----------
+# ---------- 5. Esperar a que los contenedores estén sanos ----------
 esperar_sano() {
   local servicio="$1" limite="$2" id estado inicio
   id="$(compose ps -q "$servicio")"
@@ -98,7 +131,7 @@ esperar_sano odontia-mysql 180
 esperar_sano odontia-api "$ESPERA_MAXIMA"
 esperar_sano odontia-web 60
 
-# ---------- 5. Sitio en Caddy (escritura atómica, validar y recargar) ----------
+# ---------- 6. Sitio en Caddy (escritura atómica, validar y recargar) ----------
 nuevo="$SITIO_CADDY.nuevo"      # no termina en .caddy: Caddy no lo importa
 respaldo="$SITIO_CADDY.anterior"
 sed "s/__DOMINIO__/$DOMINIO/g" "$PLANTILLA_CADDY" > "$nuevo"
@@ -115,11 +148,11 @@ else
   falla "Caddy rechazó la configuración; se restauró la anterior y no se recargó."
 fi
 
-# ---------- 6. Resumen ----------
+# ---------- 7. Resumen ----------
 echo
 echo "Odontia actualizado."
 compose ps
 echo
 echo "Sitio:  https://$DOMINIO"
-echo "Salud:  https://$DOMINIO/health/ready"
+echo "Salud:  https://$DOMINIO/health/live   (/health/ready solo dentro del contenedor)"
 echo "Logs:   cd $DIR_DEPLOY && docker compose logs -f odontia-api"

@@ -7,24 +7,24 @@
       <button type="button" class="primary-button" (click)="abrirFormulario()">＋ Nuevo trabajo</button>
     }</div>
 
-    <div class="tabs"><button type="button" [class.selected]="filtroVista === 'Activos'" (click)="verVista('Activos')">Trabajos activos</button><button type="button" [class.selected]="filtroVista === 'Historial'" (click)="verVista('Historial')">Historial</button><button type="button" [class.selected]="filtroVista === 'Todos'" (click)="verVista('Todos')">Todos</button></div>
+    <div class="tabs"><button type="button" [class.selected]="filtroVista() === 'Activos'" (click)="verVista('Activos')">Trabajos activos</button><button type="button" [class.selected]="filtroVista() === 'Historial'" (click)="verVista('Historial')">Historial</button><button type="button" [class.selected]="filtroVista() === 'Todos'" (click)="verVista('Todos')">Todos</button></div>
 
     <div class="stats-grid">
       <article class="stat-card"><span>Trabajos activos</span><strong>{{ activos }}</strong><small>Solicitados y en seguimiento</small></article>
-      <article class="stat-card warning"><span>Atrasados</span><strong>{{ tablero?.overdue ?? 0 }}</strong><small>Requieren seguimiento</small></article>
-      <article class="stat-card"><span>Esta semana</span><strong>{{ tablero?.dueThisWeek ?? 0 }}</strong><small>Entregas previstas</small></article>
+      <article class="stat-card warning"><span>Atrasados</span><strong>{{ tablero()?.overdue ?? 0 }}</strong><small>Requieren seguimiento</small></article>
+      <article class="stat-card"><span>Esta semana</span><strong>{{ tablero()?.dueThisWeek ?? 0 }}</strong><small>Entregas previstas</small></article>
       <article class="stat-card success"><span>Listos para retirar</span><strong>{{ listosParaRetirar }}</strong><small>Esperando recepción</small></article>
     </div>
 
-    @if (mensaje) {
-      <p class="feedback" role="status">{{ mensaje }}</p>
+    @if (mensaje()) {
+      <p class="feedback" role="status">{{ mensaje() }}</p>
     }
-    @if (error) {
-      <p class="feedback error-feedback" role="alert">{{ error }}</p>
+    @if (error()) {
+      <p class="feedback error-feedback" role="alert">{{ error() }}</p>
     }
 
     <section class="panel">
-      <div class="panel-heading"><div><h3>Trabajos de laboratorio</h3><small>{{ cargando ? 'Cargando…' : trabajosFiltrados.length + ' resultados' }}</small></div></div>
+      <div class="panel-heading"><div><h3>Trabajos de laboratorio</h3><small>{{ cargando() ? 'Cargando…' : (trabajosFiltrados.length | plural:'resultado') }}</small></div></div>
       <div class="filters">
         <label class="search"><span aria-hidden="true">⌕</span><input type="search" aria-label="Buscar trabajo" placeholder="Buscar paciente, trabajo o mecánico dental…" [(ngModel)]="busqueda" /></label>
         <select aria-label="Filtrar por estado" [(ngModel)]="filtroEstado"><option value="Todos">Estado: todos</option>@for (estado of estados; track estado) {
@@ -37,7 +37,7 @@
         <th>ACTUALIZAR</th>
       }</tr></thead>
       <tbody>
-        @for (trabajo of trabajosFiltrados; track trabajo) {
+        @for (trabajo of trabajosFiltrados; track trabajo.id) {
           <tr>
             <td><strong>{{ trabajo.patientName }}</strong><small class="subline">{{ trabajo.professionalName }}</small></td>
             <td><strong>{{ trabajo.workType }}</strong><small class="subline">{{ piezasDe(trabajo) }}</small>@if (turnoDe(trabajo)) {
@@ -52,14 +52,14 @@
             <td>{{ formatoPesos(trabajo.cost) }}</td>
             <td><span class="status" [ngClass]="clases[trabajo.status]">{{ nombres[trabajo.status] }}</span></td>
             @if (puedeSeguir) {
-              <td><select class="status-select" [ngModel]="trabajo.status" (ngModelChange)="cambiarEstado(trabajo, $event)" [attr.aria-label]="'Actualizar estado del trabajo de ' + trabajo.patientName">@for (estado of estados; track estado) {
+              <td><select class="status-select" [ngModel]="trabajo.status" #selectorDeEstado="ngModel" (ngModelChange)="cambiarEstado(trabajo, $event, selectorDeEstado)" [attr.aria-label]="'Actualizar estado del trabajo de ' + trabajo.patientName">@for (estado of estados; track estado) {
                 <option [value]="estado">{{ nombres[estado] }}</option>
               }</select></td>
             }
           </tr>
         }
-        @if (!cargando && trabajosFiltrados.length === 0) {
-          <tr><td [attr.colspan]="puedeSeguir ? 7 : 6" class="empty">{{ trabajos.length === 0 ? 'Todavía no hay trabajos de laboratorio registrados.' : 'No se encontraron trabajos con esos filtros.' }}</td></tr>
+        @if (!cargando() && trabajosFiltrados.length === 0) {
+          <tr><td [attr.colspan]="puedeSeguir ? 7 : 6" class="empty">{{ trabajos().length === 0 ? 'Todavía no hay trabajos de laboratorio registrados.' : 'No se encontraron trabajos con esos filtros.' }}</td></tr>
         }
       </tbody>
     </table>
@@ -73,12 +73,12 @@
 </main>
 </div>
 
-@if (mostrarFormulario) {
+@if (mostrarFormulario()) {
   <div class="modal-backdrop" (click)="cerrarFormulario()">
-    <section class="modal" role="dialog" aria-modal="true" aria-labelledby="titulo-trabajo" (click)="$event.stopPropagation()">
+    <section class="modal" role="dialog" appDialog (cerrar)="cerrarFormulario()" aria-modal="true" aria-labelledby="titulo-trabajo" (click)="$event.stopPropagation()">
       <header><div><h2 id="titulo-trabajo">Nuevo trabajo de laboratorio</h2><p>Completá los datos para registrar la solicitud.</p></div><button class="close" type="button" aria-label="Cerrar" (click)="cerrarFormulario()">×</button></header>
       <form [formGroup]="formulario" (ngSubmit)="guardarTrabajo()">
-        <label>Paciente<select formControlName="pacienteId"><option value="">Seleccionar paciente</option>@for (paciente of pacientes; track paciente) {
+        <label>Paciente<select formControlName="pacienteId"><option value="">Seleccionar paciente</option>@for (paciente of pacientes(); track paciente.id) {
         <option [value]="paciente.id">{{ paciente.lastName }}, {{ paciente.firstName }} · DNI {{ paciente.documentNumber }}</option>
       }</select>@if (formulario.controls.pacienteId.touched && formulario.controls.pacienteId.invalid) {
       <small>Seleccioná un paciente.</small>
@@ -89,8 +89,8 @@
     <label>Turno de entrega<select formControlName="turnoId">@if (!formulario.controls.pacienteId.value) {
       <option value="">Elegí un paciente primero</option>
       } @else {
-      <option value="">{{ cargandoTurnos ? 'Cargando turnos…' : 'Sin turno asignado' }}</option>
-      @for (turno of turnosDelPaciente; track turno.id) {
+      <option value="">{{ cargandoTurnos() ? 'Cargando turnos…' : 'Sin turno asignado' }}</option>
+      @for (turno of turnosDelPaciente(); track turno.id) {
         <option [value]="turno.id">{{ etiquetaDeTurno(turno) }}</option>
       }
     }</select></label>
@@ -98,7 +98,7 @@
       <label>Piezas (FDI)<input type="text" inputmode="numeric" formControlName="piezaDental" placeholder="Ej: 11, 21"/>@if (formulario.controls.piezaDental.invalid) {
         <small>Separá las piezas con comas y usá números FDI de dos dígitos (ej. 11, 21).</small>
       }</label>
-      <label>Mecánico dental / laboratorio<select formControlName="laboratorioId"><option value="">Seleccionar mecánico dental o laboratorio</option>@for (laboratorio of laboratorios; track laboratorio) {
+      <label>Mecánico dental / laboratorio<select formControlName="laboratorioId"><option value="">Seleccionar mecánico dental o laboratorio</option>@for (laboratorio of laboratorios(); track laboratorio.id) {
       <option [value]="laboratorio.id">{{ laboratorio.name }}</option>
       }@if (puedeCrearLaboratorio) {
       <option [value]="nuevoLaboratorio">＋ Agregar un mecánico dental o laboratorio nuevo…</option>
@@ -109,22 +109,22 @@
 @if (formulario.controls.laboratorioId.value === nuevoLaboratorio) {
   <label>Nombre del mecánico dental o laboratorio nuevo<input type="text" formControlName="laboratorioNuevo" placeholder="Ej. Dental Sur"/></label>
 }
-@if (!laboratorios.length && !puedeCrearLaboratorio) {
+@if (!laboratorios().length && !puedeCrearLaboratorio) {
   <small class="hint">Todavía no hay mecánicos dentales ni laboratorios cargados. Pedile a un administrador que los dé de alta.</small>
 }
 <div class="form-row"><label>Fecha estimada de entrega<input type="date" formControlName="fechaEntrega"/>@if (formulario.controls.fechaEntrega.touched && formulario.controls.fechaEntrega.invalid) {
   <small>Seleccioná una fecha.</small>
   }</label><label>Costo estimado ($)<input type="number" min="0" formControlName="costo" placeholder="0"/></label></div>
-  @if (profesionales.length > 1) {
-    <label>Profesional que lo solicita<select formControlName="profesionalId">@for (profesional of profesionales; track profesional) {
+  @if (profesionales().length > 1) {
+    <label>Profesional que lo solicita<select formControlName="profesionalId">@for (profesional of profesionales(); track profesional.userId) {
       <option [value]="profesional.userId">{{ profesional.displayName }}</option>
     }</select></label>
   }
   <label>Observaciones<textarea rows="3" formControlName="observaciones" placeholder="Indicaciones para el mecánico dental…"></textarea></label>
-  @if (errorFormulario) {
-    <p class="feedback error-feedback" role="alert">{{ errorFormulario }}</p>
+  @if (errorFormulario()) {
+    <p class="feedback error-feedback" role="alert">{{ errorFormulario() }}</p>
   }
-  <footer><button type="button" class="secondary-button" (click)="cerrarFormulario()">Cancelar</button><button type="submit" class="primary-button" [disabled]="guardando">{{ guardando ? 'Guardando…' : 'Guardar trabajo' }}</button></footer>
+  <footer><button type="button" class="secondary-button" (click)="cerrarFormulario()">Cancelar</button><button type="submit" class="primary-button" [disabled]="guardando()">{{ guardando() ? 'Guardando…' : 'Guardar trabajo' }}</button></footer>
 </form>
 </section>
 </div>

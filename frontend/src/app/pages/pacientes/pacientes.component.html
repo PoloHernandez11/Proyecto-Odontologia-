@@ -6,7 +6,7 @@
 
     <section class="page-content">
       <div class="page-heading">
-        <div><h2>Directorio de pacientes</h2><p>{{ totalPacientes }} pacientes · Información de contacto y cobertura</p></div>
+        <div><h2>Directorio de pacientes</h2><p>{{ totalPacientes() | plural:'paciente' }} · Información de contacto y cobertura</p></div>
         @if (puedeEditar) {
           <button class="primary-button" type="button" (click)="abrirNuevoPaciente()">＋ Nuevo paciente</button>
         }
@@ -17,7 +17,7 @@
         <select aria-label="Filtrar por obra social" [(ngModel)]="obraSocialSeleccionada" (ngModelChange)="buscar()">
           <option value="Todas">Obra social: todas</option>
           <option value="Particular">Particular</option>
-          @for (obra of obrasSociales; track obra) {
+          @for (obra of obrasSociales(); track obra.id) {
             <option [value]="obra.id">{{ obra.name }}</option>
           }
         </select>
@@ -27,63 +27,65 @@
         </select>
       </div>
 
-      @if (mensaje) {
-        <p class="feedback" role="status">{{ mensaje }}</p>
+      @if (mensaje()) {
+        <p class="feedback" role="status">{{ mensaje() }}</p>
       }
-      @if (error) {
-        <p class="feedback error-feedback" role="alert">{{ error }}</p>
+      @if (error()) {
+        <p class="feedback error-feedback" role="alert">{{ error() }}</p>
       }
 
       <div class="content-grid">
         <section class="list-panel">
-          <div class="list-heading"><h3>Listado de pacientes</h3><span>{{ cargando ? 'Cargando…' : pacientes.length + ' resultados' }}</span></div>
+          <div class="list-heading"><h3>Listado de pacientes</h3><span>{{ cargando() ? 'Cargando…' : (pacientes().length | plural:'resultado') }}</span></div>
           <div class="table-scroll">
             <table>
               <thead><tr><th>PACIENTE</th><th>DNI</th><th>TELÉFONO</th><th>OBRA SOCIAL</th><th>ÚLTIMA VISITA</th><th>PRÓXIMO TURNO</th><th>ESTADO</th></tr></thead>
               <tbody>
-                @for (paciente of pacientes; track paciente) {
-                  <tr tabindex="0" (click)="seleccionarPaciente(paciente)" (keydown.enter)="seleccionarPaciente(paciente)" [class.selected-row]="pacienteSeleccionado?.id === paciente.id">
+                @for (paciente of pacientes(); track paciente.id) {
+                  <tr tabindex="0" (click)="seleccionarPaciente(paciente)" (keydown.enter)="seleccionarPaciente(paciente)" [class.selected-row]="pacienteSeleccionado()?.id === paciente.id">
                     <td><div class="patient-cell"><span class="avatar">{{ iniciales(paciente) }}</span><strong>{{ paciente.firstName }} {{ paciente.lastName }}</strong></div></td>
                     <td>{{ paciente.documentNumber }}</td><td>{{ paciente.phone || '—' }}</td><td>{{ paciente.healthInsurance || 'Particular' }}</td>
                     <td>{{ fecha(paciente.lastVisitUtc, 'Sin visitas') }}</td><td>{{ fechaYHora(paciente.nextAppointmentUtc, 'Sin turno') }}</td>
                     <td><span class="status" [class.inactive]="paciente.status === 'Inactive'">{{ estados[paciente.status] }}</span></td>
                   </tr>
                 }
-                @if (!cargando && pacientes.length === 0) {
-                  <tr><td colspan="7" class="empty">{{ totalPacientes === 0 && !busqueda ? 'Todavía no hay pacientes registrados.' : 'No se encontraron pacientes con esos filtros.' }}</td></tr>
+                @if (!cargando() && pacientes().length === 0) {
+                  <tr><td colspan="7" class="empty">{{ totalPacientes() === 0 && !busqueda() ? 'Todavía no hay pacientes registrados.' : 'No se encontraron pacientes con esos filtros.' }}</td></tr>
                 }
               </tbody>
             </table>
           </div>
         </section>
 
-        @if (pacienteSeleccionado; as paciente) {
+        @if (pacienteSeleccionado(); as paciente) {
           <aside class="detail-panel">
-            <header class="detail-heading"><h3>Ficha del paciente</h3><span class="status" [class.inactive]="(ficha?.status ?? paciente.status) === 'Inactive'">{{ estados[ficha?.status ?? paciente.status] }}</span></header>
-            <div class="patient-profile"><span class="avatar big">{{ iniciales(paciente) }}</span><h2>{{ paciente.firstName }} {{ paciente.lastName }}</h2><p>DNI {{ paciente.documentNumber }}@if (ficha?.age) {
-            · {{ ficha?.age }} años
+            <header class="detail-heading"><h3>Ficha del paciente</h3><span class="status" [class.inactive]="(ficha()?.status ?? paciente.status) === 'Inactive'">{{ estados[ficha()?.status ?? paciente.status] }}</span></header>
+            <div class="patient-profile"><span class="avatar big">{{ iniciales(paciente) }}</span><h2>{{ paciente.firstName }} {{ paciente.lastName }}</h2><p>DNI {{ paciente.documentNumber }}@if (ficha()?.age) {
+            · {{ ficha()?.age }} años
           }</p></div>
-          @if (ficha?.alerts?.length) {
+          @if (ficha()?.alerts?.length) {
             <div class="detail-section alert-section">
               <h4>ALERTAS</h4>
-              @for (alerta of ficha?.alerts; track alerta) {
+              @for (alerta of ficha()?.alerts; track $index) {
                 <p><strong>⚠ {{ alerta.title }}</strong></p>
               }
             </div>
           }
-          <div class="detail-section"><h4>DATOS DE CONTACTO</h4><p><span>Teléfono</span><strong>{{ paciente.phone || 'No informado' }}</strong></p><p><span>Correo</span><strong>{{ ficha?.email || 'No informado' }}</strong></p><p><span>Obra social</span><strong>{{ ficha?.healthInsuranceName || paciente.healthInsurance || 'Particular' }}</strong></p></div>
+          <div class="detail-section"><h4>DATOS DE CONTACTO</h4><p><span>Teléfono</span><strong>{{ paciente.phone || 'No informado' }}</strong></p><p><span>Correo</span><strong>{{ ficha()?.email || 'No informado' }}</strong></p><p><span>Obra social</span><strong>{{ ficha()?.healthInsuranceName || paciente.healthInsurance || 'Particular' }}</strong></p></div>
           <div class="detail-section"><h4>ACTIVIDAD</h4>
-          <p><span>Última visita</span><strong>{{ fecha($safeNavigationMigration(resumen?.lastVisitUtc), 'Sin visitas') }}</strong></p>
-          <p><span>Próximo turno</span><strong>{{ fechaYHora($safeNavigationMigration(resumen?.upcomingAppointments?.[0]?.startUtc), 'Sin turno') }}</strong></p>
-          @if (resumen && vePagos) {
-            <p><span>Saldo pendiente</span><strong>{{ pesos(resumen.account.balance) }}</strong></p>
+          <p><span>Última visita</span><strong>{{ fecha($safeNavigationMigration(resumen()?.lastVisitUtc), 'Sin visitas') }}</strong></p>
+          <p><span>Próximo turno</span><strong>{{ fechaYHora($safeNavigationMigration(resumen()?.upcomingAppointments?.[0]?.startUtc), 'Sin turno') }}</strong></p>
+          @if (resumen(); as resumenActual) {
+            @if (vePagos) {
+              <p><span>Saldo pendiente</span><strong>{{ pesos(resumenActual.account.balance) }}</strong></p>
+            }
           }
         </div>
         <div class="detail-section history-section"><h4>HISTORIAL DE TURNOS</h4>
-        @for (turno of historial; track turno) {
+        @for (turno of historial(); track turno.id) {
           <div class="history-item"><span class="history-date">{{ fecha(turno.startUtc, '') }}</span><span><strong>{{ turno.reason || 'Turno' }}</strong><small>{{ hora(turno.startUtc) }} · {{ turno.professionalName }}</small></span><em>{{ estadoDeTurno(turno) }}</em></div>
         }
-        @if (historial.length === 0) {
+        @if (historial().length === 0) {
           <p class="no-history">Todavía no hay turnos registrados para este paciente.</p>
         }
       </div>
@@ -99,13 +101,15 @@
         }
         <a routerLink="/agenda" [queryParams]="{ nuevo: 1, paciente: paciente.id }">Agendar turno</a>
       </div>
-      @if (puedeEditar && ficha) {
-        <button class="edit-button" type="button" (click)="editarPaciente()">✎ Editar datos del paciente</button>
-        <button class="edit-button subtle-button" type="button" (click)="cambiarEstado()">{{ ficha.status === 'Inactive' ? 'Reactivar paciente' : 'Marcar como inactivo' }}</button>
+      @if (ficha(); as fichaActual) {
+        @if (puedeEditar) {
+          <button class="edit-button" type="button" (click)="editarPaciente()">✎ Editar datos del paciente</button>
+          <button class="edit-button subtle-button" type="button" (click)="cambiarEstado()">{{ fichaActual.status === 'Inactive' ? 'Reactivar paciente' : 'Marcar como inactivo' }}</button>
+        }
       }
     </aside>
   }
-  @if (!pacienteSeleccionado) {
+  @if (!pacienteSeleccionado()) {
     <aside class="detail-panel empty-detail"><p>Seleccioná un paciente para consultar su ficha.</p></aside>
   }
 </div>
@@ -113,10 +117,10 @@
 </main>
 </div>
 
-@if (mostrarFormulario) {
+@if (mostrarFormulario()) {
   <div class="modal-backdrop" (click)="cerrarFormulario()">
-    <section class="patient-modal" role="dialog" aria-modal="true" aria-labelledby="modal-title" (click)="$event.stopPropagation()">
-      <header><div><h2 id="modal-title">{{ modoEdicion ? 'Editar paciente' : 'Nuevo paciente' }}</h2><p>Completá los datos personales y de contacto.</p></div><button type="button" class="close-button" (click)="cerrarFormulario()" aria-label="Cerrar">×</button></header>
+    <section class="patient-modal" role="dialog" appDialog (cerrar)="cerrarFormulario()" aria-modal="true" aria-labelledby="modal-title" (click)="$event.stopPropagation()">
+      <header><div><h2 id="modal-title">{{ modoEdicion() ? 'Editar paciente' : 'Nuevo paciente' }}</h2><p>Completá los datos personales y de contacto.</p></div><button type="button" class="close-button" (click)="cerrarFormulario()" aria-label="Cerrar">×</button></header>
       <form [formGroup]="formularioPaciente" (ngSubmit)="guardarPaciente()">
         <div class="form-row"><label>Nombre<input type="text" formControlName="nombre" placeholder="Ej. Martín">@if (formularioPaciente.controls.nombre.touched && formularioPaciente.controls.nombre.invalid) {
           <small>Ingresá al menos 2 caracteres.</small>
@@ -134,7 +138,7 @@
     <label>Obra social
       <select formControlName="obraSocial">
         <option value="">Particular</option>
-        @for (obra of obrasSociales; track obra) {
+        @for (obra of obrasSociales(); track obra.id) {
           <option [value]="obra.id">{{ obra.name }}</option>
         }
         @if (puedeCrearObraSocial) {
@@ -145,10 +149,10 @@
     @if (formularioPaciente.controls.obraSocial.value === nuevaObraSocial) {
       <label>Nombre de la obra social nueva<input type="text" formControlName="obraSocialNueva" placeholder="Ej. OSDE"></label>
     }
-    @if (errorFormulario) {
-      <p class="form-error" role="alert">{{ errorFormulario }}</p>
+    @if (errorFormulario()) {
+      <p class="form-error" role="alert">{{ errorFormulario() }}</p>
     }
-    <footer><button type="button" class="secondary-button" (click)="cerrarFormulario()">Cancelar</button><button type="submit" class="primary-button" [disabled]="guardando">{{ guardando ? 'Guardando…' : modoEdicion ? 'Guardar cambios' : 'Registrar paciente' }}</button></footer>
+    <footer><button type="button" class="secondary-button" (click)="cerrarFormulario()">Cancelar</button><button type="submit" class="primary-button" [disabled]="guardando()">{{ guardando() ? 'Guardando…' : modoEdicion() ? 'Guardar cambios' : 'Registrar paciente' }}</button></footer>
   </form>
 </section>
 </div>

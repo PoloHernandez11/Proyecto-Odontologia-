@@ -877,6 +877,7 @@ export interface MembershipDto {
   consultorioName: string;
   roles: string[];
   isProfessional: boolean;
+  timeZoneId: string;
 }
 
 export type MessageChannel = "Email" | "WhatsApp";

@@ -1,5 +1,5 @@
 
-import { Component, inject, ChangeDetectionStrategy } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { FormControl, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import { OdontiaApi } from '../../api/odontia-api.service';
@@ -32,7 +32,7 @@ const NOTIFICACIONES: { clave: keyof NotificationSettingsDto; titulo: string; de
   selector: 'app-configuracion', standalone: true,
   imports: [ReactiveFormsModule, FormsModule],
   templateUrl: './configuracion.component.html',
-  changeDetection: ChangeDetectionStrategy.Eager,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './configuracion.component.css'
 })
 export class ConfiguracionComponent {
@@ -44,22 +44,21 @@ export class ConfiguracionComponent {
   readonly esProfesional = this.auth.esProfesional;
   readonly roles = this.auth.roles;
   readonly nombreConsultorio = this.auth.consultorio;
-  readonly puedeEditarConsultorio = this.auth.tiene('consultorio.manage');
-  readonly veConsultorio = this.auth.tiene('consultorio.read');
-  readonly puedeConfigurarHorario = this.auth.tiene('agenda.manage');
-
+  get puedeEditarConsultorio(): boolean { return this.auth.tiene('consultorio.manage'); }
+  get veConsultorio(): boolean { return this.auth.tiene('consultorio.read'); }
+  get puedeConfigurarHorario(): boolean { return this.auth.tiene('agenda.manage'); }
   /** Horario semanal de atención del profesional: la agenda sólo acepta turnos dentro de estas franjas. */
-  horario: DiaDeAtencion[] = DIAS.map(d => ({ ...d, franjas: [] }));
-  horarioCargado = false;
-  seccion: Seccion = 'datos';
-  perfil: ProfileDto | null = null;
-  consultorio: ConsultorioDto | null = null;
-  ajustes: NotificationSettingsDto | null = null;
-  cargando = true;
-  guardando = false;
-  mensaje = '';
-  error = '';
-  verContrasenas = false;
+  readonly horario = signal<DiaDeAtencion[]>(DIAS.map(d => ({ ...d, franjas: [] })));
+  readonly horarioCargado = signal(false);
+  readonly seccion = signal<Seccion>('datos');
+  readonly perfil = signal<ProfileDto | null>(null);
+  readonly consultorio = signal<ConsultorioDto | null>(null);
+  readonly ajustes = signal<NotificationSettingsDto | null>(null);
+  readonly cargando = signal(true);
+  readonly guardando = signal(false);
+  readonly mensaje = signal('');
+  readonly error = signal('');
+  readonly verContrasenas = signal(false);
 
   datos = new FormGroup({
     nombre: new FormControl('', { nonNullable: true, validators: [Validators.required, Validators.minLength(2), Validators.maxLength(80)] }),
@@ -84,8 +83,8 @@ export class ConfiguracionComponent {
 
   constructor() {
     this.api.perfil().subscribe({
-      next: perfil => { this.cargando = false; this.aplicarPerfil(perfil); },
-      error: error => { this.cargando = false; this.error = mensajeDeError(error, 'No se pudo cargar tu perfil.'); }
+      next: perfil => { this.cargando.set(false); this.aplicarPerfil(perfil); },
+      error: error => { this.cargando.set(false); this.error.set(mensajeDeError(error, 'No se pudo cargar tu perfil.')); }
     });
     if (this.veConsultorio) this.api.consultorio().subscribe({ next: consultorio => this.aplicarConsultorio(consultorio) });
     const usuario = this.auth.userId;
@@ -95,14 +94,14 @@ export class ConfiguracionComponent {
   }
 
   private aplicarHorario(franjas: WorkingHoursDto[]): void {
-    this.horario = DIAS.map(d => ({
+    this.horario.set(DIAS.map(d => ({
       ...d,
       franjas: franjas.filter(f => f.dayOfWeek === d.dia).map(f => ({ inicio: f.startTime.slice(0, 5), fin: f.endTime.slice(0, 5) }))
-    }));
-    this.horarioCargado = true;
+    })));
+    this.horarioCargado.set(true);
   }
 
-  get sinHorario(): boolean { return this.horarioCargado && this.horario.every(d => d.franjas.length === 0); }
+  get sinHorario(): boolean { return this.horarioCargado() && this.horario().every(d => d.franjas.length === 0); }
   agregarFranja(dia: DiaDeAtencion): void {
     const ultima = dia.franjas[dia.franjas.length - 1];
     dia.franjas.push(ultima ? { inicio: ultima.fin, fin: ultima.fin < '20:00' ? '20:00' : '23:00' } : { inicio: '09:00', fin: '18:00' });
@@ -110,17 +109,17 @@ export class ConfiguracionComponent {
   quitarFranja(dia: DiaDeAtencion, indice: number): void { dia.franjas.splice(indice, 1); }
   /** Copia las franjas del lunes al resto de los días hábiles. */
   copiarLunesASemana(): void {
-    const lunes = this.horario.find(d => d.dia === 'Monday')!;
-    for (const dia of this.horario) if (dia !== lunes && DIAS_HABILES.includes(dia.dia)) dia.franjas = lunes.franjas.map(f => ({ ...f }));
+    const lunes = this.horario().find(d => d.dia === 'Monday')!;
+    for (const dia of this.horario()) if (dia !== lunes && DIAS_HABILES.includes(dia.dia)) dia.franjas = lunes.franjas.map(f => ({ ...f }));
   }
 
   guardarHorario(): void {
     const usuario = this.auth.userId;
     if (!usuario) return;
-    const invalida = this.horario.find(d => d.franjas.some(f => !f.inicio || !f.fin || f.fin <= f.inicio));
-    if (invalida) { this.mensaje = ''; this.error = `Revisá las franjas del ${invalida.nombre.toLowerCase()}: la hora de fin debe ser posterior a la de inicio.`; return; }
-    this.guardando = true;
-    const slots = this.horario.flatMap(d => d.franjas.map(f => ({ dayOfWeek: d.dia, startTime: `${f.inicio}:00`, endTime: `${f.fin}:00`, gabineteId: null })));
+    const invalida = this.horario().find(d => d.franjas.some(f => !f.inicio || !f.fin || f.fin <= f.inicio));
+    if (invalida) { this.mensaje.set(''); this.error.set(`Revisá las franjas del ${invalida.nombre.toLowerCase()}: la hora de fin debe ser posterior a la de inicio.`); return; }
+    this.guardando.set(true);
+    const slots = this.horario().flatMap(d => d.franjas.map(f => ({ dayOfWeek: d.dia, startTime: `${f.inicio}:00`, endTime: `${f.fin}:00`, gabineteId: null })));
     this.api.guardarHorarioDeAtencion(usuario, slots).subscribe({
       next: franjas => { this.aplicarHorario(franjas); this.exito('Tu horario de atención se guardó. La agenda ya acepta turnos en esas franjas.'); },
       error: error => this.fallo(error, 'No se pudo guardar el horario de atención.')
@@ -128,13 +127,13 @@ export class ConfiguracionComponent {
   }
 
   private aplicarPerfil(perfil: ProfileDto): void {
-    this.perfil = perfil;
-    this.ajustes = { ...perfil.notificationSettings };
+    this.perfil.set(perfil);
+    this.ajustes.set({ ...perfil.notificationSettings });
     this.datos.reset({ nombre: perfil.firstName, apellido: perfil.lastName, tratamiento: perfil.title ?? '', telefono: perfil.phone ?? '' });
     this.profesional.reset({ especialidad: perfil.specialty ?? '', matricula: perfil.licenseNumber ?? '', duracion: perfil.defaultAppointmentMinutes ?? 30 });
   }
   private aplicarConsultorio(consultorio: ConsultorioDto): void {
-    this.consultorio = consultorio;
+    this.consultorio.set(consultorio);
     this.datosConsultorio.reset({
       nombre: consultorio.name, telefono: consultorio.phone ?? '', email: consultorio.email ?? '',
       direccion: consultorio.addressLine ?? '', ciudad: consultorio.city ?? '', provincia: consultorio.province ?? ''
@@ -142,7 +141,7 @@ export class ConfiguracionComponent {
     if (!this.puedeEditarConsultorio) this.datosConsultorio.disable();
   }
 
-  get iniciales(): string { return iniciales(this.perfil?.displayName ?? this.auth.nombre()); }
+  get iniciales(): string { return iniciales(this.perfil()?.displayName ?? this.auth.nombre()); }
   /** Requisitos de la contraseña nueva, para mostrarlos mientras se escribe. */
   get requisitos(): { titulo: string; cumple: boolean }[] {
     const valor = this.contrasena.controls.nueva.value;
@@ -154,14 +153,14 @@ export class ConfiguracionComponent {
     ];
   }
 
-  abrir(seccion: Seccion): void { this.seccion = seccion; this.mensaje = ''; this.error = ''; }
-  private exito(mensaje: string): void { this.guardando = false; this.error = ''; this.mensaje = mensaje; }
-  private fallo(error: unknown, porDefecto: string): void { this.guardando = false; this.mensaje = ''; this.error = mensajeDeError(error, porDefecto); }
+  abrir(seccion: Seccion): void { this.seccion.set(seccion); this.mensaje.set(''); this.error.set(''); }
+  private exito(mensaje: string): void { this.guardando.set(false); this.error.set(''); this.mensaje.set(mensaje); }
+  private fallo(error: unknown, porDefecto: string): void { this.guardando.set(false); this.mensaje.set(''); this.error.set(mensajeDeError(error, porDefecto)); }
 
   guardarDatos(): void {
     if (this.datos.invalid) { this.datos.markAllAsTouched(); return; }
     const valores = this.datos.getRawValue();
-    this.guardando = true;
+    this.guardando.set(true);
     this.api.actualizarPerfil({ firstName: valores.nombre.trim(), lastName: valores.apellido.trim(), title: valores.tratamiento.trim() || null, phone: valores.telefono.trim() || null }).subscribe({
       next: perfil => {
         this.aplicarPerfil(perfil);
@@ -176,7 +175,7 @@ export class ConfiguracionComponent {
   guardarProfesional(): void {
     if (this.profesional.invalid) { this.profesional.markAllAsTouched(); return; }
     const valores = this.profesional.getRawValue();
-    this.guardando = true;
+    this.guardando.set(true);
     this.api.actualizarPerfilProfesional({ specialty: valores.especialidad.trim() || null, licenseNumber: valores.matricula.trim() || null, defaultAppointmentMinutes: Number(valores.duracion) }).subscribe({
       next: perfil => { this.aplicarPerfil(perfil); this.exito('Tus datos profesionales se guardaron correctamente.'); },
       error: error => this.fallo(error, 'No se pudieron guardar tus datos profesionales.')
@@ -187,11 +186,11 @@ export class ConfiguracionComponent {
     const valores = this.contrasena.getRawValue();
     if (this.contrasena.invalid || this.requisitos.some(requisito => !requisito.cumple)) {
       this.contrasena.markAllAsTouched();
-      this.mensaje = '';
-      this.error = 'Revisá que la contraseña nueva cumpla todos los requisitos.';
+      this.mensaje.set('');
+      this.error.set('Revisá que la contraseña nueva cumpla todos los requisitos.');
       return;
     }
-    this.guardando = true;
+    this.guardando.set(true);
     this.api.cambiarContrasena(valores.actual, valores.nueva).subscribe({
       next: () => { this.contrasena.reset(); this.exito('La contraseña se cambió. Se cerraron tus otras sesiones abiertas.'); },
       error: error => this.fallo(error, 'No se pudo cambiar la contraseña. Revisá la contraseña actual.')
@@ -199,20 +198,21 @@ export class ConfiguracionComponent {
   }
 
   alternar(clave: keyof NotificationSettingsDto): void {
-    if (!this.ajustes) return;
-    const anterior = this.ajustes;
-    this.ajustes = { ...anterior, [clave]: !anterior[clave] };
-    this.api.actualizarNotificaciones(this.ajustes).subscribe({
-      next: ajustes => { this.ajustes = ajustes; this.exito('Preferencias de notificación actualizadas.'); },
-      error: error => { this.ajustes = anterior; this.fallo(error, 'No se pudo guardar la preferencia.'); }
+    const anterior = this.ajustes();
+    if (!anterior) return;
+    const nuevos = { ...anterior, [clave]: !anterior[clave] };
+    this.ajustes.set(nuevos);
+    this.api.actualizarNotificaciones(nuevos).subscribe({
+      next: ajustes => { this.ajustes.set(ajustes); this.exito('Preferencias de notificación actualizadas.'); },
+      error: error => { this.ajustes.set(anterior); this.fallo(error, 'No se pudo guardar la preferencia.'); }
     });
   }
 
   guardarConsultorio(): void {
-    if (!this.consultorio || this.datosConsultorio.invalid) { this.datosConsultorio.markAllAsTouched(); return; }
+    const actual = this.consultorio();
+    if (!actual || this.datosConsultorio.invalid) { this.datosConsultorio.markAllAsTouched(); return; }
     const valores = this.datosConsultorio.getRawValue();
-    const actual = this.consultorio;
-    this.guardando = true;
+    this.guardando.set(true);
     this.api.actualizarConsultorio({
       name: valores.nombre.trim(), phone: valores.telefono.trim() || null, email: valores.email.trim() || null,
       addressLine: valores.direccion.trim() || null, city: valores.ciudad.trim() || null, province: valores.provincia.trim() || null,

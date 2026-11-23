@@ -1,13 +1,24 @@
 import { HttpClient } from '@angular/common/http';
-import { Injectable, computed, inject, signal } from '@angular/core';
-import { Observable, catchError, finalize, map, of, shareReplay, tap } from 'rxjs';
+import { DestroyRef, Injectable, computed, inject, signal } from '@angular/core';
+import { Observable, catchError, defer, finalize, map, of, shareReplay, switchMap, tap, throwError, timer } from 'rxjs';
 import { AuthSessionDto, InvitationInfoDto, LoginResponseDto, MessageResponse, RegisterRequest, SessionResponse } from '../api/schema';
-import { API } from './api';
+import { API, codigoDeError } from './api';
+import { definirZonaDelConsultorio, zonaDelNavegador, zonaValida } from './zona-horaria';
+
+/** Cookie legible (no HttpOnly) donde el backend deja el token anti-CSRF para renovar la sesión. */
+export const COOKIE_CSRF = 'odontia_csrf';
 
 function leerCookie(nombre: string): string | null {
   if (typeof document === 'undefined') return null;
   return document.cookie.split('; ').find(cookie => cookie.startsWith(nombre + '='))?.split('=')[1] ?? null;
 }
+
+/**
+ * 401 `refresh_conflict`: otra pestaña (o solicitud) renovó la sesión en el mismo momento.
+ * No es un cierre de sesión: se espera un instante y se renueva otra vez con la cookie que dejó la otra renovación.
+ */
+export const CONFLICTO_DE_RENOVACION = 'refresh_conflict';
+export const ESPERA_ANTE_CONFLICTO_MS = 300;
 
 /** La versión de demostración guardaba pacientes, turnos y pagos ficticios en localStorage: ya no se usan. */
 function borrarDatosDeLaVersionDeDemostracion(): void {
@@ -37,6 +48,13 @@ export class AuthService {
   readonly roles = computed(() => this.membresia()?.roles ?? []);
   readonly esProfesional = computed(() => this.membresia()?.isProfessional ?? false);
   readonly consultorio = computed(() => this.membresia()?.consultorioName ?? '');
+  /** Zona horaria (IANA) del consultorio activo: con ella se muestran y se cargan todas las fechas y horas. */
+  readonly zona = computed(() => zonaValida(this.membresia()?.timeZoneId) ?? zonaDelNavegador());
+
+  constructor() {
+    definirZonaDelConsultorio(() => zonaValida(this.membresia()?.timeZoneId));
+    inject(DestroyRef).onDestroy(() => definirZonaDelConsultorio(() => null));
+  }
 
   get accessToken(): string | null { return this.sesion()?.accessToken ?? null; }
   get userId(): string | null { return this.sesion()?.user.id ?? null; }
@@ -55,12 +73,20 @@ export class AuthService {
       .pipe(tap(respuesta => this.aplicar(respuesta)));
   }
 
-  /** Una sola renovación en vuelo aunque fallen varias solicitudes a la vez. */
+  /**
+   * Una sola renovación en vuelo aunque fallen varias solicitudes a la vez. Si otra pestaña renovó
+   * en el mismo instante (401 refresh_conflict), se reintenta una vez tras una breve espera.
+   */
   renovar(): Observable<AuthSessionDto> {
-    this.renovacionEnCurso ??= this.http.post<SessionResponse>(`${API}/auth/refresh`, null, {
+    // defer: el token anti-CSRF se lee al enviar, así el reintento usa el que dejó la otra renovación.
+    const pedir = defer(() => this.http.post<SessionResponse>(`${API}/auth/refresh`, null, {
       withCredentials: true,
       headers: { 'X-CSRF-Token': this.tokenCsrf() }
-    }).pipe(
+    }));
+    this.renovacionEnCurso ??= pedir.pipe(
+      catchError(error => codigoDeError(error) === CONFLICTO_DE_RENOVACION
+        ? timer(ESPERA_ANTE_CONFLICTO_MS).pipe(switchMap(() => pedir))
+        : throwError(() => error)),
       tap(respuesta => this.aplicar(respuesta)),
       map(respuesta => respuesta.session),
       finalize(() => (this.renovacionEnCurso = null)),
@@ -72,7 +98,7 @@ export class AuthService {
   /** Al cargar la aplicación: si quedó una sesión abierta en este navegador, la recupera. */
   restaurar(): Observable<AuthSessionDto | null> {
     borrarDatosDeLaVersionDeDemostracion();
-    if (!leerCookie('odontia_csrf')) return of(null);
+    if (!leerCookie(COOKIE_CSRF)) return of(null);
     return this.renovar().pipe(catchError(() => of(null)));
   }
 
@@ -99,6 +125,7 @@ export class AuthService {
 
   olvidar(): void { this.sesion.set(null); this.csrf = null; }
 
-  private tokenCsrf(): string { return this.csrf ?? leerCookie('odontia_csrf') ?? ''; }
+  /** La cookie primero: si otra pestaña renovó la sesión, la copia en memoria quedó vieja. */
+  private tokenCsrf(): string { return leerCookie(COOKIE_CSRF) ?? this.csrf ?? ''; }
   private aplicar(respuesta: SessionResponse): void { this.sesion.set(respuesta.session); this.csrf = respuesta.csrfToken; }
 }

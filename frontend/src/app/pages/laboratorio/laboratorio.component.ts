@@ -1,12 +1,14 @@
 import { CommonModule } from '@angular/common';
-import { Component, inject, ChangeDetectionStrategy } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { AbstractControl, FormControl, FormGroup, FormsModule, ReactiveFormsModule, ValidationErrors, Validators } from '@angular/forms';
+import { AbstractControl, FormControl, FormGroup, FormsModule, NgModel, ReactiveFormsModule, ValidationErrors, Validators } from '@angular/forms';
 import { Observable, catchError, map, of, switchMap } from 'rxjs';
 import { OdontiaApi } from '../../api/odontia-api.service';
 import { AppointmentDto, LabBoardDto, LabWorkDto, LabWorkStatus, LaboratoryDto, PatientListItemDto, ProfessionalDto } from '../../api/schema';
 import { fechaCorta, horaLocal, mensajeDeError, pesos } from '../../core/api';
 import { AuthService } from '../../core/auth.service';
+import { DialogDirective } from '../../shared/dialog.directive';
+import { PluralPipe } from '../../shared/plural.pipe';
 
 const ESTADOS: Record<LabWorkStatus, string> = {
   Pending: 'Solicitado', Sent: 'Enviado', InProduction: 'En proceso', ReadyForPickup: 'Listo para retirar',
@@ -21,7 +23,7 @@ const NUEVO_LABORATORIO = '__nuevo__';
 const TURNOS_DESCARTADOS = ['Cancelled', 'NoShow'];
 
 /** Convierte "11, 21" en [11, 21]. Devuelve null si alguna pieza no es un número FDI válido. */
-function piezasFdi(texto: string): number[] | null {
+export function piezasFdi(texto: string): number[] | null {
   const piezas: number[] = [];
   for (const parte of texto.split(/[\s,;]+/).filter(Boolean)) {
     if (!/^\d{2}$/.test(parte)) return null;
@@ -33,16 +35,16 @@ function piezasFdi(texto: string): number[] | null {
   }
   return piezas;
 }
-function validarPiezas(control: AbstractControl<string>): ValidationErrors | null {
+export function validarPiezas(control: AbstractControl<string>): ValidationErrors | null {
   return piezasFdi(control.value ?? '') ? null : { piezas: true };
 }
 
 @Component({
   selector: 'app-laboratorio',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, DialogDirective, PluralPipe],
   templateUrl: './laboratorio.component.html',
-  changeDetection: ChangeDetectionStrategy.Eager,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './laboratorio.component.css'
 })
 export class LaboratorioComponent {
@@ -53,24 +55,23 @@ export class LaboratorioComponent {
   readonly clases = CLASES;
   readonly estados = Object.keys(ESTADOS) as LabWorkStatus[];
   readonly nuevoLaboratorio = NUEVO_LABORATORIO;
-  readonly puedeCrear = this.auth.tiene('lab.write');
-  readonly puedeSeguir = this.auth.tiene('lab.track') || this.auth.tiene('lab.write');
-  readonly puedeCrearLaboratorio = this.auth.tiene('laboratories.manage');
-
-  trabajos: LabWorkDto[] = [];
-  tablero: LabBoardDto | null = null;
-  laboratorios: LaboratoryDto[] = [];
-  pacientes: PatientListItemDto[] = [];
-  profesionales: ProfessionalDto[] = [];
-  busqueda = '';
-  filtroEstado = 'Todos';
-  filtroVista: 'Todos' | 'Activos' | 'Historial' = 'Activos';
-  cargando = true;
-  mostrarFormulario = false;
-  guardando = false;
-  mensaje = '';
-  error = '';
-  errorFormulario = '';
+  get puedeCrear(): boolean { return this.auth.tiene('lab.write'); }
+  get puedeSeguir(): boolean { return this.auth.tiene('lab.track') || this.auth.tiene('lab.write'); }
+  get puedeCrearLaboratorio(): boolean { return this.auth.tiene('laboratories.manage'); }
+  readonly trabajos = signal<LabWorkDto[]>([]);
+  readonly tablero = signal<LabBoardDto | null>(null);
+  readonly laboratorios = signal<LaboratoryDto[]>([]);
+  readonly pacientes = signal<PatientListItemDto[]>([]);
+  readonly profesionales = signal<ProfessionalDto[]>([]);
+  readonly busqueda = signal('');
+  readonly filtroEstado = signal('Todos');
+  readonly filtroVista = signal<'Todos' | 'Activos' | 'Historial'>('Activos');
+  readonly cargando = signal(true);
+  readonly mostrarFormulario = signal(false);
+  readonly guardando = signal(false);
+  readonly mensaje = signal('');
+  readonly error = signal('');
+  readonly errorFormulario = signal('');
 
   formulario = new FormGroup({
     pacienteId: new FormControl('', { nonNullable: true, validators: [Validators.required] }),
@@ -86,24 +87,23 @@ export class LaboratorioComponent {
   });
 
   /** Turnos del paciente elegido en el formulario, para vincular el turno de entrega. */
-  turnosDelPaciente: AppointmentDto[] = [];
-  cargandoTurnos = false;
-  private readonly veTurnos = this.auth.tiene('appointments.read');
-
+  readonly turnosDelPaciente = signal<AppointmentDto[]>([]);
+  readonly cargandoTurnos = signal(false);
+  private get veTurnos(): boolean { return this.auth.tiene('appointments.read'); }
   constructor() {
     this.cargar();
-    this.api.laboratorios().subscribe({ next: laboratorios => (this.laboratorios = laboratorios.filter(l => l.isActive)) });
+    this.api.laboratorios().subscribe({ next: laboratorios => (this.laboratorios.set(laboratorios.filter(l => l.isActive))) });
     // Al cambiar de paciente se recargan sus turnos; switchMap descarta la respuesta del paciente anterior.
     this.formulario.controls.pacienteId.valueChanges.pipe(
       switchMap(pacienteId => {
         this.formulario.controls.turnoId.setValue('');
-        this.turnosDelPaciente = [];
+        this.turnosDelPaciente.set([]);
         if (!pacienteId || !this.veTurnos) return of<AppointmentDto[]>([]);
-        this.cargandoTurnos = true;
+        this.cargandoTurnos.set(true);
         return this.api.turnos({ PatientId: pacienteId, pageSize: 100 }).pipe(map(pagina => pagina.items), catchError(() => of<AppointmentDto[]>([])));
       }),
       takeUntilDestroyed()
-    ).subscribe(turnos => { this.cargandoTurnos = false; this.turnosDelPaciente = this.ordenarTurnos(turnos); });
+    ).subscribe(turnos => { this.cargandoTurnos.set(false); this.turnosDelPaciente.set(this.ordenarTurnos(turnos)); });
   }
 
   /** Primero los próximos (del más cercano al más lejano) y después los pasados (del más reciente al más antiguo). */
@@ -118,58 +118,59 @@ export class LaboratorioComponent {
     return `${fechaCorta(turno.startUtc)} · ${horaLocal(turno.startUtc)} · ${turno.reason || 'Turno'}`;
   }
 
-  cargar(): void {
-    this.cargando = true;
+  /** @param limpiarError false para conservar el aviso del error (p. ej. un conflicto) mientras se recargan los datos. */
+  cargar(limpiarError = true): void {
+    this.cargando.set(true);
     this.api.trabajosDeLaboratorio().subscribe({
-      next: pagina => { this.cargando = false; this.error = ''; this.trabajos = pagina.items; },
-      error: error => { this.cargando = false; this.error = mensajeDeError(error, 'No se pudieron cargar los trabajos de laboratorio.'); }
+      next: pagina => { this.cargando.set(false); if (limpiarError) this.error.set(''); this.trabajos.set(pagina.items); },
+      error: error => { this.cargando.set(false); this.error.set(mensajeDeError(error, 'No se pudieron cargar los trabajos de laboratorio.')); }
     });
-    this.api.tableroDeLaboratorio().subscribe({ next: tablero => (this.tablero = tablero) });
+    this.api.tableroDeLaboratorio().subscribe({ next: tablero => (this.tablero.set(tablero)) });
   }
 
   get trabajosFiltrados(): LabWorkDto[] {
-    const texto = this.busqueda.trim().toLowerCase();
-    return this.trabajos.filter(trabajo => {
+    const texto = this.busqueda().trim().toLowerCase();
+    return this.trabajos().filter(trabajo => {
       const coincideTexto = `${trabajo.patientName} ${trabajo.workType} ${trabajo.laboratoryName}`.toLowerCase().includes(texto);
-      const coincideEstado = this.filtroEstado === 'Todos' || trabajo.status === this.filtroEstado;
+      const coincideEstado = this.filtroEstado() === 'Todos' || trabajo.status === this.filtroEstado();
       const cerrado = CERRADOS.includes(trabajo.status);
-      const coincideVista = this.filtroVista === 'Todos' || (this.filtroVista === 'Historial' ? cerrado : !cerrado);
+      const coincideVista = this.filtroVista() === 'Todos' || (this.filtroVista() === 'Historial' ? cerrado : !cerrado);
       return coincideTexto && coincideEstado && coincideVista;
     });
   }
-  get activos(): number { return this.trabajos.filter(trabajo => !CERRADOS.includes(trabajo.status)).length; }
-  get listosParaRetirar(): number { return this.tablero?.countsByStatus['ReadyForPickup'] ?? this.trabajos.filter(t => t.status === 'ReadyForPickup').length; }
+  get activos(): number { return this.trabajos().filter(trabajo => !CERRADOS.includes(trabajo.status)).length; }
+  get listosParaRetirar(): number { return this.tablero()?.countsByStatus['ReadyForPickup'] ?? this.trabajos().filter(t => t.status === 'ReadyForPickup').length; }
 
-  verVista(vista: 'Todos' | 'Activos' | 'Historial'): void { this.filtroVista = vista; this.filtroEstado = 'Todos'; }
+  verVista(vista: 'Todos' | 'Activos' | 'Historial'): void { this.filtroVista.set(vista); this.filtroEstado.set('Todos'); }
 
   abrirFormulario(): void {
-    this.mensaje = '';
-    this.errorFormulario = '';
+    this.mensaje.set('');
+    this.errorFormulario.set('');
     this.formulario.reset({
       pacienteId: '', tipoTrabajo: '', piezaDental: '', turnoId: '', laboratorioId: '', laboratorioNuevo: '',
       profesionalId: this.auth.esProfesional() ? this.auth.userId ?? '' : '', fechaEntrega: '', costo: null, observaciones: ''
     });
-    this.mostrarFormulario = true;
-    if (!this.pacientes.length) this.api.pacientes({ pageSize: 100 }).subscribe({ next: pagina => (this.pacientes = pagina.items.filter(p => p.status !== 'Inactive')) });
-    if (!this.profesionales.length) this.api.profesionales().subscribe({ next: profesionales => (this.profesionales = profesionales) });
+    this.mostrarFormulario.set(true);
+    if (!this.pacientes().length) this.api.pacientes({ pageSize: 100 }).subscribe({ next: pagina => (this.pacientes.set(pagina.items.filter(p => p.status !== 'Inactive'))) });
+    if (!this.profesionales().length) this.api.profesionales().subscribe({ next: profesionales => (this.profesionales.set(profesionales)) });
   }
-  cerrarFormulario(): void { this.mostrarFormulario = false; }
+  cerrarFormulario(): void { this.mostrarFormulario.set(false); }
 
   guardarTrabajo(): void {
     const datos = this.formulario.getRawValue();
     const creaLaboratorio = datos.laboratorioId === NUEVO_LABORATORIO;
     if (this.formulario.invalid || (creaLaboratorio && datos.laboratorioNuevo.trim().length < 2)) {
       this.formulario.markAllAsTouched();
-      if (creaLaboratorio && datos.laboratorioNuevo.trim().length < 2) this.errorFormulario = 'Escribí el nombre del mecánico dental o laboratorio nuevo.';
+      if (creaLaboratorio && datos.laboratorioNuevo.trim().length < 2) this.errorFormulario.set('Escribí el nombre del mecánico dental o laboratorio nuevo.');
       return;
     }
-    this.guardando = true;
-    this.errorFormulario = '';
+    this.guardando.set(true);
+    this.errorFormulario.set('');
     const piezas = piezasFdi(datos.piezaDental) ?? [];
     const laboratorio$: Observable<LaboratoryDto | null> = creaLaboratorio ? this.api.crearLaboratorio(datos.laboratorioNuevo.trim()) : of(null);
     laboratorio$.pipe(
       switchMap(nuevo => {
-        if (nuevo) this.laboratorios = [...this.laboratorios, nuevo];
+        if (nuevo) this.laboratorios.set([...this.laboratorios(), nuevo]);
         return this.api.crearTrabajoDeLaboratorio({
           patientId: datos.pacienteId, laboratoryId: nuevo ? nuevo.id : datos.laboratorioId, professionalUserId: datos.profesionalId || null,
           workType: datos.tipoTrabajo.trim(), toothCode: piezas[0] ?? null, toothCodes: piezas.length ? piezas : null,
@@ -179,21 +180,28 @@ export class LaboratorioComponent {
       })
     ).subscribe({
       next: trabajo => {
-        this.guardando = false;
-        this.mostrarFormulario = false;
-        this.mensaje = `Se registró el trabajo "${trabajo.workType}" para ${trabajo.patientName}.`;
+        this.guardando.set(false);
+        this.mostrarFormulario.set(false);
+        this.mensaje.set(`Se registró el trabajo "${trabajo.workType}" para ${trabajo.patientName}.`);
         this.cargar();
       },
-      error: error => { this.guardando = false; this.errorFormulario = mensajeDeError(error, 'No se pudo registrar el trabajo.'); }
+      error: error => { this.guardando.set(false); this.errorFormulario.set(mensajeDeError(error, 'No se pudo registrar el trabajo.')); }
     });
   }
 
-  cambiarEstado(trabajo: LabWorkDto, estado: LabWorkStatus): void {
+  /** @param selector el control del desplegable: si el backend rechaza el cambio, vuelve a mostrar el estado real. */
+  cambiarEstado(trabajo: LabWorkDto, estado: LabWorkStatus, selector?: NgModel): void {
     if (estado === trabajo.status) return;
     this.api.estadoTrabajoDeLaboratorio(trabajo.id, estado).subscribe({
-      next: actualizado => { this.error = ''; this.mensaje = `El trabajo de ${actualizado.patientName} ahora figura como: ${ESTADOS[actualizado.status]}.`; this.cargar(); },
-      // Si el backend rechaza el cambio (transición inválida o falta de permiso), se vuelve a mostrar el estado real.
-      error: error => { this.error = mensajeDeError(error, 'No se pudo actualizar el estado del trabajo.'); this.cargar(); }
+      next: actualizado => { this.error.set(''); this.mensaje.set(`El trabajo de ${actualizado.patientName} ahora figura como: ${ESTADOS[actualizado.status]}.`); this.cargar(); },
+      // Si el backend rechaza el cambio (conflicto de concurrencia 409, transición inválida o falta de permiso), se vuelve a mostrar el estado real.
+      // Las filas se reutilizan (track por id), así que el desplegable se restablece a mano.
+      error: error => {
+        selector?.control.setValue(trabajo.status);
+        this.mensaje.set('');
+        this.error.set(mensajeDeError(error, 'No se pudo actualizar el estado del trabajo.'));
+        this.cargar(false);
+      }
     });
   }
 

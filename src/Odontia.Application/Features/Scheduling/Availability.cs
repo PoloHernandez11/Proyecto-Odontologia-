@@ -99,10 +99,11 @@ public static class AvailabilityCalculator
         foreach (var free in FreeRanges(input))
         {
             var local = input.TimeZone.UtcToLocal(free.Start);
-            // Alinear al múltiplo del intervalo en hora local (p. ej. 09:00, 09:15...).
-            var minutes = local.Hour * 60 + local.Minute;
-            var aligned = (int)Math.Ceiling(minutes / (double)stepMinutes) * stepMinutes;
-            var start = free.Start.AddMinutes(aligned - minutes).AddSeconds(-local.Second);
+            // Alinear al múltiplo del intervalo en hora local (p. ej. 09:00, 09:15...), redondeando hacia arriba
+            // con precisión completa: una franja que empieza 09:30:30 ofrece 09:45, no 09:30 (que se superpondría).
+            var offset = local.TimeOfDay.Ticks;
+            var aligned = (offset + step.Ticks - 1) / step.Ticks * step.Ticks;
+            var start = free.Start.AddTicks(aligned - offset);
             for (var s = start; s + duration <= free.End; s += step)
                 if (s >= notBeforeUtc) slots.Add(new TimeRange(s, s + duration));
         }

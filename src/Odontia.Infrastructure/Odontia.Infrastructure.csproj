@@ -6,6 +6,9 @@
     <ProjectReference Include="..\Odontia.Application\Odontia.Application.csproj" />
   </ItemGroup>
   <ItemGroup>
+    <InternalsVisibleTo Include="Odontia.UnitTests" />
+  </ItemGroup>
+  <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" />
     <PackageReference Include="MySql.EntityFrameworkCore" />

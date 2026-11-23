@@ -1,4 +1,3 @@
-using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
@@ -7,16 +6,6 @@ using Odontia.Application.Common;
 using Odontia.Application.Features.Auth;
 
 namespace Odontia.Api.Controllers;
-
-[ApiController]
-[ApiVersion("1.0")]
-[Produces("application/json")]
-public abstract class ApiControllerBase : ControllerBase;
-
-/// <summary>Respuesta de sesión para el frontend (access token + token CSRF para renovar).</summary>
-public sealed record SessionResponse(AuthSessionDto Session, string CsrfToken);
-
-public sealed record LoginResponseDto(bool RequiresTwoFactor, string? TwoFactorChallengeToken, SessionResponse? Result);
 
 /// <summary>Autenticación, sesiones, contraseñas, 2FA e invitaciones.</summary>
 [Route("api/v{version:apiVersion}/auth")]
@@ -55,8 +44,9 @@ public sealed class AuthController(IAuthService auth, AuthCookieManager cookies)
         {
             return IssueCookies(await auth.RefreshAsync(token, UserAgent, ct));
         }
-        catch (UnauthorizedException)
+        catch (UnauthorizedException ex) when (ex.Code != AuthErrorCodes.RefreshConflict)
         {
+            // Una renovación simultánea perdida no borra las cookies: la ganadora ya emitió las nuevas.
             cookies.Clear(Response);
             throw;
         }
@@ -145,13 +135,20 @@ public sealed class AuthController(IAuthService auth, AuthCookieManager cookies)
         return new MessageResponse("Contraseña actualizada. Renueve la sesión para continuar.");
     }
 
-    /// <summary>Clave y URI otpauth para configurar una app autenticadora.</summary>
-    [HttpGet("2fa/setup")]
+    /// <summary>
+    /// Clave y URI otpauth para configurar una app autenticadora. Es POST porque genera y guarda la clave si no existe;
+    /// no invalida la sesión actual. Con 2FA ya activo responde 422 <c>two_factor_already_enabled</c>.
+    /// </summary>
+    [HttpPost("2fa/setup"), EnableRateLimiting(RateLimitPolicies.Auth)]
     public Task<AuthenticatorSetupDto> TwoFactorSetup(CancellationToken ct) => auth.GetAuthenticatorSetupAsync(ct);
 
-    /// <summary>Activa 2FA verificando un código. Devuelve códigos de recuperación (se muestran una única vez).</summary>
+    /// <summary>
+    /// Activa 2FA verificando un código. Devuelve códigos de recuperación (se muestran una única vez).
+    /// La sesión actual sigue válida; las demás sesiones del usuario se revocan.
+    /// </summary>
     [HttpPost("2fa/enable"), EnableRateLimiting(RateLimitPolicies.Auth)]
-    public Task<RecoveryCodesDto> EnableTwoFactor(EnableTwoFactorRequest request, CancellationToken ct) => auth.EnableTwoFactorAsync(request, ct);
+    public Task<RecoveryCodesDto> EnableTwoFactor(EnableTwoFactorRequest request, CancellationToken ct) =>
+        auth.EnableTwoFactorAsync(request, User.SessionId(), ct);
 
     /// <summary>Desactiva 2FA (requiere contraseña).</summary>
     [HttpPost("2fa/disable"), EnableRateLimiting(RateLimitPolicies.Auth)]

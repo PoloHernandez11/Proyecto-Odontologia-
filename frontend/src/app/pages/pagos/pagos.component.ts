@@ -1,12 +1,15 @@
 import { CommonModule } from '@angular/common';
-import { Component, inject, ChangeDetectionStrategy } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { FormControl, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { switchMap } from 'rxjs';
 import { OdontiaApi } from '../../api/odontia-api.service';
 import { BudgetDto, BudgetStatus, PatientListItemDto, PaymentDto, PaymentMethod } from '../../api/schema';
-import { fechaCorta, fechaIso, mensajeDeError, pesos } from '../../core/api';
+import { esConflictoDeConcurrencia, fechaCorta, mensajeDeError, pesos } from '../../core/api';
+import { fechaDelConsultorio } from '../../core/zona-horaria';
 import { AuthService } from '../../core/auth.service';
+import { DialogDirective } from '../../shared/dialog.directive';
+import { PluralPipe } from '../../shared/plural.pipe';
 
 export const METODOS_DE_PAGO: Record<PaymentMethod, string> = {
   Cash: 'Efectivo', BankTransfer: 'Transferencia', DebitCard: 'Tarjeta de débito', CreditCard: 'Tarjeta de crédito',
@@ -22,8 +25,8 @@ const ESTADOS: Record<BudgetStatus, string> = {
  */
 @Component({
   selector: 'app-pagos', standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, RouterLink],
-  templateUrl: './pagos.component.html', changeDetection: ChangeDetectionStrategy.Eager,
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, RouterLink, DialogDirective, PluralPipe],
+  templateUrl: './pagos.component.html', changeDetection: ChangeDetectionStrategy.OnPush,
  styleUrl: './pagos.component.css'
 })
 export class PagosComponent {
@@ -34,29 +37,28 @@ export class PagosComponent {
   readonly metodos = METODOS_DE_PAGO;
   readonly listaDeMetodos = Object.entries(METODOS_DE_PAGO) as [PaymentMethod, string][];
   readonly estados = ESTADOS;
-  readonly puedeCobrar = this.auth.tiene('payments.write');
-  readonly puedeAnular = this.auth.tiene('payments.void');
-  readonly puedeCrearConcepto = this.auth.tiene('budgets.write') && this.auth.tiene('budgets.approve');
-  readonly puedeAprobar = this.auth.tiene('budgets.approve');
+  get puedeCobrar(): boolean { return this.auth.tiene('payments.write'); }
+  get puedeAnular(): boolean { return this.auth.tiene('payments.void'); }
+  get puedeCrearConcepto(): boolean { return this.auth.tiene('budgets.write') && this.auth.tiene('budgets.approve'); }
+  get puedeAprobar(): boolean { return this.auth.tiene('budgets.approve'); }
+  readonly pacienteId = signal(this.route.snapshot.queryParamMap.get('paciente'));
+  readonly nombreDelPaciente = signal('');
+  readonly presupuestos = signal<BudgetDto[]>([]);
+  readonly pagos = signal<PaymentDto[]>([]);
+  readonly pacientes = signal<PatientListItemDto[]>([]);
+  readonly cargando = signal(true);
+  readonly busqueda = signal('');
+  readonly filtroEstado = signal('Todos');
+  readonly filtroMetodo = signal('Todos');
+  readonly mensaje = signal('');
+  readonly error = signal('');
 
-  pacienteId = this.route.snapshot.queryParamMap.get('paciente');
-  nombreDelPaciente = '';
-  presupuestos: BudgetDto[] = [];
-  pagos: PaymentDto[] = [];
-  pacientes: PatientListItemDto[] = [];
-  cargando = true;
-  busqueda = '';
-  filtroEstado = 'Todos';
-  filtroMetodo = 'Todos';
-  mensaje = '';
-  error = '';
-
-  mostrarConcepto = false;
-  mostrarCobro = false;
-  pagoPorAnular: PaymentDto | null = null;
-  motivoAnulacion = '';
-  guardando = false;
-  errorFormulario = '';
+  readonly mostrarConcepto = signal(false);
+  readonly mostrarCobro = signal(false);
+  readonly pagoPorAnular = signal<PaymentDto | null>(null);
+  readonly motivoAnulacion = signal('');
+  readonly guardando = signal(false);
+  readonly errorFormulario = signal('');
 
   formularioConcepto = new FormGroup({
     pacienteId: new FormControl('', { nonNullable: true, validators: [Validators.required] }),
@@ -73,45 +75,48 @@ export class PagosComponent {
 
   constructor() {
     this.cargar();
-    if (this.pacienteId) {
-      this.api.paciente(this.pacienteId).subscribe({ next: paciente => (this.nombreDelPaciente = `${paciente.firstName} ${paciente.lastName}`) });
+    const pacienteId = this.pacienteId();
+    if (pacienteId) {
+      this.api.paciente(pacienteId).subscribe({ next: paciente => (this.nombreDelPaciente.set(`${paciente.firstName} ${paciente.lastName}`)) });
     }
   }
 
-  cargar(): void {
-    this.cargando = true;
-    this.api.presupuestos({ PatientId: this.pacienteId }).subscribe({
-      next: pagina => { this.cargando = false; this.error = ''; this.presupuestos = [...pagina.items].sort((a, b) => b.createdAtUtc.localeCompare(a.createdAtUtc)); },
-      error: error => { this.cargando = false; this.error = mensajeDeError(error, 'No se pudieron cargar los conceptos de cobro.'); }
+  /** @param limpiarError false para conservar el aviso de un conflicto mientras se recargan los datos. */
+  cargar(limpiarError = true): void {
+    this.cargando.set(true);
+    this.api.presupuestos({ PatientId: this.pacienteId() }).subscribe({
+      next: pagina => { this.cargando.set(false); if (limpiarError) this.error.set(''); this.presupuestos.set([...pagina.items].sort((a, b) => b.createdAtUtc.localeCompare(a.createdAtUtc))); },
+      error: error => { this.cargando.set(false); this.error.set(mensajeDeError(error, 'No se pudieron cargar los conceptos de cobro.')); }
     });
-    this.api.pagos({ PatientId: this.pacienteId, IncludeVoided: true }).subscribe({
-      next: pagina => (this.pagos = [...pagina.items].sort((a, b) => b.paidAtUtc.localeCompare(a.paidAtUtc))),
-      error: error => (this.error = mensajeDeError(error, 'No se pudieron cargar los pagos.'))
+    this.api.pagos({ PatientId: this.pacienteId(), IncludeVoided: true }).subscribe({
+      next: pagina => (this.pagos.set([...pagina.items].sort((a, b) => b.paidAtUtc.localeCompare(a.paidAtUtc)))),
+      error: error => (this.error.set(mensajeDeError(error, 'No se pudieron cargar los pagos.')))
     });
   }
 
   // ── Totales (los saldos vienen calculados por el backend) ──────────────────
-  private get vigentes(): PaymentDto[] { return this.pagos.filter(pago => pago.status === 'Registered'); }
-  get cobradoHoy(): number { const hoy = fechaIso(new Date()); return this.vigentes.filter(p => fechaIso(new Date(p.paidAtUtc)) === hoy).reduce((s, p) => s + p.amount, 0); }
+  private get vigentes(): PaymentDto[] { return this.pagos().filter(pago => pago.status === 'Registered'); }
+  /** Cobrado en el día de hoy del consultorio (en su zona horaria). */
+  get cobradoHoy(): number { const hoy = fechaDelConsultorio(); return this.vigentes.filter(p => fechaDelConsultorio(p.paidAtUtc) === hoy).reduce((s, p) => s + p.amount, 0); }
   get totalCobrado(): number { return this.vigentes.reduce((suma, pago) => suma + pago.amount, 0); }
-  get aprobados(): BudgetDto[] { return this.presupuestos.filter(presupuesto => presupuesto.status === 'Approved'); }
+  get aprobados(): BudgetDto[] { return this.presupuestos().filter(presupuesto => presupuesto.status === 'Approved'); }
   get saldoPendiente(): number { return this.aprobados.reduce((suma, presupuesto) => suma + presupuesto.outstanding, 0); }
   get pacientesConSaldo(): number { return new Set(this.aprobados.filter(p => p.outstanding > 0).map(p => p.patientId)).size; }
   get cobrables(): BudgetDto[] { return this.aprobados.filter(presupuesto => presupuesto.outstanding > 0); }
 
   get presupuestosFiltrados(): BudgetDto[] {
-    const texto = this.busqueda.trim().toLowerCase();
-    return this.presupuestos.filter(presupuesto => {
+    const texto = this.busqueda().trim().toLowerCase();
+    return this.presupuestos().filter(presupuesto => {
       const coincideTexto = `${presupuesto.patientName} ${this.descripcion(presupuesto)} ${presupuesto.number}`.toLowerCase().includes(texto);
       const estado = this.situacion(presupuesto);
-      return coincideTexto && (this.filtroEstado === 'Todos' || estado.titulo === this.filtroEstado);
+      return coincideTexto && (this.filtroEstado() === 'Todos' || estado.titulo === this.filtroEstado());
     });
   }
   get pagosFiltrados(): PaymentDto[] {
-    const texto = this.busqueda.trim().toLowerCase();
-    return this.pagos.filter(pago =>
+    const texto = this.busqueda().trim().toLowerCase();
+    return this.pagos().filter(pago =>
       `${pago.patientName} ${pago.reference ?? ''} ${pago.receiptNumber}`.toLowerCase().includes(texto) &&
-      (this.filtroMetodo === 'Todos' || pago.method === this.filtroMetodo));
+      (this.filtroMetodo() === 'Todos' || pago.method === this.filtroMetodo()));
   }
 
   descripcion(presupuesto: BudgetDto): string {
@@ -123,23 +128,23 @@ export class PagosComponent {
     if (presupuesto.outstanding <= 0) return { titulo: 'Pagado', clase: 'ok' };
     return presupuesto.paid > 0 ? { titulo: 'Pago parcial', clase: 'warn' } : { titulo: 'Pendiente', clase: 'bad' };
   }
-  get presupuestoElegido(): BudgetDto | undefined { return this.presupuestos.find(p => p.id === this.formularioCobro.controls.presupuestoId.value); }
+  get presupuestoElegido(): BudgetDto | undefined { return this.presupuestos().find(p => p.id === this.formularioCobro.controls.presupuestoId.value); }
   fecha(valor: string): string { return fechaCorta(valor); }
   pesos(importe: number): string { return pesos(importe); }
 
   // ── Nuevo concepto de cobro (presupuesto de una línea, emitido y aprobado) ─
   abrirConcepto(): void {
-    this.errorFormulario = '';
-    this.formularioConcepto.reset({ pacienteId: this.pacienteId ?? '', descripcion: '', importe: null });
-    this.mostrarConcepto = true;
-    if (!this.pacientes.length) this.api.pacientes({ pageSize: 100 }).subscribe({ next: pagina => (this.pacientes = pagina.items) });
+    this.errorFormulario.set('');
+    this.formularioConcepto.reset({ pacienteId: this.pacienteId() ?? '', descripcion: '', importe: null });
+    this.mostrarConcepto.set(true);
+    if (!this.pacientes().length) this.api.pacientes({ pageSize: 100 }).subscribe({ next: pagina => (this.pacientes.set(pagina.items)) });
   }
 
   guardarConcepto(): void {
     if (this.formularioConcepto.invalid) { this.formularioConcepto.markAllAsTouched(); return; }
     const datos = this.formularioConcepto.getRawValue();
-    this.guardando = true;
-    this.errorFormulario = '';
+    this.guardando.set(true);
+    this.errorFormulario.set('');
     this.api.crearPresupuesto(datos.pacienteId, {
       discountPercent: 0, importPlanItems: false,
       items: [{ description: datos.descripcion.trim(), quantity: 1, unitPrice: datos.importe, discountPercent: 0 }]
@@ -147,8 +152,8 @@ export class PagosComponent {
       switchMap(presupuesto => this.api.emitirPresupuesto(presupuesto.id)),
       switchMap(presupuesto => this.api.aprobarPresupuesto(presupuesto.id))
     ).subscribe({
-      next: presupuesto => { this.guardando = false; this.mostrarConcepto = false; this.mensaje = `Se registró el concepto por ${pesos(presupuesto.total)} para ${presupuesto.patientName}.`; this.cargar(); },
-      error: error => { this.guardando = false; this.errorFormulario = mensajeDeError(error, 'No se pudo registrar el concepto.'); this.cargar(); }
+      next: presupuesto => { this.guardando.set(false); this.mostrarConcepto.set(false); this.mensaje.set(`Se registró el concepto por ${pesos(presupuesto.total)} para ${presupuesto.patientName}.`); this.cargar(); },
+      error: error => { this.guardando.set(false); this.errorFormulario.set(mensajeDeError(error, 'No se pudo registrar el concepto.')); this.cargar(); }
     });
   }
 
@@ -157,17 +162,17 @@ export class PagosComponent {
       ? this.api.emitirPresupuesto(presupuesto.id).pipe(switchMap(emitido => this.api.aprobarPresupuesto(emitido.id)))
       : this.api.aprobarPresupuesto(presupuesto.id);
     paso.subscribe({
-      next: () => { this.mensaje = `El presupuesto N.º ${presupuesto.number} quedó aprobado y ya se puede cobrar.`; this.cargar(); },
-      error: error => (this.error = mensajeDeError(error, 'No se pudo aprobar el presupuesto.'))
+      next: () => { this.mensaje.set(`El presupuesto N.º ${presupuesto.number} quedó aprobado y ya se puede cobrar.`); this.cargar(); },
+      error: error => { this.error.set(mensajeDeError(error, 'No se pudo aprobar el presupuesto.')); if (esConflictoDeConcurrencia(error)) this.cargar(false); }
     });
   }
 
   // ── Registrar cobro ────────────────────────────────────────────────────────
   abrirCobro(presupuesto?: BudgetDto): void {
-    this.errorFormulario = '';
-    this.mensaje = '';
+    this.errorFormulario.set('');
+    this.mensaje.set('');
     this.formularioCobro.reset({ presupuestoId: presupuesto?.id ?? '', importe: presupuesto?.outstanding ?? null, metodo: 'BankTransfer', comprobante: '', observaciones: '' });
-    this.mostrarCobro = true;
+    this.mostrarCobro.set(true);
   }
   alElegirPresupuesto(): void { this.formularioCobro.controls.importe.setValue(this.presupuestoElegido?.outstanding ?? null); }
 
@@ -175,27 +180,37 @@ export class PagosComponent {
     const presupuesto = this.presupuestoElegido;
     if (this.formularioCobro.invalid || !presupuesto) { this.formularioCobro.markAllAsTouched(); return; }
     const datos = this.formularioCobro.getRawValue();
-    if (Number(datos.importe) > presupuesto.outstanding) { this.errorFormulario = `El importe no puede superar el saldo pendiente (${pesos(presupuesto.outstanding)}).`; return; }
-    this.guardando = true;
-    this.errorFormulario = '';
+    if (Number(datos.importe) > presupuesto.outstanding) { this.errorFormulario.set(`El importe no puede superar el saldo pendiente (${pesos(presupuesto.outstanding)}).`); return; }
+    this.guardando.set(true);
+    this.errorFormulario.set('');
     this.api.registrarPago({
       patientId: presupuesto.patientId, budgetId: presupuesto.id, amount: Number(datos.importe), method: datos.metodo,
       reference: datos.comprobante.trim() || null, notes: datos.observaciones.trim() || null
     }).subscribe({
-      next: pago => { this.guardando = false; this.mostrarCobro = false; this.mensaje = `Se registró el cobro de ${pesos(pago.amount)} a ${pago.patientName} (recibo N.º ${pago.receiptNumber}).`; this.cargar(); },
-      error: error => { this.guardando = false; this.errorFormulario = mensajeDeError(error, 'No se pudo registrar el cobro.'); }
+      next: pago => { this.guardando.set(false); this.mostrarCobro.set(false); this.mensaje.set(`Se registró el cobro de ${pesos(pago.amount)} a ${pago.patientName} (recibo N.º ${pago.receiptNumber}).`); this.cargar(); },
+      error: error => { this.guardando.set(false); this.alFallarEnFormulario(error, 'No se pudo registrar el cobro.', () => (this.mostrarCobro.set(false))); }
     });
   }
 
   // ── Anulación ──────────────────────────────────────────────────────────────
-  pedirAnulacion(pago: PaymentDto): void { this.pagoPorAnular = pago; this.motivoAnulacion = ''; this.errorFormulario = ''; }
+  pedirAnulacion(pago: PaymentDto): void { this.pagoPorAnular.set(pago); this.motivoAnulacion.set(''); this.errorFormulario.set(''); }
   anular(): void {
-    if (!this.pagoPorAnular) return;
-    if (this.motivoAnulacion.trim().length < 3) { this.errorFormulario = 'Indicá el motivo de la anulación.'; return; }
-    this.guardando = true;
-    this.api.anularPago(this.pagoPorAnular.id, this.motivoAnulacion.trim()).subscribe({
-      next: pago => { this.guardando = false; this.pagoPorAnular = null; this.mensaje = `Se anuló el recibo N.º ${pago.receiptNumber}.`; this.cargar(); },
-      error: error => { this.guardando = false; this.errorFormulario = mensajeDeError(error, 'No se pudo anular el pago.'); }
+    const pagoPorAnular = this.pagoPorAnular();
+    if (!pagoPorAnular) return;
+    if (this.motivoAnulacion().trim().length < 3) { this.errorFormulario.set('Indicá el motivo de la anulación.'); return; }
+    this.guardando.set(true);
+    this.api.anularPago(pagoPorAnular.id, this.motivoAnulacion().trim()).subscribe({
+      next: pago => { this.guardando.set(false); this.pagoPorAnular.set(null); this.mensaje.set(`Se anuló el recibo N.º ${pago.receiptNumber}.`); this.cargar(); },
+      error: error => { this.guardando.set(false); this.alFallarEnFormulario(error, 'No se pudo anular el pago.', () => (this.pagoPorAnular.set(null))); }
     });
+  }
+
+  /** Ante un conflicto de concurrencia el dato cambió: se cierra el diálogo, se muestra el aviso y se recarga. */
+  private alFallarEnFormulario(error: unknown, porDefecto: string, cerrar: () => void): void {
+    if (!esConflictoDeConcurrencia(error)) { this.errorFormulario.set(mensajeDeError(error, porDefecto)); return; }
+    cerrar();
+    this.mensaje.set('');
+    this.error.set(mensajeDeError(error, porDefecto));
+    this.cargar(false);
   }
 }

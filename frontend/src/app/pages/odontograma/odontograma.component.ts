@@ -1,12 +1,12 @@
 
-import { Component, inject, ChangeDetectionStrategy } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { NgTemplateOutlet } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { forkJoin } from 'rxjs';
 import { OdontiaApi } from '../../api/odontia-api.service';
 import { ConditionDto, FindingDto, FindingStatus, OdontogramCatalogDto, OdontogramDto, PatientDto, ToothCatalogDto, ToothStateDto, ToothSurface } from '../../api/schema';
-import { fechaCorta, mensajeDeError } from '../../core/api';
+import { esConflictoDeConcurrencia, fechaCorta, mensajeDeError } from '../../core/api';
 import { AuthService } from '../../core/auth.service';
 
 /** Zona del dibujo de la pieza. Cada zona corresponde a una o dos caras FDI según el diente. */
@@ -52,7 +52,7 @@ interface Dibujo { rayitas: Rayita[]; simbolos: SimboloDePieza[]; ausente: boole
 
 const codigo = (valor: string | null | undefined): string => (valor ?? '').toUpperCase();
 
-@Component({ selector: 'app-odontograma', standalone: true, imports: [FormsModule, NgTemplateOutlet, RouterLink], templateUrl: './odontograma.component.html', changeDetection: ChangeDetectionStrategy.Eager,
+@Component({ selector: 'app-odontograma', standalone: true, imports: [FormsModule, NgTemplateOutlet, RouterLink], templateUrl: './odontograma.component.html', changeDetection: ChangeDetectionStrategy.OnPush,
  styleUrl: './odontograma.component.css' })
 export class OdontogramaComponent {
   private readonly api = inject(OdontiaApi);
@@ -73,48 +73,47 @@ export class OdontogramaComponent {
   readonly nombresDeCara = NOMBRE_DE_CARA;
   readonly piezaCompleta = PIEZA_COMPLETA;
   // Registrar en el odontograma exige el permiso y además ser profesional del consultorio.
-  readonly puedeEscribir = this.auth.tiene('odontogram.write') && this.auth.esProfesional();
-  readonly veHistoria = this.auth.tiene('clinical.read');
+  get puedeEscribir(): boolean { return this.auth.tiene('odontogram.write') && this.auth.esProfesional(); }
+  get veHistoria(): boolean { return this.auth.tiene('clinical.read'); }
+  readonly paciente = signal<PatientDto | null>(null);
+  readonly catalogo = signal<OdontogramCatalogDto | null>(null);
+  private readonly estados = signal(new Map<number, ToothStateDto>());
+  private readonly dientes = signal(new Map<number, ToothCatalogDto>());
+  readonly ultimaModificacion = signal('');
+  readonly cargando = signal(true);
+  readonly noEncontrado = signal(false);
+  readonly mensaje = signal('');
+  readonly error = signal('');
+  readonly guardando = signal(false);
 
-  paciente: PatientDto | null = null;
-  catalogo: OdontogramCatalogDto | null = null;
-  private estados = new Map<number, ToothStateDto>();
-  private dientes = new Map<number, ToothCatalogDto>();
-  ultimaModificacion = '';
-  cargando = true;
-  noEncontrado = false;
-  mensaje = '';
-  error = '';
-  guardando = false;
-
-  piezaSeleccionada: number | null = null;
-  caraElegida: string = PIEZA_COMPLETA;
-  condicionElegida = '';
-  estadoElegido: FindingStatus = 'Existing';
-  notaDelHallazgo = '';
-  notaNueva = '';
+  readonly piezaSeleccionada = signal<number | null>(null);
+  readonly caraElegida = signal<string>(PIEZA_COMPLETA);
+  readonly condicionElegida = signal('');
+  readonly estadoElegido = signal<FindingStatus>('Existing');
+  readonly notaDelHallazgo = signal('');
+  readonly notaNueva = signal('');
 
   constructor() {
     forkJoin({ paciente: this.api.paciente(this.pacienteId), catalogo: this.api.catalogoOdontograma(), odontograma: this.api.odontograma(this.pacienteId) }).subscribe({
       next: ({ paciente, catalogo, odontograma }) => {
-        this.paciente = paciente;
-        this.catalogo = catalogo;
-        this.dientes = new Map(catalogo.teeth.map(diente => [diente.code, diente]));
+        this.paciente.set(paciente);
+        this.catalogo.set(catalogo);
+        this.dientes.set(new Map(catalogo.teeth.map(diente => [diente.code, diente])));
         this.aplicar(odontograma);
-        this.cargando = false;
+        this.cargando.set(false);
       },
-      error: error => { this.cargando = false; this.noEncontrado = true; this.error = mensajeDeError(error, 'No se pudo cargar el odontograma.'); }
+      error: error => { this.cargando.set(false); this.noEncontrado.set(true); this.error.set(mensajeDeError(error, 'No se pudo cargar el odontograma.')); }
     });
   }
 
   private aplicar(odontograma: OdontogramDto): void {
-    this.estados = new Map(odontograma.teeth.map(pieza => [pieza.toothCode, pieza]));
-    this.dibujos = new Map(odontograma.teeth.map(pieza => [pieza.toothCode, this.dibujar(pieza)]));
-    this.ultimaModificacion = odontograma.lastChangeUtc ? `${fechaCorta(odontograma.lastChangeUtc)} · ${odontograma.lastChangeBy ?? ''}` : '';
+    this.estados.set(new Map(odontograma.teeth.map(pieza => [pieza.toothCode, pieza])));
+    this.dibujos.set(new Map(odontograma.teeth.map(pieza => [pieza.toothCode, this.dibujar(pieza)])));
+    this.ultimaModificacion.set(odontograma.lastChangeUtc ? `${fechaCorta(odontograma.lastChangeUtc)} · ${odontograma.lastChangeBy ?? ''}` : '');
   }
 
   // ── Dibujo ─────────────────────────────────────────────────────────────────
-  private dibujos = new Map<number, Dibujo>();
+  private readonly dibujos = signal(new Map<number, Dibujo>());
   private static readonly SIN_DIBUJO: Dibujo = { rayitas: [], simbolos: [], ausente: false };
 
   /** Traduce los hallazgos de una pieza a rayitas por cara y símbolos de pieza completa. */
@@ -149,10 +148,10 @@ export class OdontogramaComponent {
   }
 
   get condiciones(): ConditionDto[] {
-    const activas = this.catalogo?.conditions.filter(condicion => condicion.isActive && CODIGOS.includes(codigo(condicion.code))) ?? [];
+    const activas = this.catalogo()?.conditions.filter(condicion => condicion.isActive && CODIGOS.includes(codigo(condicion.code))) ?? [];
     return activas.sort((a, b) => CODIGOS.indexOf(codigo(a.code)) - CODIGOS.indexOf(codigo(b.code)));
   }
-  dibujo(pieza: number): Dibujo { return this.dibujos.get(pieza) ?? OdontogramaComponent.SIN_DIBUJO; }
+  dibujo(pieza: number): Dibujo { return this.dibujos().get(pieza) ?? OdontogramaComponent.SIN_DIBUJO; }
   /** Sólo "Ausente" deja la pieza tachada; "Extraer" indica que la pieza todavía está. */
   ausente(pieza: number): boolean { return this.dibujo(pieza).ausente; }
   nombre(condicion: ConditionDto): string { return NOMBRE_DE_CODIGO[codigo(condicion.code)] ?? condicion.name; }
@@ -161,25 +160,26 @@ export class OdontogramaComponent {
   color(hallazgo: FindingDto): string { return COLOR_DE_CODIGO[codigo(hallazgo.conditionCode)] ?? (hallazgo.color || COLOR_POR_DEFECTO); }
   colorDeCondicion(condicion: ConditionDto): string { return COLOR_DE_CODIGO[codigo(condicion.code)] ?? (condicion.color || COLOR_POR_DEFECTO); }
   descripcion(pieza: number): string {
-    const estado = this.estados.get(pieza);
+    const estado = this.estados().get(pieza);
     const hallazgos = estado?.findings.map(h => `${this.nombreDeHallazgo(h)}${h.surface ? ' (' + NOMBRE_DE_CARA[h.surface] + ')' : ''}${h.status === 'Planned' ? ' [planificado]' : ''}`) ?? [];
     return `Pieza ${pieza}: ${hallazgos.length ? hallazgos.join(', ') : 'sin hallazgos'}`;
   }
 
   // ── Selección ──────────────────────────────────────────────────────────────
   seleccionarPieza(pieza: number, zona?: Zona): void {
-    this.piezaSeleccionada = pieza;
-    this.mensaje = '';
-    this.error = '';
-    this.notaDelHallazgo = '';
+    this.piezaSeleccionada.set(pieza);
+    this.mensaje.set('');
+    this.error.set('');
+    this.notaDelHallazgo.set('');
     const cara = zona ? this.carasDeLaPieza.find(c => CARAS_POR_ZONA[zona].includes(c)) : undefined;
-    this.caraElegida = cara ?? PIEZA_COMPLETA;
+    this.caraElegida.set(cara ?? PIEZA_COMPLETA);
     this.ajustarCondicion();
   }
-  get carasDeLaPieza(): ToothSurface[] { return this.piezaSeleccionada ? this.dientes.get(this.piezaSeleccionada)?.surfaces ?? [] : []; }
-  get nombreDeLaPieza(): string { return this.piezaSeleccionada ? this.dientes.get(this.piezaSeleccionada)?.name ?? '' : ''; }
-  get hallazgosDeLaPieza(): FindingDto[] { return this.piezaSeleccionada ? this.estados.get(this.piezaSeleccionada)?.findings ?? [] : []; }
-  get notasDeLaPieza() { return this.piezaSeleccionada ? this.estados.get(this.piezaSeleccionada)?.notes ?? [] : []; }
+  private piezaActual(): number { return this.piezaSeleccionada() ?? 0; }
+  get carasDeLaPieza(): ToothSurface[] { return this.dientes().get(this.piezaActual())?.surfaces ?? []; }
+  get nombreDeLaPieza(): string { return this.dientes().get(this.piezaActual())?.name ?? ''; }
+  get hallazgosDeLaPieza(): FindingDto[] { return this.estados().get(this.piezaActual())?.findings ?? []; }
+  get notasDeLaPieza() { return this.estados().get(this.piezaActual())?.notes ?? []; }
   /**
    * Se ofrecen siempre todas las condiciones activas, ordenadas según la ubicación elegida
    * (primero las que aplican a la cara o a la pieza completa). Si se elige una condición que no
@@ -190,62 +190,72 @@ export class OdontogramaComponent {
   }
   /** Indica, en la lista, dónde se registra una condición que no corresponde a la ubicación actual. */
   etiquetaDeCondicion(condicion: ConditionDto): string {
-    if (condicion.scope === 'Tooth' && this.caraElegida !== PIEZA_COMPLETA) return `${this.nombre(condicion)} (pieza completa)`;
-    if (condicion.scope === 'Surface' && this.caraElegida === PIEZA_COMPLETA) return `${this.nombre(condicion)} (por cara)`;
+    if (condicion.scope === 'Tooth' && this.caraElegida() !== PIEZA_COMPLETA) return `${this.nombre(condicion)} (pieza completa)`;
+    if (condicion.scope === 'Surface' && this.caraElegida() === PIEZA_COMPLETA) return `${this.nombre(condicion)} (por cara)`;
     return this.nombre(condicion);
   }
   private aplicaALaUbicacion(condicion: ConditionDto): boolean {
-    return condicion.scope === 'Both' || condicion.scope === (this.caraElegida === PIEZA_COMPLETA ? 'Tooth' : 'Surface');
+    return condicion.scope === 'Both' || condicion.scope === (this.caraElegida() === PIEZA_COMPLETA ? 'Tooth' : 'Surface');
   }
   /** Al cambiar la ubicación, si la condición elegida no corresponde, se propone la primera que sí. */
   ajustarCondicion(): void {
-    const actual = this.condiciones.find(condicion => condicion.id === this.condicionElegida);
-    if (!actual || !this.aplicaALaUbicacion(actual)) this.condicionElegida = this.condicionesAplicables[0]?.id ?? '';
+    const actual = this.condiciones.find(condicion => condicion.id === this.condicionElegida());
+    if (!actual || !this.aplicaALaUbicacion(actual)) this.condicionElegida.set(this.condicionesAplicables[0]?.id ?? '');
   }
   /** Lleva la ubicación a una compatible con la condición: pieza completa o, si exige cara, la primera cara de la pieza. */
   alCambiarCondicion(): void {
-    const condicion = this.condiciones.find(c => c.id === this.condicionElegida);
+    const condicion = this.condiciones.find(c => c.id === this.condicionElegida());
     if (!condicion) return;
-    if (condicion.scope === 'Tooth' && this.caraElegida !== PIEZA_COMPLETA) this.caraElegida = PIEZA_COMPLETA;
-    else if (condicion.scope === 'Surface' && this.caraElegida === PIEZA_COMPLETA) this.caraElegida = this.carasDeLaPieza[0] ?? PIEZA_COMPLETA;
+    if (condicion.scope === 'Tooth' && this.caraElegida() !== PIEZA_COMPLETA) this.caraElegida.set(PIEZA_COMPLETA);
+    else if (condicion.scope === 'Surface' && this.caraElegida() === PIEZA_COMPLETA) this.caraElegida.set(this.carasDeLaPieza[0] ?? PIEZA_COMPLETA);
   }
 
   // ── Cambios ────────────────────────────────────────────────────────────────
   agregarHallazgo(): void {
-    if (!this.piezaSeleccionada || !this.condicionElegida) return;
-    this.guardando = true;
-    this.error = '';
+    const pieza = this.piezaSeleccionada();
+    if (!pieza || !this.condicionElegida()) return;
+    this.guardando.set(true);
+    this.error.set('');
     this.api.aplicarHallazgos(this.pacienteId, [{
-      toothCode: this.piezaSeleccionada,
+      toothCode: pieza,
       // La API acepta null para registrar la condición sobre la pieza completa.
-      surface: (this.caraElegida === PIEZA_COMPLETA ? null : this.caraElegida) as ToothSurface,
-      conditionId: this.condicionElegida, status: this.estadoElegido, notes: this.notaDelHallazgo.trim() || null
+      surface: (this.caraElegida() === PIEZA_COMPLETA ? null : this.caraElegida()) as ToothSurface,
+      conditionId: this.condicionElegida(), status: this.estadoElegido(), notes: this.notaDelHallazgo().trim() || null
     }]).subscribe({
-      next: odontograma => { this.guardando = false; this.aplicar(odontograma); this.notaDelHallazgo = ''; this.mensaje = `Se actualizó la pieza ${this.piezaSeleccionada}.`; },
-      error: error => { this.guardando = false; this.error = mensajeDeError(error, 'No se pudo registrar el hallazgo.'); }
+      next: odontograma => { this.guardando.set(false); this.aplicar(odontograma); this.notaDelHallazgo.set(''); this.mensaje.set(`Se actualizó la pieza ${pieza}.`); },
+      error: error => this.alFallarAlGuardar(error, 'No se pudo registrar el hallazgo.')
     });
   }
 
   quitarHallazgo(hallazgo: FindingDto): void {
-    this.guardando = true;
-    this.error = '';
+    this.guardando.set(true);
+    this.error.set('');
     this.api.quitarHallazgo(this.pacienteId, hallazgo.id, 'Corrección del registro').subscribe({
-      next: odontograma => { this.guardando = false; this.aplicar(odontograma); this.mensaje = `Se quitó "${this.nombreDeHallazgo(hallazgo)}" de la pieza ${hallazgo.toothCode}.`; },
-      error: error => { this.guardando = false; this.error = mensajeDeError(error, 'No se pudo quitar el hallazgo.'); }
+      next: odontograma => { this.guardando.set(false); this.aplicar(odontograma); this.mensaje.set(`Se quitó "${this.nombreDeHallazgo(hallazgo)}" de la pieza ${hallazgo.toothCode}.`); },
+      error: error => this.alFallarAlGuardar(error, 'No se pudo quitar el hallazgo.')
     });
   }
 
   agregarNota(): void {
-    const texto = this.notaNueva.trim();
-    if (!this.piezaSeleccionada || !texto) return;
-    this.guardando = true;
-    this.api.notaDePieza(this.pacienteId, this.piezaSeleccionada, texto).subscribe({
+    const texto = this.notaNueva().trim();
+    const pieza = this.piezaSeleccionada();
+    if (!pieza || !texto) return;
+    this.guardando.set(true);
+    this.api.notaDePieza(this.pacienteId, pieza, texto).subscribe({
       next: () => {
-        this.notaNueva = '';
-        this.api.odontograma(this.pacienteId).subscribe({ next: odontograma => { this.guardando = false; this.aplicar(odontograma); this.mensaje = 'Se agregó la observación.'; } });
+        this.notaNueva.set('');
+        this.api.odontograma(this.pacienteId).subscribe({ next: odontograma => { this.guardando.set(false); this.aplicar(odontograma); this.mensaje.set('Se agregó la observación.'); } });
       },
-      error: error => { this.guardando = false; this.error = mensajeDeError(error, 'No se pudo guardar la observación.'); }
+      error: error => this.alFallarAlGuardar(error, 'No se pudo guardar la observación.')
     });
+  }
+
+  /** Muestra el error; ante un conflicto de concurrencia (409) recarga el odontograma vigente. */
+  private alFallarAlGuardar(error: unknown, porDefecto: string): void {
+    this.guardando.set(false);
+    this.mensaje.set('');
+    this.error.set(mensajeDeError(error, porDefecto));
+    if (esConflictoDeConcurrencia(error)) this.api.odontograma(this.pacienteId).subscribe({ next: odontograma => this.aplicar(odontograma) });
   }
 
   fecha(valor: string): string { return fechaCorta(valor); }

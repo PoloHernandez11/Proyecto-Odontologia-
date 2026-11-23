@@ -25,14 +25,6 @@ public sealed class JwtOptions
     }
 }
 
-public static class OdontiaClaims
-{
-    public const string Consultorio = "cid";
-    public const string Session = "sid";
-    public const string Purpose = "purpose";
-    public const string SecurityStamp = "sst";
-}
-
 /// <summary>
 /// Emite access tokens JWT de corta duración. Los permisos NO viajan en el token: se resuelven en el
 /// servidor en cada solicitud a partir de la membresía activa, de modo que una revocación es inmediata.
@@ -77,30 +69,41 @@ public sealed class JwtTokenService(IOptions<JwtOptions> options, TimeProvider c
             IssuedAt = now,
             NotBefore = now,
             Expires = now.AddMinutes(5),
-            Claims = new Dictionary<string, object> { [JwtRegisteredClaimNames.Sub] = userId.ToString(), [OdontiaClaims.Purpose] = "2fa" },
+            Claims = new Dictionary<string, object>
+            {
+                [JwtRegisteredClaimNames.Sub] = userId.ToString(),
+                [JwtRegisteredClaimNames.Jti] = Guid.NewGuid().ToString("N"),
+                [OdontiaClaims.Purpose] = "2fa",
+            },
             SigningCredentials = new SigningCredentials(_opt.GetKey(), SecurityAlgorithms.HmacSha256),
         });
     }
 
-    public Guid? ValidateTwoFactorChallenge(string token)
+    public async Task<TwoFactorChallenge?> ValidateTwoFactorChallengeAsync(string token)
     {
-        var result = _handler.ValidateTokenAsync(token, new TokenValidationParameters
+        if (string.IsNullOrWhiteSpace(token)) return null;
+        var result = await _handler.ValidateTokenAsync(token, new TokenValidationParameters
         {
             ValidIssuer = _opt.Issuer,
             ValidAudience = _opt.Audience + ":2fa",
             IssuerSigningKey = _opt.GetKey(),
             ValidateLifetime = true,
             ClockSkew = TimeSpan.FromSeconds(30),
-        }).GetAwaiter().GetResult();
+        });
         if (!result.IsValid) return null;
         if (!result.Claims.TryGetValue(OdontiaClaims.Purpose, out var purpose) || purpose as string != "2fa") return null;
-        return result.Claims.TryGetValue(JwtRegisteredClaimNames.Sub, out var sub) && Guid.TryParse(sub as string, out var id) ? id : null;
+        if (!result.Claims.TryGetValue(JwtRegisteredClaimNames.Jti, out var jti) || jti is not string { Length: > 0 } jtiValue) return null;
+        if (!result.Claims.TryGetValue(JwtRegisteredClaimNames.Sub, out var sub) || !Guid.TryParse(sub as string, out var id)) return null;
+        return new TwoFactorChallenge(id, jtiValue, result.SecurityToken.ValidTo);
     }
 
     /// <summary>Huella corta del security stamp (permite invalidar tokens al cambiar credenciales sin exponer el stamp).</summary>
     public static string Stamp(string? securityStamp) =>
         Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(Encoding.UTF8.GetBytes(securityStamp ?? "")))[..16];
 
-    public static Guid? GetUserId(ClaimsPrincipal principal) =>
+    public bool MatchesSecurityStamp(ClaimsPrincipal principal, string? currentSecurityStamp) =>
+        currentSecurityStamp is not null && Stamp(currentSecurityStamp) == principal.FindFirstValue(OdontiaClaims.SecurityStamp);
+
+    public Guid? GetUserId(ClaimsPrincipal principal) =>
         Guid.TryParse(principal.FindFirstValue(JwtRegisteredClaimNames.Sub) ?? principal.FindFirstValue(ClaimTypes.NameIdentifier), out var id) ? id : null;
 }

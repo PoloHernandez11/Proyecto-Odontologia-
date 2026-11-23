@@ -45,6 +45,11 @@ public class Budget : TenantEntity
     public Guid? ApprovedByUserId { get; private set; }
     public DateTime? RejectedAtUtc { get; private set; }
     public string? StatusReason { get; private set; }
+    /// <summary>
+    /// Token de concurrencia optimista. Cambia con cada modificación del presupuesto (estado, líneas, fechas)
+    /// y con cada pago imputado, para que dos operaciones simultáneas no puedan validar contra el mismo estado.
+    /// </summary>
+    public Guid Version { get; private set; } = Guid.NewGuid();
 
     public IReadOnlyCollection<BudgetItem> Items => _items;
     public IReadOnlyCollection<BudgetStatusChange> StatusChanges => _statusChanges;
@@ -57,6 +62,7 @@ public class Budget : TenantEntity
         if (expirationDate < issueDate) throw new DomainException("La fecha de vencimiento no puede ser anterior a la de emisión.", "invalid_range");
         IssueDate = issueDate;
         ExpirationDate = expirationDate;
+        Touch();
     }
 
     public void SetDiscount(decimal percent)
@@ -68,7 +74,18 @@ public class Budget : TenantEntity
         Recalculate();
     }
 
-    public void SetNotes(string? notes) { EnsureEditable(); Notes = Guard.Optional(notes, "Observaciones", 2000); }
+    public void SetNotes(string? notes) { EnsureEditable(); Notes = Guard.Optional(notes, "Observaciones", 2000); Touch(); }
+
+    /// <summary>
+    /// Registra que el saldo del presupuesto cambió por un pago imputado. Cambia la versión: si otro pago se validó
+    /// en paralelo contra el mismo saldo, sólo uno de los dos puede guardarse (el otro recibe conflicto de concurrencia).
+    /// </summary>
+    public void MarkPaymentApplied()
+    {
+        if (Status != BudgetStatus.Approved)
+            throw new DomainException("Sólo pueden imputarse pagos a presupuestos aprobados.", "budget_not_approved");
+        Touch();
+    }
 
     public BudgetItem AddItem(Guid? procedureId, string description, int? toothCode, int quantity, decimal unitPrice, decimal discountPercent,
         Guid? treatmentPlanItemId)
@@ -132,6 +149,7 @@ public class Budget : TenantEntity
         Status = to;
         StatusReason = Guard.Optional(reason, "Motivo", 500);
         _statusChanges.Add(new BudgetStatusChange(ConsultorioId, Id, from, to, StatusReason, userId, nowUtc));
+        Touch();
     }
 
     private void Recalculate()
@@ -139,7 +157,10 @@ public class Budget : TenantEntity
         Subtotal = _items.Sum(i => i.LineTotal);
         DiscountAmount = decimal.Round(Subtotal * DiscountPercent / 100m, 2, MidpointRounding.AwayFromZero);
         Total = Subtotal - DiscountAmount;
+        Touch();
     }
+
+    private void Touch() => Version = Guid.NewGuid();
 
     private void EnsureEditable()
     {
@@ -241,6 +262,8 @@ public class Payment : TenantEntity
     public DateTime? VoidedAtUtc { get; private set; }
     public Guid? VoidedByUserId { get; private set; }
     public string? VoidReason { get; private set; }
+    /// <summary>Token de concurrencia optimista: impide dos anulaciones simultáneas del mismo pago.</summary>
+    public Guid Version { get; private set; } = Guid.NewGuid();
 
     public void Void(string reason, Guid userId, DateTime nowUtc)
     {
@@ -249,13 +272,26 @@ public class Payment : TenantEntity
         VoidedAtUtc = nowUtc;
         VoidedByUserId = userId;
         Status = PaymentStatus.Voided;
+        Version = Guid.NewGuid();
     }
 }
 
 /// <summary>Movimiento de cuenta corriente (libro inmutable). Saldo = Σ débitos − Σ créditos.</summary>
 public class AccountMovement : TenantEntity
 {
+    public const int DescriptionMaxLength = 250;
+
     private AccountMovement() { }
+
+    /// <summary>
+    /// Ajusta un texto al largo máximo de la descripción (se corta con "…"). Para descripciones que incluyen texto
+    /// libre del usuario (p. ej. el motivo de anulación, que se conserva completo en el pago).
+    /// </summary>
+    public static string FitDescription(string description)
+    {
+        var text = description.Trim();
+        return text.Length <= DescriptionMaxLength ? text : text[..(DescriptionMaxLength - 1)].TrimEnd() + "…";
+    }
 
     public AccountMovement(Guid consultorioId, Guid patientId, MovementType type, MovementDirection direction, decimal amount,
         DateTime occurredAtUtc, string description, Guid? budgetId, Guid? paymentId, Guid? reversesMovementId)
@@ -266,7 +302,7 @@ public class AccountMovement : TenantEntity
         Direction = direction;
         Amount = Guard.Money(amount, "Importe", allowZero: false);
         OccurredAtUtc = DateTime.SpecifyKind(occurredAtUtc, DateTimeKind.Utc);
-        Description = Guard.Required(description, "Descripción", 250);
+        Description = Guard.Required(description, "Descripción", DescriptionMaxLength);
         BudgetId = budgetId;
         PaymentId = paymentId;
         ReversesMovementId = reversesMovementId;

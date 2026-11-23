@@ -68,30 +68,49 @@ public class ClinicalEntry : TenantEntity, ISensitiveData
 
     private void SetContent(string title, string? description, string? indications)
     {
-        Title = Guard.Required(title, "Procedimiento / título", 200);
-        Description = Guard.Optional(description, "Descripción", 8000);
-        Indications = Guard.Optional(indications, "Indicaciones", 2000);
+        var (t, d, i) = ValidateContent(title, description, indications);
+        Title = t;
+        Description = d;
+        Indications = i;
     }
 
-    private void SetTeeth(IEnumerable<int> teeth)
+    private static (string Title, string? Description, string? Indications) ValidateContent(string title, string? description, string? indications) =>
+        (Guard.Required(title, "Procedimiento / título", 200),
+         Guard.Optional(description, "Descripción", 8000),
+         Guard.Optional(indications, "Indicaciones", 2000));
+
+    private static List<int> ValidateTeeth(IEnumerable<int> teeth)
     {
         var codes = teeth.Distinct().ToList();
         foreach (var c in codes) Fdi.Get(c);
+        return codes;
+    }
+
+    private void SetTeeth(IEnumerable<int> teeth) => ReplaceTeeth(ValidateTeeth(teeth));
+
+    private void ReplaceTeeth(List<int> codes)
+    {
         _teeth.Clear();
         _teeth.AddRange(codes.Select(c => new ClinicalEntryTooth(Id, c)));
     }
 
-    /// <summary>Corrige el registro preservando la versión previa. Requiere motivo.</summary>
+    /// <summary>
+    /// Corrige el registro preservando la versión previa. Requiere motivo. Es atómica: se valida todo
+    /// (motivo, contenido y piezas) antes de crear la revisión o modificar el registro.
+    /// </summary>
     public ClinicalEntryRevision Amend(string title, string? description, string? indications, IEnumerable<int> teeth,
         string reason, Guid userId, DateTime nowUtc)
     {
         if (IsVoided) throw new DomainException("No puede corregirse un registro anulado.", "clinical_entry_voided");
         var r = Guard.Required(reason, "Motivo de corrección", 500);
+        var content = ValidateContent(title, description, indications);
+        var codes = ValidateTeeth(teeth);
+
         var revision = new ClinicalEntryRevision(ConsultorioId, Id, Version, Title, Description, Indications,
             string.Join(',', _teeth.Select(t => t.ToothCode).Order()), r, userId, nowUtc);
         _revisions.Add(revision);
-        SetContent(title, description, indications);
-        SetTeeth(teeth);
+        (Title, Description, Indications) = content;
+        ReplaceTeeth(codes);
         Version++;
         return revision;
     }

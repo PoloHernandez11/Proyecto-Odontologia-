@@ -85,6 +85,8 @@ public interface IPaymentService
 internal sealed class BudgetService(IApplicationDbContext db, ITenantContext tenant, IConsultorioClock clock, ISequenceGenerator sequences,
     IAuditWriter audit) : IBudgetService
 {
+    private const string BudgetConflict = "El presupuesto fue modificado por otra operación. Actualice y reintente.";
+
     public async Task<PagedResult<BudgetDto>> SearchAsync(BudgetQuery q, CancellationToken ct)
     {
         tenant.Require(Permissions.BudgetsRead);
@@ -109,7 +111,7 @@ internal sealed class BudgetService(IApplicationDbContext db, ITenantContext ten
         await EnsurePlanAsync(patientId, r.TreatmentPlanId, ct);
         var today = await clock.TodayAsync(ct);
 
-        await using var tx = await db.Database.BeginTransactionAsync(ct);
+        await using var tx = await db.BeginTransactionAsync(ct);
         var number = await sequences.NextAsync(ConsultorioSequence.Budget, ct);
         var budget = new Budget(tenant.ConsultorioId, patientId, number, r.TreatmentPlanId, r.IssueDate ?? today, r.ExpirationDate ?? today.AddDays(30),
             r.DiscountPercent, r.Notes);
@@ -131,7 +133,7 @@ internal sealed class BudgetService(IApplicationDbContext db, ITenantContext ten
         b.SetNotes(r.Notes);
         foreach (var item in b.Items.ToList()) b.RemoveItem(item.Id);
         await AddItemsAsync(b, b.PatientId, r, ct);
-        await db.SaveChangesAsync(ct);
+        await db.SaveOrConflictAsync(BudgetConflict, ct);
         return await GetAsync(id, ct);
     }
 
@@ -140,7 +142,7 @@ internal sealed class BudgetService(IApplicationDbContext db, ITenantContext ten
         tenant.Require(Permissions.BudgetsWrite);
         var b = await LoadAsync(id, ct);
         b.Issue(tenant.UserId, clock.UtcNow);
-        await db.SaveChangesAsync(ct);
+        await db.SaveOrConflictAsync(BudgetConflict, ct);
         return await GetAsync(id, ct);
     }
 
@@ -153,7 +155,7 @@ internal sealed class BudgetService(IApplicationDbContext db, ITenantContext ten
         if (b.Total > 0)
             db.AccountMovements.Add(new AccountMovement(tenant.ConsultorioId, b.PatientId, MovementType.BudgetCharge, MovementDirection.Debit, b.Total,
                 clock.UtcNow, $"Presupuesto #{b.Number} aprobado", b.Id, null, null));
-        await db.SaveChangesAsync(ct);
+        await db.SaveOrConflictAsync(BudgetConflict, ct);
         audit.Write(AuditAction.BudgetStatusChanged, nameof(Budget), b.Id.ToString(), "Aprobado");
         return await GetAsync(id, ct);
     }
@@ -163,7 +165,7 @@ internal sealed class BudgetService(IApplicationDbContext db, ITenantContext ten
         tenant.Require(Permissions.BudgetsApprove);
         var b = await LoadAsync(id, ct);
         b.Reject(r.Reason, tenant.UserId, clock.UtcNow);
-        await db.SaveChangesAsync(ct);
+        await db.SaveOrConflictAsync(BudgetConflict, ct);
         audit.Write(AuditAction.BudgetStatusChanged, nameof(Budget), b.Id.ToString(), "Rechazado");
         return await GetAsync(id, ct);
     }
@@ -175,13 +177,17 @@ internal sealed class BudgetService(IApplicationDbContext db, ITenantContext ten
         var b = await LoadAsync(id, ct);
         var wasApproved = b.Status == BudgetStatus.Approved;
         b.Cancel(r.Reason ?? "", tenant.UserId, clock.UtcNow);
+        await using var tx = await db.BeginTransactionAsync(ct);
+        // Primero el cambio de estado (verifica la versión): una cancelación simultánea recibe 409 antes de duplicar el contraasiento.
+        await db.SaveOrConflictAsync(BudgetConflict, ct);
         if (wasApproved && b.Total > 0)
         {
             var charge = await db.AccountMovements.FirstOrDefaultAsync(m => m.BudgetId == b.Id && m.Type == MovementType.BudgetCharge, ct);
             db.AccountMovements.Add(new AccountMovement(tenant.ConsultorioId, b.PatientId, MovementType.BudgetChargeReversal, MovementDirection.Credit,
                 b.Total, clock.UtcNow, $"Cancelación presupuesto #{b.Number}", b.Id, null, charge?.Id));
+            await db.SaveChangesAsync(ct);
         }
-        await db.SaveChangesAsync(ct);
+        await tx.CommitAsync(ct);
         audit.Write(AuditAction.BudgetStatusChanged, nameof(Budget), b.Id.ToString(), "Cancelado");
         return await GetAsync(id, ct);
     }
@@ -200,9 +206,23 @@ internal sealed class BudgetService(IApplicationDbContext db, ITenantContext ten
     {
         var today = await clock.TodayAsync(ct);
         var due = await db.Budgets.Where(b => b.Status == BudgetStatus.Issued && b.ExpirationDate < today).ToListAsync(ct);
-        foreach (var b in due) b.MarkExpiredIfDue(today, clock.UtcNow);
-        await db.SaveChangesAsync(ct);
-        return due.Count;
+        var expired = 0;
+        // Se guarda por presupuesto: si uno se aprobó/rechazó en simultáneo (token Version), se omite ese y el ciclo
+        // continúa con los demás en lugar de fallar completo.
+        foreach (var b in due)
+        {
+            if (!b.MarkExpiredIfDue(today, clock.UtcNow)) continue;
+            try
+            {
+                await db.SaveChangesAsync(ct);
+                expired++;
+            }
+            catch (DbUpdateConcurrencyException ex)
+            {
+                ex.DiscardPendingChanges();
+            }
+        }
+        return expired;
     }
 
     private async Task AddItemsAsync(Budget budget, Guid patientId, SaveBudgetRequest r, CancellationToken ct)
@@ -270,6 +290,9 @@ internal sealed class BudgetService(IApplicationDbContext db, ITenantContext ten
 internal sealed class PaymentService(IApplicationDbContext db, ITenantContext tenant, IConsultorioClock clock, ISequenceGenerator sequences,
     IAuditWriter audit) : IPaymentService
 {
+    private const string PaymentConflict = "El pago fue modificado por otra operación. Actualice y reintente.";
+    private const string BudgetBalanceConflict = "El saldo del presupuesto cambió por otra operación simultánea. Actualice y reintente.";
+
     public async Task<PagedResult<PaymentDto>> SearchAsync(PaymentQuery q, CancellationToken ct)
     {
         tenant.Require(Permissions.FinanceRead);
@@ -298,7 +321,7 @@ internal sealed class PaymentService(IApplicationDbContext db, ITenantContext te
         var paidAt = r.PaidAt?.UtcDateTime ?? now;
         if (paidAt > now.AddMinutes(5)) throw new RequestValidationException("paidAt", "La fecha de pago no puede ser futura.");
 
-        await using var tx = await db.Database.BeginTransactionAsync(ct);
+        await using var tx = await db.BeginTransactionAsync(ct);
         if (r.BudgetId is { } bid)
         {
             var budget = await db.Budgets.FirstOrDefaultAsync(b => b.Id == bid && b.PatientId == r.PatientId, ct)
@@ -309,6 +332,9 @@ internal sealed class PaymentService(IApplicationDbContext db, ITenantContext te
             var outstanding = AccountCalculator.BudgetOutstanding(budget, payments);
             if (r.Amount > outstanding)
                 throw new BusinessRuleException($"El importe supera el saldo pendiente del presupuesto ({outstanding:N2}).", "amount_exceeds_outstanding");
+            // Cambia la versión del presupuesto: si otro pago se validó en paralelo contra el mismo saldo,
+            // sólo uno puede guardarse; el otro recibe 409 y debe reintentar con el saldo actualizado.
+            budget.MarkPaymentApplied();
         }
 
         var number = await sequences.NextAsync(ConsultorioSequence.Receipt, ct);
@@ -316,7 +342,7 @@ internal sealed class PaymentService(IApplicationDbContext db, ITenantContext te
         db.Payments.Add(payment);
         db.AccountMovements.Add(new AccountMovement(tenant.ConsultorioId, r.PatientId, MovementType.Payment, MovementDirection.Credit, payment.Amount,
             paidAt, $"Pago recibo #{number} ({r.Method})", r.BudgetId, payment.Id, null));
-        await db.SaveChangesAsync(ct);
+        await db.SaveOrConflictAsync(BudgetBalanceConflict, ct);
         await tx.CommitAsync(ct);
         return await GetAsync(payment.Id, ct);
     }
@@ -328,9 +354,13 @@ internal sealed class PaymentService(IApplicationDbContext db, ITenantContext te
         var p = await db.Payments.FirstOrDefaultAsync(x => x.Id == id, ct) ?? throw new NotFoundException("El pago no existe.");
         p.Void(r.Reason, tenant.UserId, clock.UtcNow);
         var original = await db.AccountMovements.FirstOrDefaultAsync(m => m.PaymentId == p.Id && m.Type == MovementType.Payment, ct);
+        await using var tx = await db.BeginTransactionAsync(ct);
+        // Primero la anulación (verifica la versión): una anulación simultánea recibe 409 antes de duplicar el contraasiento.
+        await db.SaveOrConflictAsync(PaymentConflict, ct);
         db.AccountMovements.Add(new AccountMovement(tenant.ConsultorioId, p.PatientId, MovementType.PaymentReversal, MovementDirection.Debit, p.Amount,
-            clock.UtcNow, $"Anulación recibo #{p.ReceiptNumber}: {r.Reason}", p.BudgetId, p.Id, original?.Id));
+            clock.UtcNow, AccountMovement.FitDescription($"Anulación recibo #{p.ReceiptNumber}: {r.Reason}"), p.BudgetId, p.Id, original?.Id));
         await db.SaveChangesAsync(ct);
+        await tx.CommitAsync(ct);
         audit.Write(AuditAction.PaymentVoided, nameof(Payment), p.Id.ToString(), $"Recibo #{p.ReceiptNumber}");
         return await GetAsync(id, ct);
     }
@@ -369,5 +399,60 @@ internal sealed class PaymentService(IApplicationDbContext db, ITenantContext te
         return items.Select(p => new PaymentDto(p.Id, p.ReceiptNumber, p.PatientId, patients.GetValueOrDefault(p.PatientId, "?"), p.BudgetId,
             p.BudgetId is null ? null : numbers.GetValueOrDefault(p.BudgetId.Value), p.Amount, p.Method, p.PaidAtUtc, p.Reference, p.Notes, p.Status,
             names.GetValueOrDefault(p.ReceivedByUserId, "?"), p.VoidedAtUtc, p.VoidReason)).ToList();
+    }
+}
+
+/// <summary>Utilidades de concurrencia optimista (token Version) compartidas por los servicios de la aplicación.</summary>
+internal static class OptimisticConcurrency
+{
+    /// <summary>Guarda y traduce un conflicto de concurrencia optimista (token Version) en 409 con un mensaje del dominio.</summary>
+    public static async Task SaveOrConflictAsync(this IApplicationDbContext db, string message, CancellationToken ct)
+    {
+        try { await db.SaveChangesAsync(ct); }
+        catch (DbUpdateConcurrencyException)
+        {
+            throw new ConflictException(message, "concurrency_conflict");
+        }
+    }
+
+    /// <summary>
+    /// Guarda; ante un conflicto de concurrencia descarta todos los cambios pendientes y devuelve false
+    /// (para procesos en lote que deben continuar con el resto).
+    /// </summary>
+    public static async Task<bool> TrySaveAsync(this IApplicationDbContext db, CancellationToken ct)
+    {
+        try
+        {
+            await db.SaveChangesAsync(ct);
+            return true;
+        }
+        catch (DbUpdateConcurrencyException ex)
+        {
+            ex.DiscardPendingChanges();
+            return false;
+        }
+    }
+
+    /// <summary>Descarta (desasocia) todos los cambios no confirmados del contexto, incluida la auditoría generada por el intento fallido.</summary>
+    public static void DiscardPendingChanges(this DbUpdateConcurrencyException ex)
+    {
+        var context = ex.Entries.FirstOrDefault()?.Context;
+        if (context is null) return;
+        foreach (var entry in context.ChangeTracker.Entries().Where(e => e.State is not (EntityState.Unchanged or EntityState.Detached)).ToList())
+            entry.State = EntityState.Detached;
+    }
+
+    /// <summary>
+    /// Desasocia sólo las entidades en conflicto y la auditoría agregada por el intento fallido (se regenera al reintentar),
+    /// conservando el resto de los cambios pendientes para un nuevo guardado.
+    /// </summary>
+    public static void DetachEntitiesAndPendingAudit(this DbUpdateConcurrencyException ex, IEnumerable<object> entities)
+    {
+        var context = ex.Entries.FirstOrDefault()?.Context;
+        if (context is null) return;
+        var set = entities.ToHashSet(ReferenceEqualityComparer.Instance);
+        foreach (var entry in context.ChangeTracker.Entries()
+                     .Where(e => set.Contains(e.Entity) || (e.Entity is AuditLog && e.State == EntityState.Added)).ToList())
+            entry.State = EntityState.Detached;
     }
 }

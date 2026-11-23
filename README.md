@@ -176,7 +176,9 @@ ODONTIA_TEST_MYSQL="server=localhost;port=3306;database=odontia_test;user=root;p
 
 - OpenAPI: `/swagger/v1/swagger.json` y `/swagger/v1/swagger.yaml` (copias versionadas en [docs/openapi.v1.json](docs/openapi.v1.json) y [docs/openapi.v1.yaml](docs/openapi.v1.yaml)), con `operationId` únicos para generar clientes TypeScript
 - Tabla completa de endpoints y permisos: [docs/ENDPOINTS.md](docs/ENDPOINTS.md)
-- Postman: importar `postman/Odontia.postman_collection.json` y `postman/Odontia.local.postman_environment.json`
+- Postman: importar `postman/Odontia.postman_collection.json` y `postman/Odontia.local.postman_environment.json`. Es un flujo
+  ejecutable con aserciones (completar `email`/`password` de una cuenta de prueba); uso con newman, límites de tasa y carpeta Manual en
+  [docs/ENDPOINTS.md › Postman / newman](docs/ENDPOINTS.md#postman--newman)
 
 Para regenerar `docs/ENDPOINTS.md` y la colección Postman después de cambiar la API, exportar el OpenAPI a
 `docs/openapi.v1.json` (y `/swagger/v1/swagger.yaml` a `docs/openapi.v1.yaml`) y ejecutar `node tools/gen-docs.js .` desde la carpeta `Odontia`.

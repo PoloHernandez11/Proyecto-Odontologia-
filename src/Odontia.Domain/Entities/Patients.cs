@@ -69,6 +69,8 @@ public class Patient : TenantEntity
     public PatientStatus Status { get; private set; }
     /// <summary>Campo normalizado para búsqueda insensible a mayúsculas/acentos ("apellido nombre").</summary>
     public string SearchName { get; private set; } = default!;
+    /// <summary>Token de concurrencia optimista: ediciones simultáneas del paciente responden 409.</summary>
+    public Guid Version { get; private set; } = Guid.NewGuid();
 
     public HealthInsurance? HealthInsurance { get; private set; }
     public MedicalHistory? MedicalHistory { get; private set; }
@@ -91,53 +93,85 @@ public class Patient : TenantEntity
         return new string(chars.ToArray()).Normalize(System.Text.NormalizationForm.FormC);
     }
 
+    // Cada método valida todos sus datos antes de modificar la entidad (sin mutaciones parciales).
+
     public void SetIdentity(string firstName, string lastName, string documentNumber)
     {
-        FirstName = Guard.Required(firstName, "Nombre", 80);
-        LastName = Guard.Required(lastName, "Apellido", 80);
+        var first = Guard.Required(firstName, "Nombre", 80);
+        var last = Guard.Required(lastName, "Apellido", 80);
         var doc = NormalizeDocument(Guard.Required(documentNumber, "DNI", 20));
         if (doc.Length is < 6 or > 15) throw new DomainException("El DNI informado no es válido.", "invalid_document");
+        FirstName = first;
+        LastName = last;
         DocumentNumber = doc;
         SearchName = NormalizeText($"{LastName} {FirstName}");
+        Touch();
     }
 
     public void SetPersonalData(DateOnly? birthDate, Sex sex, string? occupation, DateOnly today)
     {
         if (birthDate is not null && (birthDate > today || birthDate < today.AddYears(-130)))
             throw new DomainException("La fecha de nacimiento no es válida.", "invalid_birthdate");
+        var occ = Guard.Optional(occupation, "Ocupación", 100);
         BirthDate = birthDate;
         Sex = sex;
-        Occupation = Guard.Optional(occupation, "Ocupación", 100);
+        Occupation = occ;
+        Touch();
     }
 
     public void SetContact(string? phone, string? email, string? addressLine, string? city, string? province, string? postalCode)
     {
-        Phone = Guard.Optional(phone, "Teléfono", 40);
-        PhoneNormalized = NormalizePhone(Phone);
-        Email = Guard.Optional(email, "Correo", 256)?.ToLowerInvariant();
-        AddressLine = Guard.Optional(addressLine, "Domicilio", 250);
-        City = Guard.Optional(city, "Ciudad", 100);
-        Province = Guard.Optional(province, "Provincia", 100);
-        PostalCode = Guard.Optional(postalCode, "Código postal", 20);
+        var ph = Guard.Optional(phone, "Teléfono", 40);
+        var mail = Guard.Optional(email, "Correo", 256)?.ToLowerInvariant();
+        var addr = Guard.Optional(addressLine, "Domicilio", 250);
+        var c = Guard.Optional(city, "Ciudad", 100);
+        var prov = Guard.Optional(province, "Provincia", 100);
+        var zip = Guard.Optional(postalCode, "Código postal", 20);
+        Phone = ph;
+        PhoneNormalized = NormalizePhone(ph);
+        Email = mail;
+        AddressLine = addr;
+        City = c;
+        Province = prov;
+        PostalCode = zip;
+        Touch();
     }
 
     public void SetEmergencyContact(string? name, string? phone, string? relationship)
     {
-        EmergencyContactName = Guard.Optional(name, "Contacto de emergencia", 120);
-        EmergencyContactPhone = Guard.Optional(phone, "Teléfono de emergencia", 40);
-        EmergencyContactRelationship = Guard.Optional(relationship, "Vínculo", 60);
+        var n = Guard.Optional(name, "Contacto de emergencia", 120);
+        var ph = Guard.Optional(phone, "Teléfono de emergencia", 40);
+        var rel = Guard.Optional(relationship, "Vínculo", 60);
+        EmergencyContactName = n;
+        EmergencyContactPhone = ph;
+        EmergencyContactRelationship = rel;
+        Touch();
     }
 
     public void SetCoverage(Guid? healthInsuranceId, string? plan, string? affiliateNumber)
     {
+        var p = healthInsuranceId is null ? null : Guard.Optional(plan, "Plan", 60);
+        var affiliate = healthInsuranceId is null ? null : Guard.Optional(affiliateNumber, "Número de afiliado", 40);
         HealthInsuranceId = healthInsuranceId;
-        InsurancePlan = healthInsuranceId is null ? null : Guard.Optional(plan, "Plan", 60);
-        AffiliateNumber = healthInsuranceId is null ? null : Guard.Optional(affiliateNumber, "Número de afiliado", 40);
+        InsurancePlan = p;
+        AffiliateNumber = affiliate;
+        Touch();
     }
 
-    public void SetAdministrativeNotes(string? notes) => AdministrativeNotes = Guard.Optional(notes, "Observaciones", 2000);
+    public void SetAdministrativeNotes(string? notes)
+    {
+        AdministrativeNotes = Guard.Optional(notes, "Observaciones", 2000);
+        Touch();
+    }
 
-    public void SetStatus(PatientStatus status) => Status = status;
+    public void SetStatus(PatientStatus status)
+    {
+        if (Status == status) return;
+        Status = status;
+        Touch();
+    }
+
+    private void Touch() => Version = Guid.NewGuid();
 
     public int? AgeAt(DateOnly today)
     {
@@ -171,12 +205,16 @@ public class MedicalHistory : TenantEntity, ISensitiveData
     public string? Allergies { get; set; }
     public string? CurrentMedication { get; set; }
     public string? OtherConditions { get; set; }
+    /// <summary>Token de concurrencia optimista; se renueva en <see cref="Validate"/> (paso obligatorio tras modificar).</summary>
+    public Guid Version { get; private set; } = Guid.NewGuid();
 
+    /// <summary>Valida y normaliza los antecedentes cargados y marca una nueva versión.</summary>
     public void Validate()
     {
         Allergies = Guard.Optional(Allergies, "Alergias", 500);
         CurrentMedication = Guard.Optional(CurrentMedication, "Medicación actual", 1000);
         OtherConditions = Guard.Optional(OtherConditions, "Otros antecedentes", 2000);
+        Version = Guid.NewGuid();
     }
 
     /// <summary>
@@ -196,10 +234,21 @@ public class MedicalHistory : TenantEntity, ISensitiveData
         if (Hepatitis) yield return ("Hepatitis", AlertSeverity.Warning);
     }
 
+    /// <summary>Respuestas negativas habituales (normalizadas: minúsculas, sin acentos ni puntuación).</summary>
+    private static readonly HashSet<string> NegativeAnswers =
+    [
+        "no", "ninguna", "ninguno", "ningunas", "ningunos", "ninguna conocida", "ninguno conocido", "ningunas conocidas",
+        "niega", "niega alergias", "no refiere", "no refiere alergias", "refiere ninguna", "no posee", "no tiene", "no presenta",
+        "no conocidas", "no conoce", "sin alergias", "sin alergias conocidas", "sin datos", "nada", "negativo", "n a", "na",
+    ];
+
     private static bool IsNoneKnown(string text)
     {
-        var t = Patient.NormalizeText(text);
-        return t is "ninguna" or "ninguna conocida" or "no" or "niega" or "sin alergias" or "-";
+        var normalized = Patient.NormalizeText(text);
+        var words = new string(normalized.Select(c => char.IsLetterOrDigit(c) ? c : ' ').ToArray())
+            .Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        // Sin letras ni dígitos (p. ej. "-", "--", ".") equivale a no informar alergias.
+        return words.Length == 0 || NegativeAnswers.Contains(string.Join(' ', words));
     }
 }
 

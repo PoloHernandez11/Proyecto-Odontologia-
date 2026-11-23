@@ -1,4 +1,4 @@
-@if (paciente; as p) {
+@if (paciente(); as p) {
   <div class="clinical-page">
     <main class="clinical-content">
       <p class="breadcrumb"><a routerLink="/historia-clinica">Historia clínica</a> / {{ p.firstName }} {{ p.lastName }}</p>
@@ -8,10 +8,10 @@
       <nav class="clinical-tabs"><a class="selected" [routerLink]="['/historia-clinica', p.id]">Historia clínica</a>@if (veOdontograma) {
       <a [routerLink]="['/odontograma', p.id]">Odontograma</a>
     }</nav>
-    @if (historia) {
+    @if (historia(); as h) {
       <section class="background-card">
         <h3>Antecedentes y alertas</h3>
-        @for (alerta of historia.alerts; track alerta) {
+        @for (alerta of h.alerts; track $index) {
           <p class="alert-line">⚠ <strong>{{ alerta.title }}</strong>@if (alerta.details) {
           — {{ alerta.details }}
         }</p>
@@ -19,33 +19,33 @@
       @if (antecedentes.length) {
         <p><b>Antecedentes:</b> {{ antecedentes.join(', ') }}</p>
       }
-      @if (historia.medicalHistory.allergies) {
-        <p><b>Alergias:</b> {{ historia.medicalHistory.allergies }}</p>
+      @if (h.medicalHistory.allergies) {
+        <p><b>Alergias:</b> {{ h.medicalHistory.allergies }}</p>
       }
-      @if (historia.medicalHistory.currentMedication) {
-        <p><b>Medicación actual:</b> {{ historia.medicalHistory.currentMedication }}</p>
+      @if (h.medicalHistory.currentMedication) {
+        <p><b>Medicación actual:</b> {{ h.medicalHistory.currentMedication }}</p>
       }
-      @if (historia.medicalHistory.otherConditions) {
-        <p><b>Otros:</b> {{ historia.medicalHistory.otherConditions }}</p>
+      @if (h.medicalHistory.otherConditions) {
+        <p><b>Otros:</b> {{ h.medicalHistory.otherConditions }}</p>
       }
-      @if (!historia.alerts.length && !antecedentes.length && !historia.medicalHistory.allergies && !historia.medicalHistory.currentMedication && !historia.medicalHistory.otherConditions) {
+      @if (!h.alerts.length && !antecedentes.length && !h.medicalHistory.allergies && !h.medicalHistory.currentMedication && !h.medicalHistory.otherConditions) {
         <p class="muted">Sin antecedentes médicos registrados.</p>
       }
     </section>
   }
   <div class="section-heading"><div><h2>Registro de consultas</h2><p>Consultas, evoluciones y tratamientos realizados. Los registros no se borran: quedan en el historial.</p></div>@if (puedeEscribir) {
-  <button type="button" class="primary" (click)="mostrarFormulario = !mostrarFormulario">＋ Nueva consulta</button>
+  <button type="button" class="primary" (click)="mostrarFormulario.set(!mostrarFormulario())">＋ Nueva consulta</button>
 }</div>
-@if (mensaje) {
-  <p class="feedback" role="status">{{ mensaje }}</p>
+@if (mensaje()) {
+  <p class="feedback" role="status">{{ mensaje() }}</p>
 }
-@if (error) {
-  <p class="feedback error-feedback" role="alert">{{ error }}</p>
+@if (error()) {
+  <p class="feedback error-feedback" role="alert">{{ error() }}</p>
 }
-@if (mostrarFormulario) {
+@if (mostrarFormulario()) {
   <form class="record-form" [formGroup]="formulario" (ngSubmit)="guardarRegistro()">
     <h3>Registrar consulta</h3>
-    <label>Tipo de registro<select formControlName="tipo">@for (tipo of tiposDisponibles; track tipo) {
+    <label>Tipo de registro<select formControlName="tipo">@for (tipo of tiposDisponibles; track tipo[0]) {
       <option [value]="tipo[0]">{{ tipo[1] }}</option>
     }</select></label>
     <label>Motivo de consulta<input formControlName="motivo" placeholder="Ej. Dolor al masticar"></label>@if (formulario.controls.motivo.touched && formulario.controls.motivo.invalid) {
@@ -57,11 +57,11 @@
   <small>Usá números FDI de dos dígitos separados por comas.</small>
 }
 <label>Indicaciones y observaciones<textarea rows="3" formControlName="observaciones" placeholder="Indicaciones y observaciones adicionales"></textarea></label>
-<div class="form-actions"><button type="button" class="secondary" (click)="mostrarFormulario = false">Cancelar</button><button class="primary" type="submit" [disabled]="guardando">{{ guardando ? 'Guardando…' : 'Guardar consulta' }}</button></div>
+<div class="form-actions"><button type="button" class="secondary" (click)="mostrarFormulario.set(false)">Cancelar</button><button class="primary" type="submit" [disabled]="guardando()">{{ guardando() ? 'Guardando…' : 'Guardar consulta' }}</button></div>
 </form>
 }
 <section class="records">
-  @for (registro of registros; track registro) {
+  @for (registro of registros(); track registro.id) {
     <article class="record-card" [class.voided]="registro.isVoided">
       <div class="record-date">{{ fecha(registro.occurredAtUtc) }}</div>
       <div class="record-body">
@@ -81,16 +81,16 @@
       </div>
     </article>
   }
-  @if (registros.length === 0) {
+  @if (registros().length === 0) {
     <div class="empty">Todavía no hay consultas registradas para este paciente.</div>
   }
 </section>
 </main>
 </div>
 }
-@if (cargando) {
+@if (cargando()) {
   <main class="not-found"><p>Cargando la historia clínica…</p></main>
 }
-@if (noEncontrado) {
+@if (noEncontrado()) {
   <main class="not-found"><h2>No encontramos al paciente</h2><a routerLink="/historia-clinica">Elegir otro paciente</a></main>
 }

@@ -19,6 +19,16 @@ using Swashbuckle.AspNetCore.SwaggerGen;
 var builder = WebApplication.CreateBuilder(args);
 var config = builder.Configuration;
 
+Hardening.ConfigureLogging(builder.Logging, builder.Environment);
+
+// Sin cabecera "Server: Kestrel" y cuerpo máximo global chico (JSON); las cargas de archivos declaran su propio límite.
+builder.Services.Configure<RequestLimitsOptions>(config.GetSection(RequestLimitsOptions.Section));
+builder.WebHost.ConfigureKestrel(o =>
+{
+    o.AddServerHeader = false;
+    o.Limits.MaxRequestBodySize = config.GetValue(RequestLimitsOptions.Section + ":MaxBodyBytes", new RequestLimitsOptions().MaxBodyBytes);
+});
+
 // ---------------- Servicios ----------------
 builder.Services.AddApplication(config);
 builder.Services.AddInfrastructure(config, builder.Environment, OdontiaTestHooks.ConfigureDatabase);
@@ -125,6 +135,7 @@ builder.Services.AddRateLimiter(o =>
     o.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
     o.OnRejected = async (ctx, ct) =>
     {
+        Hardening.SetRetryAfter(ctx);
         var problems = ctx.HttpContext.RequestServices.GetRequiredService<Microsoft.AspNetCore.Http.IProblemDetailsService>();
         await problems.WriteAsync(new ProblemDetailsContext
         {
@@ -149,9 +160,28 @@ builder.Services.AddRateLimiter(o =>
         }));
 });
 
+// Proxys de confianza por nombre de host (p. ej. el contenedor de Caddy): se resuelven por DNS y un middleware
+// descarta las cabeceras X-Forwarded-* de cualquier otra IP. Si se configuran, reemplazan a KnownProxies/KnownNetworks.
+var knownProxyHosts = (config.GetSection("ReverseProxy:KnownProxyHosts").Get<string[]>() ?? [])
+    .Where(h => !string.IsNullOrWhiteSpace(h)).ToArray();
+if (knownProxyHosts.Length > 0)
+    builder.Services.AddSingleton(sp => new TrustedProxyHosts(knownProxyHosts,
+        TimeSpan.FromSeconds(config.GetValue("ReverseProxy:KnownProxyHostsRefreshSeconds", 60)),
+        TimeSpan.FromSeconds(5), TrustedProxyHosts.ResolveWithDnsAsync, TimeProvider.System,
+        sp.GetRequiredService<ILogger<TrustedProxyHosts>>()));
+
 builder.Services.Configure<ForwardedHeadersOptions>(o =>
 {
     o.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+    if (knownProxyHosts.Length > 0)
+    {
+        // TrustedProxyHostsMiddleware ya descartó las cabeceras que no vienen del proxy resuelto.
+        o.KnownProxies.Clear();
+        o.KnownIPNetworks.Clear();
+        o.KnownIPNetworks.Add(System.Net.IPNetwork.Parse("0.0.0.0/0"));
+        o.KnownIPNetworks.Add(System.Net.IPNetwork.Parse("::/0"));
+        return;
+    }
     foreach (var proxy in config.GetSection("ReverseProxy:KnownProxies").Get<string[]>() ?? [])
         if (System.Net.IPAddress.TryParse(proxy, out var ip)) o.KnownProxies.Add(ip);
     // Redes completas de proxys de confianza en notación CIDR (p. ej. la red interna de Docker "172.18.0.0/16"),
@@ -192,7 +222,11 @@ if (config.GetValue("Database:ApplyMigrationsOnStartup", false))
     await scope.ServiceProvider.GetRequiredService<OdontiaDbContext>().Database.MigrateAsync();
 }
 
-if (config.GetValue("ReverseProxy:Enabled", false)) app.UseForwardedHeaders();
+if (config.GetValue("ReverseProxy:Enabled", false))
+{
+    if (knownProxyHosts.Length > 0) app.UseMiddleware<TrustedProxyHostsMiddleware>();
+    app.UseForwardedHeaders();
+}
 app.UseMiddleware<SecurityHeadersMiddleware>();
 app.UseExceptionHandler();
 app.UseStatusCodePages();
@@ -213,13 +247,21 @@ if (app.Environment.IsDevelopment() || config.GetValue("Swagger:Enabled", false)
 }
 
 app.UseCors("frontend");
+app.UseMiddleware<RequestBodyLimitMiddleware>();
 app.UseAuthentication();
-app.UseMiddleware<TenantResolutionMiddleware>();
+// El rate limiter va antes de resolver el tenant (que consulta la base): una ráfaga se corta sin tocar la DB.
+// Las particiones sólo usan la IP y el "sub" del token, ya disponible tras UseAuthentication.
 app.UseRateLimiter();
+app.UseMiddleware<TenantResolutionMiddleware>();
 app.UseAuthorization();
 
 app.MapHealthChecks("/health/live", new HealthCheckOptions { Predicate = _ => false }).AllowAnonymous().DisableRateLimiting();
-app.MapHealthChecks("/health/ready", new HealthCheckOptions { Predicate = c => c.Tags.Contains("ready") }).AllowAnonymous().DisableRateLimiting();
+// Pública (la restricción de red la aplica la infraestructura) pero sin detalles: sólo el estado global.
+app.MapHealthChecks("/health/ready", new HealthCheckOptions
+{
+    Predicate = c => c.Tags.Contains("ready"),
+    ResponseWriter = Hardening.WriteMinimalHealth,
+}).AllowAnonymous().DisableRateLimiting();
 app.MapControllers().RequireCors("frontend");
 
 app.Run();

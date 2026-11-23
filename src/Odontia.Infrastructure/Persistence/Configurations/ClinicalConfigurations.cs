@@ -135,6 +135,7 @@ internal sealed class OdontogramConfiguration : IEntityTypeConfiguration<Odontog
     public void Configure(EntityTypeBuilder<Odontogram> b)
     {
         b.ToTable("Odontograms");
+        b.Property(x => x.Version).IsConcurrencyToken();
         b.HasConsultorio();
         b.HasTenantReference<Odontogram, Patient>(nameof(Odontogram.PatientId));
         b.HasIndex(x => new { x.ConsultorioId, x.PatientId }).IsUnique();

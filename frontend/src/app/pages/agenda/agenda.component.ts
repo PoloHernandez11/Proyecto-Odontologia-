@@ -1,23 +1,32 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnDestroy, inject, ChangeDetectionStrategy } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, NgZone, computed, inject, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
-import { Subject, Subscription, debounceTime, of, switchMap } from 'rxjs';
+import { Subject, debounceTime, of, switchMap } from 'rxjs';
 import { AccionTurno, ESTADOS_DE_TURNO, OdontiaApi } from '../../api/odontia-api.service';
 import { AgendaAppointmentDto, AgendaLabWorkDto, AppointmentStatus, LabWorkStatus, GabineteDto, PatientListItemDto, ProfessionalDto, ScheduleBlockDto } from '../../api/schema';
-import { fechaCorta, fechaIso, horaLocal, iniciales, mensajeDeError } from '../../core/api';
+import { esConflictoDeConcurrencia, fechaCorta, fechaIso, iniciales, mensajeDeError } from '../../core/api';
 import { AuthService } from '../../core/auth.service';
+import { diaDeCalendario, fechaEnZona, horaEnZona, instanteEnZona, minutosEnZona, partesEnZona, zonaDelNavegador, zonaValida } from '../../core/zona-horaria';
+import { DialogDirective } from '../../shared/dialog.directive';
+import { PluralPipe } from '../../shared/plural.pipe';
+import { horarioPredeterminado } from './horario-predeterminado';
 
 type Vista = 'dia' | 'semana' | 'mes';
 interface Accion { titulo: string; accion: AccionTurno; }
+interface TurnoEnGrilla { turno: AgendaAppointmentDto; top: number; alto: number; trabajos: AgendaLabWorkDto[]; resumen: string; }
+interface BloqueoEnGrilla { bloqueo: ScheduleBlockDto; top: number; alto: number; }
+interface ColumnaDelDia { profesional: ProfessionalDto; turnos: TurnoEnGrilla[]; bloqueos: BloqueoEnGrilla[]; }
 
-const ALTO_HORA = 64;
-const ANCHO_TARJETA = 300; // ancho de la tarjeta de detalle al pasar el mouse
+const ALTO_HORA = 64; // píxeles por hora en la vista de día
+const ANCHO_TARJETA = 300; // ancho de la tarjeta de detalle
+const PRESION_LARGA_MS = 500; // en pantallas táctiles, mantener presionado un turno abre su detalle
 
 const ESTADOS_DE_TRABAJO: Record<LabWorkStatus, string> = {
   Pending: 'Solicitado', Sent: 'Enviado', InProduction: 'En proceso', ReadyForPickup: 'Listo para retirar',
   Received: 'Recibido', Placed: 'Colocado al paciente', Cancelled: 'Cancelado'
-}; // píxeles por hora en la vista de día
+};
 
 const ACCIONES: Partial<Record<AppointmentStatus, Accion[]>> = {
   Pending: [{ titulo: '✓ Confirmar', accion: 'confirm' }, { titulo: 'Registrar llegada', accion: 'check-in' }, { titulo: 'No asistió', accion: 'no-show' }],
@@ -32,53 +41,73 @@ const CLASE_DE_ESTADO: Record<AppointmentStatus, string> = {
   Attended: 'atendido', Cancelled: 'cancelado', NoShow: 'cancelado'
 };
 
+function piezasDe(trabajo: AgendaLabWorkDto): string {
+  const piezas = trabajo.toothCodes ?? [];
+  return piezas.length ? `${piezas.length === 1 ? 'Pieza' : 'Piezas'} ${piezas.join(', ')}` : 'Sin pieza indicada';
+}
+
+/**
+ * Agenda del consultorio. OnPush: todo el estado de la plantilla son signals y los datos derivados
+ * (turnos por profesional, posiciones en la grilla, totales) se calculan una vez en computed().
+ * Las fechas y horas se interpretan en la zona horaria del consultorio activo (memberships[].timeZoneId de la
+ * sesión); si la sesión no la trae, se usa la que informa la agenda (AgendaDto.timeZoneId).
+ */
 @Component({
   selector: 'app-agenda',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, RouterLink],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, RouterLink, DialogDirective, PluralPipe],
   templateUrl: './agenda.component.html',
-  host: { '(window:scroll)': 'ocultarDetalle()', '(window:resize)': 'ocultarDetalle()' },
-  changeDetection: ChangeDetectionStrategy.Eager,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './agenda.component.css'
 })
-export class AgendaComponent implements OnDestroy {
+export class AgendaComponent {
   private readonly api = inject(OdontiaApi);
   private readonly auth = inject(AuthService);
   private readonly route = inject(ActivatedRoute);
+  private readonly destroyRef = inject(DestroyRef);
   private readonly busquedaDePacientes = new Subject<string>();
-  private readonly suscripcion: Subscription;
 
-  readonly puedeEscribir = this.auth.tiene('appointments.write');
-  readonly puedeSobreturno = this.auth.tiene('appointments.overbook');
+  get puedeEscribir(): boolean { return this.auth.tiene('appointments.write'); }
+  get puedeSobreturno(): boolean { return this.auth.tiene('appointments.overbook'); }
   readonly estados = ESTADOS_DE_TURNO;
   readonly clases = CLASE_DE_ESTADO;
+  readonly estadosDeTrabajo = ESTADOS_DE_TRABAJO;
 
-  vista: Vista = 'dia';
-  fechaActual = new Date();
-  busqueda = '';
-  profesionalSeleccionado = 'Todos';
-  profesionales: ProfessionalDto[] = [];
-  gabinetes: GabineteDto[] = [];
-  turnos: AgendaAppointmentDto[] = [];
-  bloqueos: ScheduleBlockDto[] = [];
-  turnoSeleccionado: AgendaAppointmentDto | null = null;
-  cargando = true;
-  mensaje = '';
-  error = '';
+  /** Zona que informa la respuesta de la agenda: sólo se usa si la sesión no trae la del consultorio. */
+  private readonly zonaDeLaAgenda = signal<string | null>(null);
+  /** Zona del consultorio: la de la membresía activa; si no, la de la agenda; si no, la del navegador. */
+  readonly zona = computed(() => zonaValida(this.auth.membresia()?.timeZoneId) ?? this.zonaDeLaAgenda() ?? zonaDelNavegador());
+  /** Mientras el usuario no navegue, la fecha visible sigue a "hoy" en la zona del consultorio. */
+  private siguiendoHoy = true;
+  private readonly ahora = signal(new Date());
+
+  readonly vista = signal<Vista>('dia');
+  /** Día de calendario visible (campos locales = fecha en la zona del consultorio). */
+  readonly fechaActual = signal(diaDeCalendario(fechaEnZona(new Date(), this.zona())));
+  readonly busqueda = signal('');
+  readonly profesionalSeleccionado = signal('Todos');
+  readonly profesionales = signal<ProfessionalDto[]>([]);
+  readonly gabinetes = signal<GabineteDto[]>([]);
+  readonly turnos = signal<AgendaAppointmentDto[]>([]);
+  readonly bloqueos = signal<ScheduleBlockDto[]>([]);
+  readonly turnoSeleccionado = signal<AgendaAppointmentDto | null>(null);
+  readonly cargando = signal(true);
+  readonly mensaje = signal('');
+  readonly error = signal('');
 
   // Cancelación con motivo
-  cancelando = false;
-  motivoCancelacion = '';
+  readonly cancelando = signal(false);
+  readonly motivoCancelacion = signal('');
 
   // Alta de turno
-  mostrarFormulario = false;
-  guardando = false;
-  errorFormulario = '';
-  textoPaciente = '';
-  pacientesEncontrados: PatientListItemDto[] = [];
-  pacienteElegido: PatientListItemDto | null = null;
-  formularioTurno = new FormGroup({
-    fecha: new FormControl(fechaIso(new Date()), { nonNullable: true, validators: [Validators.required] }),
+  readonly mostrarFormulario = signal(false);
+  readonly guardando = signal(false);
+  readonly errorFormulario = signal('');
+  readonly textoPaciente = signal('');
+  readonly pacientesEncontrados = signal<PatientListItemDto[]>([]);
+  readonly pacienteElegido = signal<PatientListItemDto | null>(null);
+  readonly formularioTurno = new FormGroup({
+    fecha: new FormControl(fechaEnZona(new Date(), this.zona()), { nonNullable: true, validators: [Validators.required] }),
     hora: new FormControl('09:00', { nonNullable: true, validators: [Validators.required] }),
     duracion: new FormControl(30, { nonNullable: true, validators: [Validators.required, Validators.min(5), Validators.max(480)] }),
     profesional: new FormControl('', { nonNullable: true, validators: [Validators.required] }),
@@ -87,184 +116,317 @@ export class AgendaComponent implements OnDestroy {
     sobreturno: new FormControl(false, { nonNullable: true })
   });
 
-  constructor() {
-    this.suscripcion = this.busquedaDePacientes.pipe(
-      debounceTime(250),
-      switchMap(texto => (texto.trim().length < 2 ? of(null) : this.api.pacientes({ Search: texto.trim(), pageSize: 8 })))
-    ).subscribe({ next: pagina => (this.pacientesEncontrados = pagina?.items ?? []) });
+  // Tarjeta de detalle (mouse, teclado o presión larga en pantallas táctiles)
+  readonly turnoEnDetalle = signal<AgendaAppointmentDto | null>(null);
+  readonly posicionDetalle = signal({ top: 0, left: 0 });
+  private temporizadorPresion: ReturnType<typeof setTimeout> | null = null;
+  private inicioPresion = { x: 0, y: 0 };
+  private ignorarSiguienteClic = false;
 
-    this.api.profesionales().subscribe({
+  constructor() {
+    this.busquedaDePacientes.pipe(
+      debounceTime(250),
+      switchMap(texto => (texto.trim().length < 2 ? of(null) : this.api.pacientes({ Search: texto.trim(), pageSize: 8 }))),
+      takeUntilDestroyed()
+    ).subscribe({ next: pagina => this.pacientesEncontrados.set(pagina?.items ?? []) });
+
+    this.api.profesionales().pipe(takeUntilDestroyed()).subscribe({
       next: profesionales => {
-        this.profesionales = profesionales;
+        this.profesionales.set(profesionales);
         // Quien sólo puede ver su propia agenda arranca filtrado en sí mismo.
         if (!this.auth.tiene('agenda.all_professionals') && profesionales.some(p => p.userId === this.auth.userId)) {
-          this.profesionalSeleccionado = this.auth.userId!;
+          this.profesionalSeleccionado.set(this.auth.userId!);
         }
         this.cargar();
         this.abrirDesdeLaUrl();
       },
-      error: error => { this.cargando = false; this.error = mensajeDeError(error, 'No se pudo cargar la agenda.'); }
+      error: error => { this.cargando.set(false); this.error.set(mensajeDeError(error, 'No se pudo cargar la agenda.')); }
     });
-    this.api.gabinetes().subscribe({ next: gabinetes => (this.gabinetes = gabinetes.filter(g => g.isActive)) });
-  }
+    this.api.gabinetes().pipe(takeUntilDestroyed()).subscribe({ next: gabinetes => this.gabinetes.set(gabinetes.filter(g => g.isActive)) });
 
-  ngOnDestroy(): void { this.suscripcion.unsubscribe(); }
+    // Scroll, resize y reloj fuera de la zona de Angular: no disparan detección de cambios global.
+    // Sólo cuando cambia un signal se refresca esta vista.
+    const zone = inject(NgZone);
+    zone.runOutsideAngular(() => {
+      const ocultar = () => { if (this.turnoEnDetalle()) this.ocultarDetalle(); };
+      window.addEventListener('scroll', ocultar, { passive: true });
+      window.addEventListener('resize', ocultar, { passive: true });
+      const reloj = setInterval(() => this.ahora.set(new Date()), 60_000);
+      this.destroyRef.onDestroy(() => {
+        window.removeEventListener('scroll', ocultar);
+        window.removeEventListener('resize', ocultar);
+        clearInterval(reloj);
+        this.cancelarPresion();
+        document.removeEventListener('pointerdown', this.alTocarFuera, true);
+      });
+    });
+  }
 
   // ── Rango visible ──────────────────────────────────────────────────────────
-  private get rango(): { desde: Date; hasta: Date } {
-    const desde = new Date(this.fechaActual); desde.setHours(0, 0, 0, 0);
-    if (this.vista === 'semana') desde.setDate(desde.getDate() - ((desde.getDay() + 6) % 7));
-    if (this.vista === 'mes') desde.setDate(1);
+  private readonly rango = computed(() => {
+    const vista = this.vista();
+    const desde = new Date(this.fechaActual());
+    if (vista === 'semana') desde.setDate(desde.getDate() - ((desde.getDay() + 6) % 7));
+    if (vista === 'mes') desde.setDate(1);
     const hasta = new Date(desde);
-    if (this.vista === 'dia') hasta.setDate(hasta.getDate() + 1);
-    else if (this.vista === 'semana') hasta.setDate(hasta.getDate() + 7);
+    if (vista === 'dia') hasta.setDate(hasta.getDate() + 1);
+    else if (vista === 'semana') hasta.setDate(hasta.getDate() + 7);
     else hasta.setMonth(hasta.getMonth() + 1);
     return { desde, hasta };
-  }
+  });
 
-  get fechaTitulo(): string {
-    const { desde, hasta } = this.rango;
-    if (this.vista === 'dia') {
-      const texto = new Intl.DateTimeFormat('es-AR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }).format(desde);
-      return texto.charAt(0).toUpperCase() + texto.slice(1);
-    }
-    if (this.vista === 'mes') {
-      const texto = new Intl.DateTimeFormat('es-AR', { month: 'long', year: 'numeric' }).format(desde);
+  readonly fechaTitulo = computed(() => {
+    const { desde, hasta } = this.rango();
+    const vista = this.vista();
+    if (vista === 'dia' || vista === 'mes') {
+      const opciones: Intl.DateTimeFormatOptions = vista === 'dia'
+        ? { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }
+        : { month: 'long', year: 'numeric' };
+      const texto = new Intl.DateTimeFormat('es-AR', opciones).format(desde);
       return texto.charAt(0).toUpperCase() + texto.slice(1);
     }
     const fin = new Date(hasta); fin.setDate(fin.getDate() - 1);
     return `Semana del ${fechaCorta(fechaIso(desde))} al ${fechaCorta(fechaIso(fin))}`;
+  });
+
+  /** @param limpiarError false para conservar el aviso de un conflicto mientras se recargan los datos. */
+  cargar(limpiarError = true): void {
+    const { desde, hasta } = this.rango();
+    this.cargando.set(true);
+    const ultimoDia = new Date(hasta); ultimoDia.setDate(ultimoDia.getDate() - 1);
+    const profesional = this.profesionalSeleccionado();
+    this.api.agenda(fechaIso(desde), fechaIso(ultimoDia), profesional === 'Todos' ? null : profesional)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: agenda => {
+          if (this.adoptarZona(agenda.timeZoneId)) return; // la fecha de "hoy" cambió con la zona: se recargó
+          this.cargando.set(false);
+          if (limpiarError) this.error.set('');
+          const turnos = [...agenda.appointments].sort((a, b) => a.startUtc.localeCompare(b.startUtc));
+          this.turnos.set(turnos);
+          this.bloqueos.set(agenda.blocks);
+          this.turnoEnDetalle.set(null);
+          const seleccionado = this.turnoSeleccionado();
+          if (seleccionado) this.turnoSeleccionado.set(turnos.find(turno => turno.id === seleccionado.id) ?? null);
+        },
+        error: error => { this.cargando.set(false); this.error.set(mensajeDeError(error, 'No se pudo cargar la agenda.')); }
+      });
   }
 
-  cargar(): void {
-    const { desde, hasta } = this.rango;
-    this.cargando = true;
-    const ultimoDia = new Date(hasta); ultimoDia.setDate(ultimoDia.getDate() - 1);
-    this.api.agenda(fechaIso(desde), fechaIso(ultimoDia), this.profesionalSeleccionado === 'Todos' ? null : this.profesionalSeleccionado).subscribe({
-      next: agenda => {
-        this.cargando = false;
-        this.error = '';
-        this.turnos = [...agenda.appointments].sort((a, b) => a.startUtc.localeCompare(b.startUtc));
-        this.bloqueos = agenda.blocks;
-        this.turnoEnDetalle = null;
-        if (this.turnoSeleccionado) this.turnoSeleccionado = this.turnos.find(turno => turno.id === this.turnoSeleccionado!.id) ?? null;
-      },
-      error: error => { this.cargando = false; this.error = mensajeDeError(error, 'No se pudo cargar la agenda.'); }
-    });
+  /** Toma la zona que informa la agenda (respaldo). Devuelve true si eso cambió el día visible y se pidió de nuevo la agenda. */
+  private adoptarZona(timeZoneId: string | null | undefined): boolean {
+    const zonaInformada = zonaValida(timeZoneId);
+    if (!zonaInformada || zonaInformada === this.zonaDeLaAgenda()) return false;
+    const anterior = this.zona();
+    this.zonaDeLaAgenda.set(zonaInformada);
+    const zona = this.zona();
+    if (zona === anterior || !this.siguiendoHoy) return false;
+    const hoy = fechaEnZona(new Date(), zona);
+    if (hoy === fechaIso(this.fechaActual())) return false;
+    this.fechaActual.set(diaDeCalendario(hoy));
+    this.cargar();
+    return true;
   }
 
   mover(sentido: number): void {
-    const nueva = new Date(this.fechaActual);
-    if (this.vista === 'dia') nueva.setDate(nueva.getDate() + sentido);
-    else if (this.vista === 'semana') nueva.setDate(nueva.getDate() + 7 * sentido);
+    const nueva = new Date(this.fechaActual());
+    const vista = this.vista();
+    if (vista === 'dia') nueva.setDate(nueva.getDate() + sentido);
+    else if (vista === 'semana') nueva.setDate(nueva.getDate() + 7 * sentido);
     else nueva.setMonth(nueva.getMonth() + sentido, 1);
-    this.fechaActual = nueva;
-    this.turnoSeleccionado = null;
+    this.siguiendoHoy = false;
+    this.fechaActual.set(nueva);
+    this.turnoSeleccionado.set(null);
     this.cargar();
   }
-  irHoy(): void { this.fechaActual = new Date(); this.turnoSeleccionado = null; this.cargar(); }
-  seleccionarVista(vista: Vista): void { this.vista = vista; this.turnoSeleccionado = null; this.cargar(); }
-  verDia(turno: AgendaAppointmentDto): void { this.fechaActual = new Date(turno.startUtc); this.vista = 'dia'; this.cargar(); }
+  irHoy(): void {
+    this.siguiendoHoy = true;
+    this.fechaActual.set(diaDeCalendario(fechaEnZona(new Date(), this.zona())));
+    this.turnoSeleccionado.set(null);
+    this.cargar();
+  }
+  seleccionarVista(vista: Vista): void { this.vista.set(vista); this.turnoSeleccionado.set(null); this.cargar(); }
+  verDia(turno: AgendaAppointmentDto): void {
+    this.siguiendoHoy = false;
+    this.fechaActual.set(diaDeCalendario(fechaEnZona(turno.startUtc, this.zona())));
+    this.vista.set('dia');
+    this.cargar();
+  }
+  cambiarProfesional(valor: string): void { this.profesionalSeleccionado.set(valor); this.cargar(); }
 
-  // ── Datos para la plantilla ────────────────────────────────────────────────
-  get turnosFiltrados(): AgendaAppointmentDto[] {
-    const texto = this.busqueda.toLowerCase().trim();
-    if (!texto) return this.turnos;
-    return this.turnos.filter(turno => turno.patientName.toLowerCase().includes(texto) || (turno.patientPhone ?? '').includes(texto));
-  }
-  get turnosActivos(): AgendaAppointmentDto[] { return this.turnosFiltrados.filter(turno => turno.status !== 'Cancelled'); }
+  // ── Datos derivados para la plantilla ──────────────────────────────────────
+  readonly turnosFiltrados = computed(() => {
+    const texto = this.busqueda().toLowerCase().trim();
+    const turnos = this.turnos();
+    if (!texto) return turnos;
+    return turnos.filter(turno => turno.patientName.toLowerCase().includes(texto) || (turno.patientPhone ?? '').includes(texto));
+  });
+  readonly turnosActivos = computed(() => this.turnosFiltrados().filter(turno => turno.status !== 'Cancelled'));
 
-  get columnas(): ProfessionalDto[] {
-    return this.profesionalSeleccionado === 'Todos' ? this.profesionales : this.profesionales.filter(p => p.userId === this.profesionalSeleccionado);
-  }
-  turnosDe(profesional: ProfessionalDto): AgendaAppointmentDto[] { return this.turnosActivos.filter(turno => turno.professionalUserId === profesional.userId); }
-  bloqueosDe(profesional: ProfessionalDto): ScheduleBlockDto[] {
-    return this.bloqueos.filter(bloqueo => bloqueo.kind !== 'ExtraAvailability' && (!bloqueo.professionalUserId || bloqueo.professionalUserId === profesional.userId));
-  }
+  readonly columnas = computed(() => {
+    const elegido = this.profesionalSeleccionado();
+    const profesionales = this.profesionales();
+    return elegido === 'Todos' ? profesionales : profesionales.filter(p => p.userId === elegido);
+  });
 
   /** Horas visibles en la vista de día: de 8 a 20, ampliadas si hay turnos fuera de ese rango. */
-  get horas(): number[] {
+  readonly horas = computed(() => {
+    const zona = this.zona();
     let desde = 8, hasta = 20;
-    for (const turno of this.turnosActivos) {
-      const inicio = new Date(turno.startUtc), fin = new Date(turno.endUtc);
-      desde = Math.min(desde, inicio.getHours());
-      hasta = Math.max(hasta, fin.getHours() + (fin.getMinutes() > 0 ? 1 : 0));
+    for (const turno of this.turnosActivos()) {
+      const inicio = partesEnZona(turno.startUtc, zona), fin = partesEnZona(turno.endUtc, zona);
+      desde = Math.min(desde, inicio.hora);
+      hasta = Math.max(hasta, fin.hora + (fin.minuto > 0 ? 1 : 0));
     }
     return Array.from({ length: hasta - desde }, (_, indice) => desde + indice);
-  }
-  get altoDelDia(): number { return this.horas.length * ALTO_HORA; }
-  private posicion(inicioUtc: string, finUtc: string): { top: number; height: number } {
-    const inicio = new Date(inicioUtc), fin = new Date(finUtc);
-    const dia = new Date(this.fechaActual); dia.setHours(this.horas[0], 0, 0, 0);
-    const top = Math.max(0, (inicio.getTime() - dia.getTime()) / 3_600_000 * ALTO_HORA);
-    const bottom = Math.min(this.altoDelDia, (fin.getTime() - dia.getTime()) / 3_600_000 * ALTO_HORA);
-    return { top, height: Math.max(26, bottom - top - 2) };
-  }
-  estilo(elemento: { startUtc: string; endUtc: string }): Record<string, string> {
-    const { top, height } = this.posicion(elemento.startUtc, elemento.endUtc);
-    return { top: `${top}px`, height: `${height}px` };
-  }
-  get lineaDeAhora(): number | null {
-    const ahora = new Date();
-    if (this.vista !== 'dia' || fechaIso(ahora) !== fechaIso(this.fechaActual)) return null;
-    const horas = ahora.getHours() + ahora.getMinutes() / 60 - this.horas[0];
-    return horas < 0 || horas > this.horas.length ? null : horas * ALTO_HORA;
+  });
+  readonly altoDelDia = computed(() => this.horas().length * ALTO_HORA);
+  readonly columnasCss = computed(() => `60px repeat(${this.columnas().length || 1}, minmax(0, 1fr))`);
+
+  /** Posición vertical (px) de un tramo dentro del día visible, en la zona del consultorio. */
+  private posicion(inicioUtc: string, finUtc: string): { top: number; alto: number } {
+    const zona = this.zona();
+    const dia = fechaIso(this.fechaActual());
+    const base = this.horas()[0] * 60;
+    const minutos = (instante: string, siEsAntes: number, siEsDespues: number) => {
+      const fecha = fechaEnZona(instante, zona);
+      return fecha < dia ? siEsAntes : fecha > dia ? siEsDespues : minutosEnZona(instante, zona);
+    };
+    const top = Math.max(0, (minutos(inicioUtc, 0, 24 * 60) - base) / 60 * ALTO_HORA);
+    const bottom = Math.min(this.altoDelDia(), (minutos(finUtc, 0, 24 * 60) - base) / 60 * ALTO_HORA);
+    return { top, alto: Math.max(26, bottom - top - 2) };
   }
 
-  hora(instante: string): string { return horaLocal(instante); }
-  fecha(instante: string): string { return fechaCorta(instante); }
+  /** Turnos y bloqueos agrupados por profesional, con su posición ya calculada (una vez por cambio de datos). */
+  readonly columnasDelDia = computed<ColumnaDelDia[]>(() => {
+    if (this.vista() !== 'dia') return [];
+    const turnos = this.turnosActivos();
+    const bloqueos = this.bloqueos().filter(bloqueo => bloqueo.kind !== 'ExtraAvailability');
+    return this.columnas().map(profesional => ({
+      profesional,
+      turnos: turnos.filter(turno => turno.professionalUserId === profesional.userId).map(turno => {
+        const trabajos = turno.labWorks ?? [];
+        return { turno, ...this.posicion(turno.startUtc, turno.endUtc), trabajos, resumen: this.resumenDeTrabajos(trabajos) };
+      }),
+      bloqueos: bloqueos
+        .filter(bloqueo => !bloqueo.professionalUserId || bloqueo.professionalUserId === profesional.userId)
+        .map(bloqueo => ({ bloqueo, ...this.posicion(bloqueo.startUtc, bloqueo.endUtc) }))
+    }));
+  });
+
+  readonly lineaDeAhora = computed(() => {
+    const ahora = this.ahora(), zona = this.zona();
+    if (this.vista() !== 'dia' || fechaEnZona(ahora, zona) !== fechaIso(this.fechaActual())) return null;
+    const horas = minutosEnZona(ahora, zona) / 60 - this.horas()[0];
+    return horas < 0 || horas > this.horas().length ? null : horas * ALTO_HORA;
+  });
+
+  readonly resumen = computed(() => {
+    const conteo: Partial<Record<AppointmentStatus, number>> = {};
+    for (const turno of this.turnos()) conteo[turno.status] = (conteo[turno.status] ?? 0) + 1;
+    const de = (estado: AppointmentStatus) => conteo[estado] ?? 0;
+    return {
+      agendados: this.turnos().length - de('Cancelled'), confirmados: de('Confirmed'), pendientes: de('Pending'),
+      atendidos: de('Attended'), cancelados: de('Cancelled')
+    };
+  });
+
+  readonly accionesDisponibles = computed<Accion[]>(() => {
+    const turno = this.turnoSeleccionado();
+    return turno && this.puedeEscribir ? ACCIONES[turno.status] ?? [] : [];
+  });
+  readonly puedeCancelar = computed(() => {
+    const turno = this.turnoSeleccionado();
+    return this.puedeEscribir && !!turno && ['Pending', 'Confirmed', 'Arrived', 'InWaitingRoom'].includes(turno.status);
+  });
+
+  hora(instante: string): string { return horaEnZona(instante, this.zona()); }
+  fecha(instante: string): string { return fechaCorta(fechaEnZona(instante, this.zona())); }
   iniciales(nombre: string): string { return iniciales(nombre); }
-  contar(estado: AppointmentStatus): number { return this.turnos.filter(turno => turno.status === estado).length; }
-  get accionesDisponibles(): Accion[] { return this.turnoSeleccionado && this.puedeEscribir ? ACCIONES[this.turnoSeleccionado.status] ?? [] : []; }
-  get puedeCancelar(): boolean {
-    return this.puedeEscribir && !!this.turnoSeleccionado && ['Pending', 'Confirmed', 'Arrived', 'InWaitingRoom'].includes(this.turnoSeleccionado.status);
-  }
-
-  // ── Trabajos de laboratorio del turno ──────────────────────────────────────
-  trabajosDe(turno: AgendaAppointmentDto): AgendaLabWorkDto[] { return turno.labWorks ?? []; }
-  piezas(trabajo: AgendaLabWorkDto): string {
-    const piezas = trabajo.toothCodes ?? [];
-    return piezas.length ? `${piezas.length === 1 ? 'Pieza' : 'Piezas'} ${piezas.join(', ')}` : 'Sin pieza indicada';
-  }
-  estadoDeTrabajo(trabajo: AgendaLabWorkDto): string { return ESTADOS_DE_TRABAJO[trabajo.status] ?? trabajo.status; }
+  piezas(trabajo: AgendaLabWorkDto): string { return piezasDe(trabajo); }
   /** Texto para el aria-label y el title de la marca "T". */
-  resumenDeTrabajos(turno: AgendaAppointmentDto): string {
-    const trabajos = this.trabajosDe(turno).map(t => `${this.piezas(t)} · ${t.workType} · Mecánico dental: ${t.laboratoryName}`);
-    return `Trabajos de laboratorio: ${trabajos.join('; ')}`;
+  resumenDeTrabajos(trabajos: AgendaLabWorkDto[]): string {
+    return `Trabajos de laboratorio: ${trabajos.map(t => `${piezasDe(t)} · ${t.workType} · Mecánico dental: ${t.laboratoryName}`).join('; ')}`;
   }
 
-  // ── Tarjeta de detalle al pasar el mouse o enfocar un turno ────────────────
-  turnoEnDetalle: AgendaAppointmentDto | null = null;
-  posicionDetalle = { top: 0, left: 0 };
-  mostrarDetalle(turno: AgendaAppointmentDto, evento: Event): void {
-    const elemento = evento.currentTarget as HTMLElement | null;
-    if (!elemento) return;
+  // ── Tarjeta de detalle ─────────────────────────────────────────────────────
+  private ubicarDetalle(turno: AgendaAppointmentDto, elemento: HTMLElement): void {
     const caja = elemento.getBoundingClientRect();
     // Se ubica a la derecha del turno; si no entra, a la izquierda. Verticalmente, dentro de la ventana.
     const entraALaDerecha = caja.right + 8 + ANCHO_TARJETA <= window.innerWidth;
     const left = entraALaDerecha ? caja.right + 8 : Math.max(8, caja.left - 8 - ANCHO_TARJETA);
     const top = Math.min(Math.max(8, caja.top), Math.max(8, window.innerHeight - 280));
-    this.posicionDetalle = { top, left };
-    this.turnoEnDetalle = turno;
+    this.posicionDetalle.set({ top, left });
+    this.turnoEnDetalle.set(turno);
   }
-  ocultarDetalle(): void { this.turnoEnDetalle = null; }
+  /** Mouse: al entrar. Los eventos táctiles se ignoran (en el táctil se usa la presión larga). */
+  alEntrar(turno: AgendaAppointmentDto, evento: PointerEvent): void {
+    if (evento.pointerType === 'mouse') this.ubicarDetalle(turno, evento.currentTarget as HTMLElement);
+  }
+  alSalir(evento: PointerEvent): void { if (evento.pointerType === 'mouse') this.ocultarDetalle(); }
+  /** Teclado: sólo con foco visible (un toque también enfoca el botón, y no debe abrir la tarjeta). */
+  alEnfocar(turno: AgendaAppointmentDto, evento: FocusEvent): void {
+    const elemento = evento.currentTarget as HTMLElement;
+    if (elemento.matches(':focus-visible')) this.ubicarDetalle(turno, elemento);
+  }
+  ocultarDetalle(): void { this.turnoEnDetalle.set(null); }
+
+  alPresionar(turno: AgendaAppointmentDto, evento: PointerEvent): void {
+    if (evento.pointerType === 'mouse') return;
+    this.cancelarPresion();
+    const elemento = evento.currentTarget as HTMLElement;
+    this.inicioPresion = { x: evento.clientX, y: evento.clientY };
+    this.temporizadorPresion = setTimeout(() => {
+      this.temporizadorPresion = null;
+      this.ignorarSiguienteClic = true;
+      this.ubicarDetalle(turno, elemento);
+      // El próximo toque fuera de la tarjeta la cierra.
+      setTimeout(() => document.addEventListener('pointerdown', this.alTocarFuera, true));
+    }, PRESION_LARGA_MS);
+  }
+  alMoverPresion(evento: PointerEvent): void {
+    if (this.temporizadorPresion && Math.hypot(evento.clientX - this.inicioPresion.x, evento.clientY - this.inicioPresion.y) > 10) this.cancelarPresion();
+  }
+  cancelarPresion(): void {
+    if (this.temporizadorPresion) clearTimeout(this.temporizadorPresion);
+    this.temporizadorPresion = null;
+  }
+  private readonly alTocarFuera = () => {
+    document.removeEventListener('pointerdown', this.alTocarFuera, true);
+    this.ocultarDetalle();
+  };
 
   // ── Acciones sobre un turno ────────────────────────────────────────────────
-  seleccionarTurno(turno: AgendaAppointmentDto): void { this.turnoSeleccionado = turno; this.mensaje = ''; this.cancelando = false; this.motivoCancelacion = ''; }
+  seleccionarTurno(turno: AgendaAppointmentDto): void {
+    // Una presión larga abre el detalle y no debe además seleccionar el turno.
+    if (this.ignorarSiguienteClic) { this.ignorarSiguienteClic = false; return; }
+    this.turnoSeleccionado.set(turno);
+    this.mensaje.set('');
+    this.cancelando.set(false);
+    this.motivoCancelacion.set('');
+  }
+
+  private alFallarAccion(error: unknown, porDefecto: string): void {
+    this.mensaje.set('');
+    this.error.set(mensajeDeError(error, porDefecto));
+    if (esConflictoDeConcurrencia(error)) { this.cancelando.set(false); this.cargar(false); }
+  }
 
   ejecutar(accion: Accion): void {
-    if (!this.turnoSeleccionado) return;
-    this.api.accionTurno(this.turnoSeleccionado.id, accion.accion).subscribe({
-      next: turno => { this.error = ''; this.mensaje = `El turno de ${turno.patientName} ahora figura como: ${ESTADOS_DE_TURNO[turno.status]}.`; this.cargar(); },
-      error: error => (this.error = mensajeDeError(error, 'No se pudo actualizar el turno.'))
+    const seleccionado = this.turnoSeleccionado();
+    if (!seleccionado) return;
+    this.api.accionTurno(seleccionado.id, accion.accion).subscribe({
+      next: turno => { this.error.set(''); this.mensaje.set(`El turno de ${turno.patientName} ahora figura como: ${ESTADOS_DE_TURNO[turno.status]}.`); this.cargar(); },
+      error: error => this.alFallarAccion(error, 'No se pudo actualizar el turno.')
     });
   }
 
   confirmarCancelacion(): void {
-    if (!this.turnoSeleccionado) return;
-    this.api.cancelarTurno(this.turnoSeleccionado.id, this.motivoCancelacion.trim() || null).subscribe({
-      next: turno => { this.error = ''; this.cancelando = false; this.mensaje = `Se canceló el turno de ${turno.patientName}.`; this.cargar(); },
-      error: error => (this.error = mensajeDeError(error, 'No se pudo cancelar el turno.'))
+    const seleccionado = this.turnoSeleccionado();
+    if (!seleccionado) return;
+    this.api.cancelarTurno(seleccionado.id, this.motivoCancelacion().trim() || null).subscribe({
+      next: turno => { this.error.set(''); this.cancelando.set(false); this.mensaje.set(`Se canceló el turno de ${turno.patientName}.`); this.cargar(); },
+      error: error => this.alFallarAccion(error, 'No se pudo cancelar el turno.')
     });
   }
 
@@ -275,7 +437,7 @@ export class AgendaComponent implements OnDestroy {
     this.abrirFormulario();
     const pacienteId = parametros.get('paciente');
     if (pacienteId) {
-      this.api.paciente(pacienteId).subscribe({
+      this.api.paciente(pacienteId).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
         next: paciente => this.elegirPaciente({
           id: paciente.id, firstName: paciente.firstName, lastName: paciente.lastName, documentNumber: paciente.documentNumber,
           phone: paciente.phone, status: paciente.status
@@ -285,55 +447,62 @@ export class AgendaComponent implements OnDestroy {
   }
 
   abrirFormulario(): void {
-    const propio = this.profesionales.find(p => p.userId === this.auth.userId);
-    const profesional = this.profesionalSeleccionado !== 'Todos'
-      ? this.profesionales.find(p => p.userId === this.profesionalSeleccionado)
-      : propio ?? this.profesionales[0];
+    const profesionales = this.profesionales();
+    const elegido = this.profesionalSeleccionado();
+    const propio = profesionales.find(p => p.userId === this.auth.userId);
+    const profesional = elegido !== 'Todos' ? profesionales.find(p => p.userId === elegido) : propio ?? profesionales[0];
+    const { fecha, hora } = horarioPredeterminado(new Date(), fechaIso(this.fechaActual()), this.zona());
     this.formularioTurno.reset({
-      fecha: fechaIso(this.fechaActual), hora: '09:00', duracion: profesional?.defaultAppointmentMinutes ?? 30,
+      fecha, hora, duracion: profesional?.defaultAppointmentMinutes ?? 30,
       profesional: profesional?.userId ?? '', gabinete: '', motivo: '', sobreturno: false
     });
-    this.textoPaciente = '';
-    this.pacientesEncontrados = [];
-    this.pacienteElegido = null;
-    this.errorFormulario = '';
-    this.mensaje = '';
-    this.mostrarFormulario = true;
+    this.textoPaciente.set('');
+    this.pacientesEncontrados.set([]);
+    this.pacienteElegido.set(null);
+    this.errorFormulario.set('');
+    this.mensaje.set('');
+    this.mostrarFormulario.set(true);
   }
-  cerrarFormulario(): void { this.mostrarFormulario = false; }
+  cerrarFormulario(): void { this.mostrarFormulario.set(false); }
 
-  buscarPaciente(): void { this.pacienteElegido = null; this.busquedaDePacientes.next(this.textoPaciente); }
+  buscarPaciente(texto: string): void {
+    this.textoPaciente.set(texto);
+    this.pacienteElegido.set(null);
+    this.busquedaDePacientes.next(texto);
+  }
   elegirPaciente(paciente: PatientListItemDto): void {
-    this.pacienteElegido = paciente;
-    this.textoPaciente = `${paciente.firstName} ${paciente.lastName}`;
-    this.pacientesEncontrados = [];
+    this.pacienteElegido.set(paciente);
+    this.textoPaciente.set(`${paciente.firstName} ${paciente.lastName}`);
+    this.pacientesEncontrados.set([]);
   }
   alCambiarProfesional(): void {
-    const profesional = this.profesionales.find(p => p.userId === this.formularioTurno.controls.profesional.value);
+    const profesional = this.profesionales().find(p => p.userId === this.formularioTurno.controls.profesional.value);
     if (profesional) this.formularioTurno.controls.duracion.setValue(profesional.defaultAppointmentMinutes);
   }
 
   guardarTurno(): void {
-    if (!this.pacienteElegido) { this.errorFormulario = 'Buscá y elegí un paciente de la lista. Si es nuevo, registralo primero en Pacientes.'; return; }
-    if (this.formularioTurno.invalid) { this.formularioTurno.markAllAsTouched(); this.errorFormulario = 'Completá la fecha, la hora, el profesional y el motivo.'; return; }
+    const paciente = this.pacienteElegido();
+    if (!paciente) { this.errorFormulario.set('Buscá y elegí un paciente de la lista. Si es nuevo, registralo primero en Pacientes.'); return; }
+    if (this.formularioTurno.invalid) { this.formularioTurno.markAllAsTouched(); this.errorFormulario.set('Completá la fecha, la hora, el profesional y el motivo.'); return; }
     const datos = this.formularioTurno.getRawValue();
-    // La fecha y la hora se interpretan en la zona horaria del navegador y se envían en UTC.
-    const inicio = new Date(`${datos.fecha}T${datos.hora}:00`);
-    this.guardando = true;
-    this.errorFormulario = '';
+    // La fecha y la hora se interpretan en la zona horaria del consultorio y se envían en UTC.
+    const inicio = instanteEnZona(datos.fecha, datos.hora, this.zona());
+    this.guardando.set(true);
+    this.errorFormulario.set('');
     this.api.crearTurno({
-      patientId: this.pacienteElegido.id, professionalUserId: datos.profesional, gabineteId: datos.gabinete || null,
+      patientId: paciente.id, professionalUserId: datos.profesional, gabineteId: datos.gabinete || null,
       start: inicio.toISOString(), durationMinutes: datos.duracion, reason: datos.motivo.trim(),
       isOverbooking: datos.sobreturno, confirmed: false
     }).subscribe({
       next: turno => {
-        this.guardando = false;
-        this.mostrarFormulario = false;
-        this.mensaje = `Se agendó el turno de ${turno.patientName} para el ${fechaCorta(turno.startUtc)} a las ${horaLocal(turno.startUtc)}.`;
-        this.fechaActual = new Date(turno.startUtc);
+        this.guardando.set(false);
+        this.mostrarFormulario.set(false);
+        this.mensaje.set(`Se agendó el turno de ${turno.patientName} para el ${this.fecha(turno.startUtc)} a las ${this.hora(turno.startUtc)}.`);
+        this.siguiendoHoy = false;
+        this.fechaActual.set(diaDeCalendario(fechaEnZona(turno.startUtc, this.zona())));
         this.cargar();
       },
-      error: error => { this.guardando = false; this.errorFormulario = mensajeDeError(error, 'No se pudo agendar el turno.'); }
+      error: error => { this.guardando.set(false); this.errorFormulario.set(mensajeDeError(error, 'No se pudo agendar el turno.')); }
     });
   }
 }

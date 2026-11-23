@@ -141,11 +141,17 @@ namespace Odontia.Infrastructure.Persistence.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("ReversesMovementId")
+                        .IsUnique();
+
                     b.HasIndex("ConsultorioId", "BudgetId");
 
                     b.HasIndex("ConsultorioId", "PaymentId");
 
                     b.HasIndex("ConsultorioId", "ReversesMovementId");
+
+                    b.HasIndex("PaymentId", "Type")
+                        .IsUnique();
 
                     b.HasIndex("ConsultorioId", "PatientId", "OccurredAtUtc");
 
@@ -512,6 +518,10 @@ namespace Odontia.Infrastructure.Persistence.Migrations
                         .HasColumnType("datetime(6)");
 
                     b.Property<Guid?>("UpdatedByUserId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<Guid>("Version")
+                        .IsConcurrencyToken()
                         .HasColumnType("char(36)");
 
                     b.HasKey("Id");
@@ -2015,6 +2025,10 @@ namespace Odontia.Infrastructure.Persistence.Migrations
                     b.Property<Guid?>("UpdatedByUserId")
                         .HasColumnType("char(36)");
 
+                    b.Property<Guid>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("char(36)");
+
                     b.Property<string>("WorkType")
                         .IsRequired()
                         .HasMaxLength(120)
@@ -2204,6 +2218,10 @@ namespace Odontia.Infrastructure.Persistence.Migrations
                     b.Property<Guid?>("UpdatedByUserId")
                         .HasColumnType("char(36)");
 
+                    b.Property<Guid>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("char(36)");
+
                     b.HasKey("Id");
 
                     b.HasIndex("PatientId")
@@ -2305,6 +2323,10 @@ namespace Odontia.Infrastructure.Persistence.Migrations
                         .HasColumnType("datetime(6)");
 
                     b.Property<Guid?>("UpdatedByUserId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<Guid>("Version")
+                        .IsConcurrencyToken()
                         .HasColumnType("char(36)");
 
                     b.HasKey("Id");
@@ -2752,6 +2774,10 @@ namespace Odontia.Infrastructure.Persistence.Migrations
                     b.Property<Guid?>("UpdatedByUserId")
                         .HasColumnType("char(36)");
 
+                    b.Property<Guid>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("char(36)");
+
                     b.HasKey("Id");
 
                     b.HasIndex("ConsultorioId", "DocumentNumber")
@@ -2867,6 +2893,10 @@ namespace Odontia.Infrastructure.Persistence.Migrations
                         .HasColumnType("datetime(6)");
 
                     b.Property<Guid?>("UpdatedByUserId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<Guid>("Version")
+                        .IsConcurrencyToken()
                         .HasColumnType("char(36)");
 
                     b.Property<string>("VoidReason")
@@ -3947,6 +3977,10 @@ namespace Odontia.Infrastructure.Persistence.Migrations
                     b.Property<Guid?>("UpdatedByUserId")
                         .HasColumnType("char(36)");
 
+                    b.Property<Guid>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("char(36)");
+
                     b.HasKey("Id");
 
                     b.HasIndex("ConsultorioId", "ProfessionalUserId");
@@ -4018,6 +4052,10 @@ namespace Odontia.Infrastructure.Persistence.Migrations
                         .HasColumnType("datetime(6)");
 
                     b.Property<Guid?>("UpdatedByUserId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<Guid>("Version")
+                        .IsConcurrencyToken()
                         .HasColumnType("char(36)");
 
                     b.HasKey("Id");

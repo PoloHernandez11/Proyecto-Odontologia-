@@ -65,6 +65,8 @@ public class TreatmentPlan : TenantEntity, ISensitiveData
     public TreatmentStatus Status { get; private set; }
     public DateOnly? StartDate { get; private set; }
     public DateOnly? EndDate { get; private set; }
+    /// <summary>Token de concurrencia optimista del agregado (cambia con el plan, sus prestaciones o su historial).</summary>
+    public Guid Version { get; private set; } = Guid.NewGuid();
     public IReadOnlyCollection<TreatmentPlanItem> Items => _items;
     public IReadOnlyCollection<TreatmentChange> Changes => _changes;
 
@@ -81,9 +83,14 @@ public class TreatmentPlan : TenantEntity, ISensitiveData
 
     public void Update(string title, string? notes)
     {
-        Title = Guard.Required(title, "Título", 150);
-        Notes = Guard.Optional(notes, "Observaciones", 2000);
+        var t = Guard.Required(title, "Título", 150);
+        var n = Guard.Optional(notes, "Observaciones", 2000);
+        Title = t;
+        Notes = n;
+        Touch();
     }
+
+    private void Touch() => Version = Guid.NewGuid();
 
     public TreatmentPlanItem AddItem(ProcedureCatalogItem procedure, int? toothCode, IReadOnlyCollection<ToothSurface> surfaces,
         Guid? professionalUserId, Guid? diagnosisId, string? notes, Guid userId, DateTime nowUtc)
@@ -109,6 +116,7 @@ public class TreatmentPlan : TenantEntity, ISensitiveData
         _items.Add(item);
         _changes.Add(new TreatmentChange(ConsultorioId, Id, item.Id, null, TreatmentStatus.Pending, $"Prestación agregada: {procedure.Name}", userId, nowUtc));
         RecalculateStatus(userId, nowUtc);
+        Touch();
         return item;
     }
 
@@ -117,9 +125,11 @@ public class TreatmentPlan : TenantEntity, ISensitiveData
         var item = _items.FirstOrDefault(i => i.Id == itemId) ?? throw new DomainException("La prestación no pertenece al plan.", "item_not_found");
         if (Status == TreatmentStatus.Cancelled) throw new DomainException("El plan está cancelado.", "plan_closed");
         var from = item.Status;
+        if (from == status) return; // sin cambio: no se ensucia el historial
         item.ChangeStatus(status, DateOnly.FromDateTime(nowUtc));
         _changes.Add(new TreatmentChange(ConsultorioId, Id, item.Id, from, status, note, userId, nowUtc));
         RecalculateStatus(userId, nowUtc);
+        Touch();
     }
 
     public void Cancel(string reason, Guid userId, DateTime nowUtc)
@@ -137,6 +147,7 @@ public class TreatmentPlan : TenantEntity, ISensitiveData
         Status = TreatmentStatus.Cancelled;
         EndDate = DateOnly.FromDateTime(nowUtc);
         _changes.Add(new TreatmentChange(ConsultorioId, Id, null, prev, Status, r, userId, nowUtc));
+        Touch();
     }
 
     private void EnsureOpen()
@@ -158,7 +169,8 @@ public class TreatmentPlan : TenantEntity, ISensitiveData
         if (next == prev) return;
         Status = next;
         var today = DateOnly.FromDateTime(nowUtc);
-        if (next == TreatmentStatus.InProgress) StartDate ??= today;
+        // Un plan completado directamente (Pendiente → Completado) también registra su inicio.
+        if (next is TreatmentStatus.InProgress or TreatmentStatus.Completed) StartDate ??= today;
         if (next is TreatmentStatus.Completed or TreatmentStatus.Cancelled) EndDate = today;
         else EndDate = null;
         _changes.Add(new TreatmentChange(ConsultorioId, Id, null, prev, next, "Estado del plan recalculado", userId, nowUtc));
@@ -201,6 +213,8 @@ public class TreatmentPlanItem : TenantEntity, ISensitiveData
     public DateOnly? StartDate { get; private set; }
     public DateOnly? EndDate { get; private set; }
     public int SortOrder { get; private set; }
+    /// <summary>Token de concurrencia optimista de la prestación.</summary>
+    public Guid Version { get; private set; } = Guid.NewGuid();
 
     public ProcedureCatalogItem? Procedure { get; private set; }
 
@@ -228,6 +242,7 @@ public class TreatmentPlanItem : TenantEntity, ISensitiveData
         if (status == TreatmentStatus.InProgress) StartDate ??= today;
         if (status == TreatmentStatus.Completed) { StartDate ??= today; EndDate = today; }
         if (status == TreatmentStatus.Cancelled) EndDate = today;
+        Version = Guid.NewGuid();
     }
 }
 

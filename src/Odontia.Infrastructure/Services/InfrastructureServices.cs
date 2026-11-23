@@ -1,7 +1,7 @@
 using System.Data;
 using System.Security.Cryptography;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Storage;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Odontia.Application.Abstractions;
@@ -9,6 +9,7 @@ using Odontia.Application.Common;
 using Odontia.Domain.Entities;
 using Odontia.Domain.Enums;
 using Odontia.Infrastructure.Persistence;
+using Odontia.Infrastructure.Security;
 
 namespace Odontia.Infrastructure.Services;
 
@@ -20,8 +21,7 @@ internal sealed class AuditWriter(IServiceScopeFactory scopes, ITenantContext te
 {
     public void Write(AuditAction action, string entityType, string? entityId, string? details = null, Guid? consultorioId = null, Guid? userId = null)
     {
-        var cid = consultorioId ?? tenant.ConsultorioIdOrNull;
-        var uid = userId ?? (tenant.IsAuthenticated ? tenant.UserId : null);
+        var (cid, uid) = Resolve(consultorioId, userId);
         try
         {
             using var scope = scopes.CreateScope();
@@ -33,14 +33,49 @@ internal sealed class AuditWriter(IServiceScopeFactory scopes, ITenantContext te
         {
             logger.LogError(ex, "No se pudo registrar el evento de auditoría {Action} sobre {EntityType}", action, entityType);
         }
-        logger.LogInformation("Audit {Action} {EntityType} {EntityId} user={UserId} consultorio={ConsultorioId}", action, entityType, entityId, uid, cid);
+        Log(action, entityType, entityId, uid, cid);
     }
+
+    /// <summary>
+    /// Variante asíncrona. No usa el token de la solicitud: el evento debe persistir aunque el cliente cancele
+    /// (p. ej. un intento de login fallido seguido de un corte de conexión).
+    /// </summary>
+    public async Task WriteAsync(AuditAction action, string entityType, string? entityId, string? details = null, Guid? consultorioId = null,
+        Guid? userId = null, CancellationToken ct = default)
+    {
+        var (cid, uid) = Resolve(consultorioId, userId);
+        try
+        {
+            await using var scope = scopes.CreateAsyncScope();
+            var db = scope.ServiceProvider.GetRequiredService<OdontiaDbContext>();
+            db.AuditLogs.Add(new AuditLog(cid, uid, action, entityType, entityId, details, tenant.IpAddress, clock.GetUtcNow().UtcDateTime));
+            await db.SaveChangesAsync(CancellationToken.None);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "No se pudo registrar el evento de auditoría {Action} sobre {EntityType}", action, entityType);
+        }
+        Log(action, entityType, entityId, uid, cid);
+    }
+
+    private (Guid? Consultorio, Guid? User) Resolve(Guid? consultorioId, Guid? userId) =>
+        (consultorioId ?? tenant.ConsultorioIdOrNull, userId ?? (tenant.IsAuthenticated ? tenant.UserId : null));
+
+    private void Log(AuditAction action, string entityType, string? entityId, Guid? uid, Guid? cid) =>
+        logger.LogInformation("Audit {Action} {EntityType} {EntityId} user={UserId} consultorio={ConsultorioId}", action, entityType, entityId, uid, cid);
 }
 
 /// <summary>Registra cada mensaje saliente y su resultado real informado por el proveedor.</summary>
 internal sealed class MessageDispatcher(IServiceScopeFactory scopes, IEmailSender email, IWhatsAppSender whatsApp, TimeProvider clock,
     ILogger<MessageDispatcher> logger) : IMessageDispatcher
 {
+    public bool IsChannelConfigured(MessageChannel channel) => channel switch
+    {
+        MessageChannel.Email => email.IsConfigured,
+        MessageChannel.WhatsApp => whatsApp.IsConfigured,
+        _ => false,
+    };
+
     public async Task<OutboundMessage> SendEmailAsync(Guid? consultorioId, string to, string subject, string html, string text, string purpose,
         bool containsSecret, string? relatedType, Guid? relatedId, CancellationToken ct)
     {
@@ -83,7 +118,7 @@ internal sealed class MessageDispatcher(IServiceScopeFactory scopes, IEmailSende
 /// <summary>Bloqueo de fila (InnoDB: UPDATE toma un lock exclusivo hasta el commit) para serializar reservas.</summary>
 internal sealed class AgendaLock(OdontiaDbContext db) : IAgendaLock
 {
-    public async Task<IDbContextTransaction> AcquireAsync(Guid professionalUserId, Guid? gabineteId, CancellationToken ct)
+    public async Task<IApplicationTransaction> AcquireAsync(Guid professionalUserId, Guid? gabineteId, CancellationToken ct)
     {
         var tx = await db.Database.BeginTransactionAsync(IsolationLevel.ReadCommitted, ct);
         await db.Members.Where(m => m.UserId == professionalUserId)
@@ -91,7 +126,7 @@ internal sealed class AgendaLock(OdontiaDbContext db) : IAgendaLock
         if (gabineteId is { } g)
             await db.Gabinetes.Where(x => x.Id == g)
                 .ExecuteUpdateAsync(s => s.SetProperty(x => x.LockVersion, x => x.LockVersion + 1), ct);
-        return tx;
+        return new EfApplicationTransaction(tx);
     }
 }
 
@@ -123,34 +158,63 @@ internal sealed class SequenceGenerator(OdontiaDbContext db, ITenantContext tena
     }
 }
 
-public sealed record ResolvedMembership(Guid MemberId, bool IsProfessional, IReadOnlyList<string> Permissions);
-
-public interface IMembershipResolver
+/// <summary>Opciones de la caché de autorización por solicitud.</summary>
+public sealed class AuthCacheOptions
 {
-    /// <summary>Membresía activa del usuario en el consultorio (usuario, consultorio y membresía activos), o null.</summary>
-    Task<ResolvedMembership?> ResolveAsync(Guid userId, Guid consultorioId, CancellationToken ct);
-    Task<string?> GetSecurityStampAsync(Guid userId, CancellationToken ct);
+    public const string Section = "Auth:RequestCache";
+    /// <summary>Vida máxima de una entrada (además de la invalidación explícita por cambios). 0 desactiva la caché.</summary>
+    public int Seconds { get; set; } = 30;
 }
 
-internal sealed class MembershipResolver(OdontiaDbContext db) : IMembershipResolver
+/// <summary>
+/// Resuelve stamp, sesión y membresía con caché corta en memoria. La invalidación es inmediata ante cambios
+/// guardados con EF (ver <see cref="AuthStateInvalidationInterceptor"/>); el TTL acota cualquier otro caso.
+/// </summary>
+internal sealed class MembershipResolver(OdontiaDbContext db, IMemoryCache cache, AuthStateVersions versions,
+    Microsoft.Extensions.Options.IOptions<AuthCacheOptions> options) : IMembershipResolver
 {
-    public async Task<ResolvedMembership?> ResolveAsync(Guid userId, Guid consultorioId, CancellationToken ct)
+    private const string RotatedReason = Odontia.Application.Features.Auth.RefreshTokenReasons.Rotated;
+
+    private sealed record Box<T>(T Value);
+
+    private TimeSpan Ttl => TimeSpan.FromSeconds(Math.Max(0, options.Value.Seconds));
+
+    private string Key(string kind, Guid userId, string rest) => $"auth:{kind}:{userId:N}:{rest}:{versions.For(userId)}:{versions.Global}";
+
+    private async Task<T> CachedAsync<T>(string key, Func<Task<T>> load)
     {
-        var row = await db.Members.IgnoreQueryFilters().AsNoTracking()
-            .Where(m => m.UserId == userId && m.ConsultorioId == consultorioId && m.IsActive && m.User!.IsActive)
-            .Where(m => db.Consultorios.Any(c => c.Id == consultorioId && c.IsActive))
-            .Select(m => new
-            {
-                m.Id,
-                m.IsProfessional,
-                Permissions = m.Roles.SelectMany(r => r.Role!.Permissions.Select(p => p.Permission)).ToList(),
-            })
-            .FirstOrDefaultAsync(ct);
-        return row is null ? null : new ResolvedMembership(row.Id, row.IsProfessional, row.Permissions.Distinct().ToList());
+        if (Ttl <= TimeSpan.Zero) return await load();
+        if (cache.TryGetValue(key, out Box<T>? hit) && hit is not null) return hit.Value;
+        var value = await load();
+        cache.Set(key, new Box<T>(value), new MemoryCacheEntryOptions { AbsoluteExpirationRelativeToNow = Ttl, Size = 1 });
+        return value;
     }
 
-    public async Task<string?> GetSecurityStampAsync(Guid userId, CancellationToken ct) =>
-        await db.Users.AsNoTracking().Where(u => u.Id == userId && u.IsActive).Select(u => u.SecurityStamp).FirstOrDefaultAsync(ct);
+    public Task<ResolvedMembership?> ResolveAsync(Guid userId, Guid consultorioId, CancellationToken ct) =>
+        CachedAsync(Key("member", userId, consultorioId.ToString("N")), async () =>
+        {
+            var row = await db.Members.IgnoreQueryFilters().AsNoTracking()
+                .Where(m => m.UserId == userId && m.ConsultorioId == consultorioId && m.IsActive && m.User!.IsActive)
+                .Where(m => db.Consultorios.Any(c => c.Id == consultorioId && c.IsActive))
+                .Select(m => new
+                {
+                    m.Id,
+                    m.IsProfessional,
+                    Permissions = m.Roles.SelectMany(r => r.Role!.Permissions.Select(p => p.Permission)).ToList(),
+                })
+                .FirstOrDefaultAsync(ct);
+            return row is null ? null : new ResolvedMembership(row.Id, row.IsProfessional, row.Permissions.Distinct().ToList());
+        });
+
+    public Task<string?> GetSecurityStampAsync(Guid userId, CancellationToken ct) =>
+        CachedAsync(Key("stamp", userId, "-"), () =>
+            db.Users.AsNoTracking().Where(u => u.Id == userId && u.IsActive).Select(u => u.SecurityStamp).FirstOrDefaultAsync(ct));
+
+    public Task<bool> IsSessionActiveAsync(Guid userId, Guid sessionId, CancellationToken ct) =>
+        CachedAsync(Key("session", userId, sessionId.ToString("N")), async () =>
+            // Los tokens rotados quedan revocados con motivo "rotated"; cualquier otro motivo revoca la sesión entera.
+            !await db.RefreshTokens.AsNoTracking().AnyAsync(t => t.UserId == userId && t.FamilyId == sessionId
+                && t.RevokedAtUtc != null && t.RevokedReason != RotatedReason, ct));
 }
 
 /// <summary>Almacenamiento local privado (desarrollo / instalaciones on-premise). Fuera del directorio web.</summary>

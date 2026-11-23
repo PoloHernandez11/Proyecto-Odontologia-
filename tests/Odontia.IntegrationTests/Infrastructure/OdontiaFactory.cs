@@ -26,6 +26,8 @@ public class OdontiaFactory : WebApplicationFactory<Program>
     public CapturingEmailSender Emails { get; } = new();
     public string StorageRoot { get; } = Path.Combine(Path.GetTempPath(), "odontia-tests", Guid.NewGuid().ToString("N"));
     protected virtual bool RequireConfirmedEmail => false;
+    /// <summary>Configuración adicional por fixture (p. ej. límites de rate limiting bajos).</summary>
+    protected virtual IDictionary<string, string?> ExtraSettings => new Dictionary<string, string?>();
 
     public OdontiaFactory()
     {
@@ -63,7 +65,7 @@ public class OdontiaFactory : WebApplicationFactory<Program>
             ["Cors:AllowedOrigins:0"] = "https://app.test",
             ["Email:Provider"] = "None",
             ["Swagger:Enabled"] = "true",
-        }));
+        }).AddInMemoryCollection(ExtraSettings));
         builder.ConfigureServices(services =>
         {
             services.RemoveAll<IEmailSender>();
@@ -126,17 +128,33 @@ public sealed class ConfirmedEmailFactory : OdontiaFactory
 public sealed class CapturingEmailSender : IEmailSender
 {
     public ConcurrentQueue<OutgoingEmail> Sent { get; } = new();
+    /// <summary>Demora simulada del proveedor (p. ej. SMTP lento).</summary>
+    public TimeSpan Delay { get; set; } = TimeSpan.Zero;
 
-    public Task<SendResult> SendAsync(OutgoingEmail email, CancellationToken ct)
+    public async Task<SendResult> SendAsync(OutgoingEmail email, CancellationToken ct)
     {
+        if (Delay > TimeSpan.Zero) await Task.Delay(Delay, ct);
         Sent.Enqueue(email);
-        return Task.FromResult(SendResult.NoProvider("test-capture"));
+        return SendResult.NoProvider("test-capture");
     }
 
+    /// <summary>Último enlace enviado. Espera hasta 10 s: los correos de autenticación se envían en segundo plano.</summary>
     public string LastLinkFor(string to, string pathFragment)
     {
-        var mail = Sent.Reverse().First(m => m.To.Equals(to, StringComparison.OrdinalIgnoreCase) && m.TextBody.Contains(pathFragment));
+        var mail = WaitFor(m => m.To.Equals(to, StringComparison.OrdinalIgnoreCase) && m.TextBody.Contains(pathFragment));
         return Regex.Match(mail.TextBody, @"https?://\S+").Value.TrimEnd('.', ')');
+    }
+
+    public OutgoingEmail WaitFor(Func<OutgoingEmail, bool> match, int timeoutMs = 10_000)
+    {
+        var sw = System.Diagnostics.Stopwatch.StartNew();
+        while (true)
+        {
+            var mail = Sent.Reverse().FirstOrDefault(match);
+            if (mail is not null) return mail;
+            if (sw.ElapsedMilliseconds > timeoutMs) throw new TimeoutException("No se recibió el correo esperado.");
+            Thread.Sleep(20);
+        }
     }
 
     public static string Query(string url, string key)

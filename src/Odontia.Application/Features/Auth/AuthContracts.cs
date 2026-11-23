@@ -10,6 +10,12 @@ public sealed class AuthOptions
     public int RefreshTokenDays { get; set; } = 7;
     /// <summary>Duración absoluta máxima de una sesión (familia de refresh tokens).</summary>
     public int SessionMaxDays { get; set; } = 30;
+    /// <summary>
+    /// Gracia (segundos) para un refresh token recién rotado: si se presenta dentro de esta ventana y su reemplazo sigue
+    /// activo, se responde 401 <c>refresh_conflict</c> sin revocar la sesión (otra pestaña o un reintento de red lento).
+    /// Pasada la ventana, el reuso se trata como robo y revoca la sesión. 0 desactiva la gracia.
+    /// </summary>
+    public int RefreshReuseGraceSeconds { get; set; } = 20;
     public int InvitationDays { get; set; } = 7;
     public string DefaultTimeZone { get; set; } = "America/Argentina/Buenos_Aires";
 }
@@ -44,7 +50,8 @@ public sealed record AcceptInvitationRequest(string Token, string? FirstName, st
 
 // ---------- Respuestas ----------
 
-public sealed record MembershipDto(Guid ConsultorioId, string ConsultorioName, IReadOnlyList<string> Roles, bool IsProfessional);
+/// <param name="TimeZoneId">Zona horaria IANA del consultorio (p. ej. America/Argentina/Buenos_Aires), para mostrar la agenda en hora local.</param>
+public sealed record MembershipDto(Guid ConsultorioId, string ConsultorioName, IReadOnlyList<string> Roles, bool IsProfessional, string TimeZoneId);
 
 public sealed record AuthUserDto(Guid Id, string Email, string FirstName, string LastName, string DisplayName, string? Title,
     string? Specialty, string? LicenseNumber, bool TwoFactorEnabled);

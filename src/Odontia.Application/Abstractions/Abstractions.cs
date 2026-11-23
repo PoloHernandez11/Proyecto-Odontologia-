@@ -1,5 +1,4 @@
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Infrastructure;
 using Odontia.Domain.Entities;
 using Odontia.Domain.Enums;
 
@@ -61,7 +60,8 @@ public interface IApplicationDbContext
     DbSet<AuditLog> AuditLogs { get; }
     DbSet<ConsultorioSequence> Sequences { get; }
 
-    DatabaseFacade Database { get; }
+    /// <summary>Abre una transacción sobre esta unidad de trabajo; si se libera sin confirmar, se revierte.</summary>
+    Task<IApplicationTransaction> BeginTransactionAsync(CancellationToken ct = default);
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }
@@ -102,7 +102,7 @@ public interface ITenantContextInitializer
 /// </summary>
 public interface IAgendaLock
 {
-    Task<Microsoft.EntityFrameworkCore.Storage.IDbContextTransaction> AcquireAsync(Guid professionalUserId, Guid? gabineteId, CancellationToken ct);
+    Task<IApplicationTransaction> AcquireAsync(Guid professionalUserId, Guid? gabineteId, CancellationToken ct);
 }
 
 /// <summary>Numeración correlativa atómica por consultorio (presupuestos, recibos).</summary>
@@ -132,11 +132,15 @@ public sealed record SendResult(bool ProviderConfigured, bool Accepted, string P
 
 public interface IEmailSender
 {
+    /// <summary>False cuando no hay un proveedor real que entregue el mensaje (el envío terminaría en NotSentNoProvider).</summary>
+    bool IsConfigured => true;
     Task<SendResult> SendAsync(OutgoingEmail email, CancellationToken ct);
 }
 
 public interface IWhatsAppSender
 {
+    /// <summary>False cuando no hay un proveedor real que entregue el mensaje (el envío terminaría en NotSentNoProvider).</summary>
+    bool IsConfigured => true;
     Task<SendResult> SendAsync(OutgoingWhatsApp message, CancellationToken ct);
 }
 
@@ -148,22 +152,40 @@ public interface IMessageDispatcher
 
     Task<OutboundMessage> SendWhatsAppAsync(Guid? consultorioId, string toPhone, string text, string purpose,
         string? relatedType, Guid? relatedId, CancellationToken ct);
+
+    /// <summary>Indica si el canal tiene un proveedor configurado capaz de entregar mensajes.</summary>
+    bool IsChannelConfigured(MessageChannel channel);
 }
 
 /// <summary>Registro explícito de eventos de seguridad/operaciones importantes.</summary>
 public interface IAuditWriter
 {
     void Write(AuditAction action, string entityType, string? entityId, string? details = null, Guid? consultorioId = null, Guid? userId = null);
+
+    /// <summary>Variante asíncrona (preferida dentro de solicitudes). Por defecto delega en <see cref="Write"/>.</summary>
+    Task WriteAsync(AuditAction action, string entityType, string? entityId, string? details = null, Guid? consultorioId = null, Guid? userId = null,
+        CancellationToken ct = default)
+    {
+        Write(action, entityType, entityId, details, consultorioId, userId);
+        return Task.CompletedTask;
+    }
 }
 
 public sealed record AccessTokenResult(string Token, DateTime ExpiresAtUtc);
+
+/// <summary>Desafío de segundo factor validado: usuario, identificador único (jti) y vencimiento.</summary>
+public sealed record TwoFactorChallenge(Guid UserId, string Jti, DateTime ExpiresAtUtc);
 
 public interface IJwtTokenService
 {
     AccessTokenResult CreateAccessToken(ApplicationUser user, Guid? consultorioId, Guid sessionId);
     /// <summary>Token corto (5 min) para completar el segundo factor.</summary>
     string CreateTwoFactorChallenge(Guid userId);
-    Guid? ValidateTwoFactorChallenge(string token);
+    Task<TwoFactorChallenge?> ValidateTwoFactorChallengeAsync(string token);
+    /// <summary>Usuario (claim sub) de un principal autenticado, o null.</summary>
+    Guid? GetUserId(System.Security.Claims.ClaimsPrincipal principal);
+    /// <summary>True si la huella del security stamp del token coincide con el stamp vigente (false si éste es null).</summary>
+    bool MatchesSecurityStamp(System.Security.Claims.ClaimsPrincipal principal, string? currentSecurityStamp);
 }
 
 /// <summary>Configuración de URLs públicas del frontend (enlaces en correos).</summary>

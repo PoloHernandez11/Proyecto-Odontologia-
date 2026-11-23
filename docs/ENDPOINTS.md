@@ -5,6 +5,22 @@
 
 Códigos comunes en todas las operaciones autenticadas: `401` (sin sesión o sesión invalidada), `403` (sin permiso / sin consultorio activo), `400` (validación), `404` (no existe **o pertenece a otro consultorio**), `409` (conflicto/concurrencia), `422` (regla de negocio), `429` (rate limit).
 
+## Postman / newman
+
+La colección `postman/Odontia.postman_collection.json` es un **flujo ejecutable con aserciones**: las carpetas están ordenadas por dependencia (autenticación → consultorio y catálogos → pacientes → turnos → odontograma → historia clínica → tratamientos → presupuestos → pagos → laboratorio → tareas → documentos → notificaciones → finanzas/dashboards → cierre de sesión). Cada request valida el código de estado esperado (incluidos los 4xx de los casos negativos intencionales) y la forma del JSON; los ids creados se guardan en variables de colección. Las fechas se calculan en scripts *pre-request* (siempre futuras) y los datos únicos (DNI, códigos, nombres) se generan por corrida, así que la colección se puede re-ejecutar.
+
+Requisitos de la cuenta de prueba (variables de entorno `email` / `password` en `postman/Odontia.local.postman_environment.json`, vacías en el repositorio): administradora de su consultorio (registrada con `POST /auth/register` y correo confirmado), **profesional** y **sin 2FA**. Usar sólo contra entornos locales o de prueba: la corrida crea datos y modifica la configuración del consultorio de esa cuenta.
+
+```bash
+npx newman run postman/Odontia.postman_collection.json -e postman/Odontia.local.postman_environment.json \
+  --env-var "email=<correo>" --env-var "password=<contraseña>" --working-dir postman --delay-request 100
+```
+
+- `--working-dir postman` es necesario para el archivo de `postman/fixtures/` que se sube en Documentos.
+- Rate limiting: los endpoints con política *auth* (login, 2FA, contraseñas, confirmación, invitaciones) admiten **10 req/min por IP**; la corrida usa 8. Esperar 1 minuto entre corridas consecutivas (o después de registrar/confirmar la cuenta). `--delay-request 100` evita ráfagas contra el límite global (600 req/min por usuario).
+- La carpeta **99 · Manual** agrupa requests que necesitan datos que llegan por correo o desde una app autenticadora (confirmación, TOTP, invitaciones, restablecimiento) o que alteran la cuenta de prueba: se omiten salvo que se defina la variable indicada en la descripción de cada uno.
+- La colección se regenera con `node tools/gen-docs.js .`; el escenario (orden, cuerpos, capturas y códigos esperados) está en `tools/postman-flow.js`. El generador falla si una operación del OpenAPI no tiene escenario o si un request usa una variable no declarada.
+
 ## Índice
 
 - [Autenticación y sesiones](#autenticación-y-sesiones)
@@ -36,8 +52,8 @@ Códigos comunes en todas las operaciones autenticadas: `401` (sin sesión o ses
 | Método | Ruta | operationId | Descripción | Parámetros | Cuerpo | Respuesta | Permiso |
 |---|---|---|---|---|---|---|---|
 | POST | `/auth/2fa/disable` | `authDisableTwoFactor` | Desactiva 2FA (requiere contraseña). | — | `DisableTwoFactorRequest` | 204 | Autenticado |
-| POST | `/auth/2fa/enable` | `authEnableTwoFactor` | Activa 2FA verificando un código. Devuelve códigos de recuperación (se muestran una única vez). | — | `EnableTwoFactorRequest` | 200 `RecoveryCodesDto` | Autenticado |
-| GET | `/auth/2fa/setup` | `authTwoFactorSetup` | Clave y URI otpauth para configurar una app autenticadora. | — | — | 200 `AuthenticatorSetupDto` | Autenticado |
+| POST | `/auth/2fa/enable` | `authEnableTwoFactor` | Activa 2FA verificando un código. Devuelve códigos de recuperación (se muestran una única vez). La sesión actual sigue válida; las demás sesiones del usuario se revocan. | — | `EnableTwoFactorRequest` | 200 `RecoveryCodesDto` | Autenticado |
+| POST | `/auth/2fa/setup` | `authTwoFactorSetup` | Clave y URI otpauth para configurar una app autenticadora. Es POST porque genera y guarda la clave si no existe; no invalida la sesión actual. Con 2FA ya activo responde 422 `two_factor_already_enabled`. | — | — | 200 `AuthenticatorSetupDto` | Autenticado |
 | POST | `/auth/change-password` | `authChangePassword` | Cambio de contraseña del usuario autenticado. Revoca las demás sesiones. | — | `ChangePasswordRequest` | 200 `MessageResponse` | Autenticado |
 | POST | `/auth/confirm-email` | `authConfirmEmail` | Confirma el correo electrónico. | — | `ConfirmEmailRequest` | 200 `MessageResponse` | Público |
 | POST | `/auth/forgot-password` | `authForgotPassword` | Solicita el correo de recuperación. Responde siempre igual (protección contra enumeración). | — | `ForgotPasswordRequest` | 202 `MessageResponse` | Público |

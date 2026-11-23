@@ -60,7 +60,11 @@ public class Consultorio : AuditableEntity
             throw new DomainException("El intervalo de agenda debe ser 5, 10, 15, 20, 30 o 60 minutos.");
         if (reminderHoursBefore is < 0 or > 168)
             throw new DomainException("La anticipación de recordatorios debe estar entre 0 y 168 horas.");
-        TimeZoneId = Guard.Required(timeZoneId, "Zona horaria", 64);
+        var tz = Guard.Required(timeZoneId, "Zona horaria", 64);
+        // Una zona desconocida haría que el reloj del consultorio cayera a UTC (agenda y "hoy" corridos).
+        if (!TimeZoneInfo.TryFindSystemTimeZoneById(tz, out _))
+            throw new DomainException("La zona horaria no es válida.", "invalid_time_zone");
+        TimeZoneId = tz;
         DefaultAppointmentMinutes = defaultAppointmentMinutes;
         SlotIntervalMinutes = slotIntervalMinutes;
         ReminderHoursBefore = reminderHoursBefore;

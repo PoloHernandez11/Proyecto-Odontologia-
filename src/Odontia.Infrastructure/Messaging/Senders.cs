@@ -28,6 +28,8 @@ public sealed class SmtpOptions
     public bool EnableSsl { get; set; } = true;
     public string? UserName { get; set; }
     public string? Password { get; set; }
+    /// <summary>Tiempo máximo por envío (conexión + entrega). Evita que un SMTP lento retenga recursos 100 s.</summary>
+    public int TimeoutSeconds { get; set; } = 15;
 }
 
 public sealed class WhatsAppOptions
@@ -40,11 +42,17 @@ public sealed class WhatsAppOptions
 /// <summary>Envío SMTP real. Sólo informa aceptación cuando el servidor SMTP aceptó el mensaje.</summary>
 internal sealed class SmtpEmailSender(IOptions<EmailOptions> options) : IEmailSender
 {
+    public bool IsConfigured => !string.IsNullOrWhiteSpace(options.Value.Smtp.Host);
+
     public async Task<SendResult> SendAsync(OutgoingEmail email, CancellationToken ct)
     {
         var o = options.Value;
         if (string.IsNullOrWhiteSpace(o.Smtp.Host)) return SendResult.NoProvider("smtp");
-        using var client = new SmtpClient(o.Smtp.Host, o.Smtp.Port) { EnableSsl = o.Smtp.EnableSsl, DeliveryMethod = SmtpDeliveryMethod.Network };
+        var timeout = TimeSpan.FromSeconds(Math.Clamp(o.Smtp.TimeoutSeconds, 1, 120));
+        using var client = new SmtpClient(o.Smtp.Host, o.Smtp.Port)
+        {
+            EnableSsl = o.Smtp.EnableSsl, DeliveryMethod = SmtpDeliveryMethod.Network, Timeout = (int)timeout.TotalMilliseconds,
+        };
         if (!string.IsNullOrWhiteSpace(o.Smtp.UserName)) client.Credentials = new NetworkCredential(o.Smtp.UserName, o.Smtp.Password);
         using var message = new MailMessage
         {
@@ -57,10 +65,20 @@ internal sealed class SmtpEmailSender(IOptions<EmailOptions> options) : IEmailSe
         };
         message.To.Add(email.To);
         message.AlternateViews.Add(AlternateView.CreateAlternateViewFromString(email.TextBody, Encoding.UTF8, "text/plain"));
+        // El envío asincrónico se acota además con un token propio (SmtpClient.Timeout no cubre todas las fases).
+        using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        timeoutCts.CancelAfter(timeout);
+        var started = System.Diagnostics.Stopwatch.GetTimestamp();
         try
         {
-            await client.SendMailAsync(message, ct);
+            await client.SendMailAsync(message, timeoutCts.Token);
             return new SendResult(true, true, "smtp", message.Headers["Message-ID"], null);
+        }
+        catch (Exception ex) when (ex is (OperationCanceledException or SmtpException) && !ct.IsCancellationRequested
+                                   && (timeoutCts.IsCancellationRequested || System.Diagnostics.Stopwatch.GetElapsedTime(started) >= timeout * 0.9))
+        {
+            // Vencido el plazo, SmtpClient informa OperationCanceledException o SmtpException(GeneralFailure) según la fase.
+            return new SendResult(true, false, "smtp", null, "timeout");
         }
         catch (SmtpException ex)
         {
@@ -75,6 +93,9 @@ internal sealed class SmtpEmailSender(IOptions<EmailOptions> options) : IEmailSe
 /// </summary>
 internal sealed class DevelopmentFileEmailSender(IOptions<EmailOptions> options, IHostEnvironment env, ILogger<DevelopmentFileEmailSender> logger) : IEmailSender
 {
+    /// <summary>No entrega correos: los envíos automáticos (recordatorios) no deben considerarlo un proveedor.</summary>
+    public bool IsConfigured => false;
+
     public async Task<SendResult> SendAsync(OutgoingEmail email, CancellationToken ct)
     {
         if (!env.IsDevelopment()) return SendResult.NoProvider("development-file");
@@ -92,6 +113,8 @@ internal sealed class DevelopmentFileEmailSender(IOptions<EmailOptions> options,
 
 internal sealed class NoEmailSender(ILogger<NoEmailSender> logger) : IEmailSender
 {
+    public bool IsConfigured => false;
+
     public Task<SendResult> SendAsync(OutgoingEmail email, CancellationToken ct)
     {
         logger.LogWarning("No hay proveedor de correo configurado: el mensaje a {Recipient} no fue enviado.", Mask.Email(email.To));
@@ -102,6 +125,8 @@ internal sealed class NoEmailSender(ILogger<NoEmailSender> logger) : IEmailSende
 /// <summary>Sin proveedor de WhatsApp configurado: registra el intento sin enviar ni afirmar envío.</summary>
 internal sealed class NoWhatsAppSender(IOptions<WhatsAppOptions> options, ILogger<NoWhatsAppSender> logger) : IWhatsAppSender
 {
+    public bool IsConfigured => false;
+
     public Task<SendResult> SendAsync(OutgoingWhatsApp message, CancellationToken ct)
     {
         var provider = options.Value.Provider.Equals("DevelopmentLog", StringComparison.OrdinalIgnoreCase) ? "development-log" : "none";

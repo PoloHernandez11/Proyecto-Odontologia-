@@ -2,7 +2,7 @@
   <header class="od-topbar"><div><h1>Perfil y configuración</h1><p>Tus datos, tu seguridad y las preferencias del consultorio</p></div></header>
 
   <div class="od-content settings">
-    @if (perfil; as p) {
+    @if (perfil(); as p) {
       <aside class="summary">
         <span class="avatar" aria-hidden="true">{{ iniciales }}</span>
         <strong>{{ p.displayName }}</strong>
@@ -14,35 +14,35 @@
           <small class="where">{{ nombreConsultorio() }}</small>
         }
         <nav class="sections" aria-label="Secciones de configuración">
-          <button type="button" [class.selected]="seccion === 'datos'" (click)="abrir('datos')">Mis datos</button>
+          <button type="button" [class.selected]="seccion() === 'datos'" (click)="abrir('datos')">Mis datos</button>
           @if (esProfesional()) {
-            <button type="button" [class.selected]="seccion === 'profesional'" (click)="abrir('profesional')">Datos profesionales</button>
+            <button type="button" [class.selected]="seccion() === 'profesional'" (click)="abrir('profesional')">Datos profesionales</button>
             @if (puedeConfigurarHorario) {
-              <button type="button" [class.selected]="seccion === 'horario'" (click)="abrir('horario')">Horario de atención @if (sinHorario) {<span class="pending-dot" title="Sin cargar"></span>}</button>
+              <button type="button" [class.selected]="seccion() === 'horario'" (click)="abrir('horario')">Horario de atención @if (sinHorario) {<span class="pending-dot" title="Sin cargar"></span>}</button>
             }
           }
-          <button type="button" [class.selected]="seccion === 'seguridad'" (click)="abrir('seguridad')">Seguridad</button>
-          <button type="button" [class.selected]="seccion === 'notificaciones'" (click)="abrir('notificaciones')">Notificaciones</button>
+          <button type="button" [class.selected]="seccion() === 'seguridad'" (click)="abrir('seguridad')">Seguridad</button>
+          <button type="button" [class.selected]="seccion() === 'notificaciones'" (click)="abrir('notificaciones')">Notificaciones</button>
           @if (veConsultorio) {
-            <button type="button" [class.selected]="seccion === 'consultorio'" (click)="abrir('consultorio')">Consultorio</button>
+            <button type="button" [class.selected]="seccion() === 'consultorio'" (click)="abrir('consultorio')">Consultorio</button>
           }
         </nav>
       </aside>
     }
 
     <section class="od-panel detail">
-      @if (cargando) {
+      @if (cargando()) {
         <p class="od-note loading">Cargando tu perfil…</p>
       }
-      @if (perfil; as p) {
+      @if (perfil(); as p) {
         <div class="od-panel-body">
-          @if (mensaje) {
-            <p class="od-feedback" role="status">{{ mensaje }}</p>
+          @if (mensaje()) {
+            <p class="od-feedback" role="status">{{ mensaje() }}</p>
           }
-          @if (error) {
-            <p class="od-feedback error" role="alert">{{ error }}</p>
+          @if (error()) {
+            <p class="od-feedback error" role="alert">{{ error() }}</p>
           }
-          @if (seccion === 'datos') {
+          @if (seccion() === 'datos') {
             <form class="od-form" [formGroup]="datos" (ngSubmit)="guardarDatos()">
               <h2>Mis datos</h2>
               <div class="od-form-row">
@@ -61,10 +61,10 @@
               </div>
               <label>Correo electrónico<input type="email" [value]="p.email" disabled></label>
               <p class="od-note">{{ p.emailConfirmed ? '✓ Correo confirmado.' : 'Tu correo todavía no está confirmado.' }} El correo es tu usuario de ingreso y no se cambia desde esta pantalla.</p>
-              <footer><button type="submit" class="od-button" [disabled]="guardando || datos.pristine">{{ guardando ? 'Guardando…' : 'Guardar cambios' }}</button></footer>
+              <footer><button type="submit" class="od-button" [disabled]="guardando() || datos.pristine">{{ guardando() ? 'Guardando…' : 'Guardar cambios' }}</button></footer>
             </form>
           }
-          @if (seccion === 'profesional') {
+          @if (seccion() === 'profesional') {
             <form class="od-form" [formGroup]="profesional" (ngSubmit)="guardarProfesional()">
               <h2>Datos profesionales</h2>
               <div class="od-form-row">
@@ -75,10 +75,10 @@
                 <small>Elegí un valor entre 5 y 480 minutos.</small>
               }</label>
               <p class="od-note">Esta duración se propone automáticamente al agendar un turno con vos.</p>
-              <footer><button type="submit" class="od-button" [disabled]="guardando || profesional.pristine">{{ guardando ? 'Guardando…' : 'Guardar cambios' }}</button></footer>
+              <footer><button type="submit" class="od-button" [disabled]="guardando() || profesional.pristine">{{ guardando() ? 'Guardando…' : 'Guardar cambios' }}</button></footer>
             </form>
           }
-          @if (seccion === 'horario') {
+          @if (seccion() === 'horario') {
             <div class="od-form">
               <h2>Horario de atención</h2>
               <p class="od-note">La agenda sólo permite dar turnos con vos dentro de estas franjas. Podés cargar más de una franja por día (por ejemplo, mañana y tarde). Los días sin franjas figuran como no laborables.</p>
@@ -86,7 +86,7 @@
                 <p class="od-feedback error" role="note">Todavía no cargaste tu horario: mientras tanto no se pueden agendar turnos con vos.</p>
               }
               <ul class="week">
-                @for (dia of horario; track dia.dia) {
+                @for (dia of horario(); track dia.dia) {
                   <li>
                     <strong>{{ dia.nombre }}</strong>
                     <div class="slots">
@@ -106,28 +106,28 @@
                 }
               </ul>
               <footer>
-                <button type="button" class="od-button" [disabled]="guardando" (click)="guardarHorario()">{{ guardando ? 'Guardando…' : 'Guardar horario' }}</button>
+                <button type="button" class="od-button" [disabled]="guardando()" (click)="guardarHorario()">{{ guardando() ? 'Guardando…' : 'Guardar horario' }}</button>
                 <button type="button" class="od-button secondary" (click)="copiarLunesASemana()">Copiar el lunes a martes–viernes</button>
               </footer>
             </div>
           }
-          @if (seccion === 'seguridad') {
+          @if (seccion() === 'seguridad') {
             <form class="od-form" [formGroup]="contrasena" (ngSubmit)="cambiarContrasena()">
               <h2>Cambiar contraseña</h2>
-              <label>Contraseña actual<input [type]="verContrasenas ? 'text' : 'password'" formControlName="actual" autocomplete="current-password"></label>
+              <label>Contraseña actual<input [type]="verContrasenas() ? 'text' : 'password'" formControlName="actual" autocomplete="current-password"></label>
               <div class="od-form-row">
-                <label>Contraseña nueva<input [type]="verContrasenas ? 'text' : 'password'" formControlName="nueva" autocomplete="new-password"></label>
-                <label>Repetir la contraseña nueva<input [type]="verContrasenas ? 'text' : 'password'" formControlName="repetida" autocomplete="new-password"></label>
+                <label>Contraseña nueva<input [type]="verContrasenas() ? 'text' : 'password'" formControlName="nueva" autocomplete="new-password"></label>
+                <label>Repetir la contraseña nueva<input [type]="verContrasenas() ? 'text' : 'password'" formControlName="repetida" autocomplete="new-password"></label>
               </div>
-              <label class="check"><input type="checkbox" [checked]="verContrasenas" (change)="verContrasenas = !verContrasenas"> Mostrar las contraseñas</label>
+              <label class="check"><input type="checkbox" [checked]="verContrasenas()" (change)="verContrasenas.set(!verContrasenas())"> Mostrar las contraseñas</label>
               @if (contrasena.controls.nueva.value) {
                 <ul class="requirements">
-                  @for (requisito of requisitos; track requisito) {
+                  @for (requisito of requisitos; track requisito.titulo) {
                     <li [class.ok]="requisito.cumple">{{ requisito.cumple ? '✓' : '○' }} {{ requisito.titulo }}</li>
                   }
                 </ul>
               }
-              <footer><button type="submit" class="od-button" [disabled]="guardando">{{ guardando ? 'Guardando…' : 'Cambiar contraseña' }}</button></footer>
+              <footer><button type="submit" class="od-button" [disabled]="guardando()">{{ guardando() ? 'Guardando…' : 'Cambiar contraseña' }}</button></footer>
             </form>
             <div class="block">
               <h2>Sesión</h2>
@@ -135,12 +135,12 @@
               <button type="button" class="od-button danger" (click)="cerrarSesion()">Cerrar sesión en este dispositivo</button>
             </div>
           }
-          @if (seccion === 'notificaciones' && ajustes; as a) {
+          @if (seccion() === 'notificaciones' && ajustes(); as a) {
             <div>
               <h2>Notificaciones</h2>
               <p class="od-note">Los cambios se guardan al instante.</p>
               <ul class="switches">
-                @for (opcion of notificaciones; track opcion) {
+                @for (opcion of notificaciones; track opcion.clave) {
                   <li>
                     <span><strong>{{ opcion.titulo }}</strong><small>{{ opcion.detalle }}</small></span>
                     <button type="button" role="switch" class="switch" [class.on]="a[opcion.clave]" [attr.aria-checked]="a[opcion.clave]" [attr.aria-label]="opcion.titulo" (click)="alternar(opcion.clave)"><i></i></button>
@@ -149,7 +149,7 @@
               </ul>
             </div>
           }
-          @if (seccion === 'consultorio') {
+          @if (seccion() === 'consultorio') {
             <form class="od-form" [formGroup]="datosConsultorio" (ngSubmit)="guardarConsultorio()">
               <h2>Consultorio</h2>
               @if (!puedeEditarConsultorio) {
@@ -169,11 +169,11 @@
                 <label>Ciudad<input type="text" formControlName="ciudad"></label>
                 <label>Provincia<input type="text" formControlName="provincia"></label>
               </div>
-              @if (consultorio; as c) {
+              @if (consultorio(); as c) {
                 <p class="od-note">Zona horaria: {{ c.timeZoneId }} · Turnos de {{ c.defaultAppointmentMinutes }} min por defecto · Recordatorios {{ c.reminderHoursBefore }} h antes.</p>
               }
               @if (puedeEditarConsultorio) {
-                <footer><button type="submit" class="od-button" [disabled]="guardando || datosConsultorio.pristine">{{ guardando ? 'Guardando…' : 'Guardar cambios' }}</button></footer>
+                <footer><button type="submit" class="od-button" [disabled]="guardando() || datosConsultorio.pristine">{{ guardando() ? 'Guardando…' : 'Guardar cambios' }}</button></footer>
               }
             </form>
           }

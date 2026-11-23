@@ -12,7 +12,7 @@ flowchart LR
       Infra["Odontia.Infrastructure<br/>EF Core MySQL · Identity · JWT<br/>archivos · correo · jobs"]
     end
     Api --> App
-    Api --> Infra
+    Api -. "sólo composición (Program.cs)" .-> Infra
     Infra --> App
     App --> Dom
     Infra --> DB[(MySQL 8.4+)]
@@ -23,11 +23,27 @@ flowchart LR
 - **Domain** no depende de EF Core ni de ASP.NET (sólo de `Microsoft.Extensions.Identity.Stores` para `IdentityUser<Guid>`).
   Las reglas viven en las entidades: máquina de estados de turnos y laboratorio, versionado de evoluciones clínicas,
   reglas del odontograma, totales de presupuestos, anulación de pagos, etc.
-- **Application** define los puertos (`IApplicationDbContext`, `IFileStorage`, `IEmailSender`, `IAgendaLock`, …) y los
-  servicios de casos de uso. Usa `IApplicationDbContext` directamente (sin repositorios genéricos: EF Core ya es unidad de
-  trabajo + repositorio). Cada servicio vuelve a verificar permisos (defensa en profundidad).
-- **Infrastructure** implementa los puertos.
-- **Api** sólo traduce HTTP ↔ casos de uso. Los controllers no contienen consultas ni lógica de negocio.
+- **Application** define los puertos (`IApplicationDbContext`, `IApplicationTransaction`, `IAgendaLock`, `IMembershipResolver`,
+  `IJwtTokenService`, `IFileStorage`, `IEmailSender`, …) y los servicios de casos de uso. Usa `IApplicationDbContext`
+  directamente (sin repositorios genéricos: EF Core ya es unidad de trabajo + repositorio). Cada servicio vuelve a verificar
+  permisos (defensa en profundidad).
+  - Decisión pragmática: Application depende del paquete EF Core para `DbSet`/`IQueryable`/`Include`, pero **las firmas de
+    los puertos no exponen tipos de infraestructura de EF** (`DatabaseFacade`, `IDbContextTransaction`). Las transacciones se
+    abren con `IApplicationDbContext.BeginTransactionAsync` (o `IAgendaLock.AcquireAsync`) y se manejan como
+    `IApplicationTransaction` (`CommitAsync`; liberarla sin confirmar revierte).
+- **Infrastructure** implementa los puertos (p. ej. `EfApplicationTransaction` adapta la transacción de EF Core).
+- **Api** sólo traduce HTTP ↔ casos de uso y consume únicamente interfaces de Application (el middleware de consultorio usa
+  `IMembershipResolver` e `IJwtTokenService`). La única referencia a Infrastructure es la raíz de composición (`Program.cs`:
+  `AddInfrastructure`, `JwtOptions` para JwtBearer y migraciones al iniciar). Los controllers no contienen consultas ni lógica de negocio.
+
+### Organización del código
+
+- Un tipo por archivo: cada controller en `Api/Controllers/<Nombre>Controller.cs`; cada validador en
+  `Application/Validation/<Feature>/<Request>Validator.cs` (namespace `Odontia.Application.Validation`; reglas comunes en
+  `Validation/Rules.cs`); cada servicio con su interfaz en `Features/<Feature>/<Servicio>.cs`.
+- `AuthService` (contrato `IAuthService`) es una clase `partial` dividida por responsabilidad: `AuthService.cs` (registro y
+  utilidades), `.Login.cs`, `.Sessions.cs` (emisión, rotación y revocación), `.Credentials.cs` (contraseñas y correo),
+  `.TwoFactor.cs` e `.Invitations.cs`.
 
 ## Pipeline de una solicitud
 
@@ -86,6 +102,10 @@ sequenceDiagram
   contra MySQL: se crea 1 y las otras 5 reciben 409.
 - **Optimista**: los turnos tienen `Version` y las evoluciones clínicas `Version`. Una edición con versión vieja → 409.
 - **Numeración** (presupuestos, recibos): contador por consultorio incrementado con `UPDATE … SET LastValue = LastValue + 1`.
+- **Último administrador**: cambiar roles de un miembro, desactivarlo o editar los permisos de un rol toma primero un
+  bloqueo (`UPDATE … SET LockVersion = LockVersion + 1` sobre los miembros del consultorio) y luego valida que quede al menos
+  un miembro activo con `users.manage` y `roles.manage`; si no, 422 `last_administrator`. Dos degradaciones simultáneas
+  quedan serializadas.
 - **Login concurrente**: el "último acceso" se actualiza con un `UPDATE` atómico, sin el `ConcurrencyStamp` de Identity.
 - No se usa `EnableRetryOnFailure`: es incompatible con transacciones explícitas, y reintentar una reserva a ciegas no es
   seguro. Ante errores transitorios el cliente reintenta la operación completa.

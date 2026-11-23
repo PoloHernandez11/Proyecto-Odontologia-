@@ -71,7 +71,8 @@ public sealed class AuthTests(OdontiaFactory factory) : IClassFixture<OdontiaFac
         api.ApplySession(body.AsObject());
         Assert.Contains(r1.Headers.GetValues("Set-Cookie"), c => c.StartsWith("odontia_rt=") && c.Contains("httponly", StringComparison.OrdinalIgnoreCase) && c.Contains("secure", StringComparison.OrdinalIgnoreCase));
 
-        // Reuso del refresh token anterior (robado): se rechaza y se revoca la familia completa.
+        // Reuso del refresh token anterior (robado) fuera de la ventana de gracia: se rechaza y se revoca la familia completa.
+        await api.AgeRotatedRefreshTokensAsync(TimeSpan.FromMinutes(1));
         var attacker = factory.NewClient();
         var req = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/refresh");
         req.Headers.Add("Cookie", $"odontia_rt={oldCookie}; odontia_csrf=x");

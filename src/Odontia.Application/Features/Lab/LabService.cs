@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Odontia.Application.Abstractions;
 using Odontia.Application.Common;
+using Odontia.Application.Features.Finance;
 using Odontia.Application.Features.Notifications;
 using Odontia.Application.Features.Patients;
 using Odontia.Domain.Authorization;
@@ -63,6 +64,8 @@ public interface ILabService
 
 internal sealed class LabService(IApplicationDbContext db, ITenantContext tenant, IConsultorioClock clock, INotificationService notifications) : ILabService
 {
+    private const string ConcurrencyMessage = "El trabajo de laboratorio fue modificado por otra operación. Actualice y reintente.";
+
     public async Task<IReadOnlyList<LaboratoryDto>> GetLaboratoriesAsync(bool includeInactive, CancellationToken ct)
     {
         if (!tenant.Has(Permissions.LabRead) && !tenant.Has(Permissions.LaboratoriesManage)) throw new ForbiddenAccessException();
@@ -158,7 +161,7 @@ internal sealed class LabService(IApplicationDbContext db, ITenantContext tenant
         if (r.LaboratoryId != w.LaboratoryId) throw new RequestValidationException("laboratoryId", "Para cambiar de laboratorio cancele y cree un nuevo trabajo.");
         w.Update(r.WorkType, r.ResolveToothCodes(), r.Description, r.EstimatedDeliveryDate, r.Cost, r.Notes);
         if (r.AppointmentId != w.AppointmentId) w.LinkAppointment(r.AppointmentId);
-        await db.SaveChangesAsync(ct);
+        await db.SaveOrConflictAsync(ConcurrencyMessage, ct);
         return await GetAsync(id, ct);
     }
 
@@ -174,7 +177,7 @@ internal sealed class LabService(IApplicationDbContext db, ITenantContext tenant
         w.ChangeStatus(r.Status, date, r.Note, tenant.UserId, clock.UtcNow);
         if (r.NewEstimatedDeliveryDate is not null)
             w.Update(w.WorkType, w.ToothCodes, w.Description, r.NewEstimatedDeliveryDate, w.Cost, w.Notes);
-        await db.SaveChangesAsync(ct);
+        await db.SaveOrConflictAsync(ConcurrencyMessage, ct);
         if (r.Status is LabWorkStatus.ReadyForPickup or LabWorkStatus.Received && w.ProfessionalUserId != tenant.UserId)
             await notifications.NotifyAsync(w.ProfessionalUserId, NotificationType.LabWorkUpdate,
                 r.Status == LabWorkStatus.Received ? "Trabajo de laboratorio recibido" : "Trabajo listo para retirar",

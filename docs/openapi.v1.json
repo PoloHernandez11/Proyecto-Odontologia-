@@ -4162,11 +4162,11 @@
       }
     },
     "/api/v1/auth/2fa/setup": {
-      "get": {
+      "post": {
         "tags": [
           "Auth"
         ],
-        "summary": "Clave y URI otpauth para configurar una app autenticadora.",
+        "summary": "Clave y URI otpauth para configurar una app autenticadora. Es POST porque genera y guarda la clave si no existe;\r\nno invalida la sesión actual. Con 2FA ya activo responde 422 `two_factor_already_enabled`.",
         "operationId": "authTwoFactorSetup",
         "responses": {
           "200": {
@@ -4175,6 +4175,26 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/AuthenticatorSetupDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflicto: duplicado, horario ocupado o versión desactualizada (`slot_taken`, `concurrency_conflict`, …).",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiProblem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Regla de negocio incumplida (el `detail` es apto para mostrar al usuario).",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiProblem"
                 }
               }
             }
@@ -4197,7 +4217,7 @@
         "tags": [
           "Auth"
         ],
-        "summary": "Activa 2FA verificando un código. Devuelve códigos de recuperación (se muestran una única vez).",
+        "summary": "Activa 2FA verificando un código. Devuelve códigos de recuperación (se muestran una única vez).\r\nLa sesión actual sigue válida; las demás sesiones del usuario se revocan.",
         "operationId": "authEnableTwoFactor",
         "requestBody": {
           "content": {
@@ -20514,6 +20534,9 @@
           },
           "isProfessional": {
             "type": "boolean"
+          },
+          "timeZoneId": {
+            "type": "string"
           }
         },
         "additionalProperties": false

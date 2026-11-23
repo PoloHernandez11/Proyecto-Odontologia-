@@ -6,6 +6,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using Odontia.Application.Abstractions;
+using Odontia.Application.Features.Auth;
 using Odontia.Domain.Entities;
 using Odontia.Infrastructure.BackgroundJobs;
 using Odontia.Infrastructure.Messaging;
@@ -26,9 +27,16 @@ public static class DependencyInjection
         services.Configure<WhatsAppOptions>(configuration.GetSection(WhatsAppOptions.Section));
         services.Configure<LocalStorageOptions>(configuration.GetSection(LocalStorageOptions.Section));
         services.Configure<BackgroundJobOptions>(configuration.GetSection(BackgroundJobOptions.Section));
+        services.Configure<AuthCacheOptions>(configuration.GetSection(AuthCacheOptions.Section));
 
-        services.AddDbContext<OdontiaDbContext>(options =>
+        services.AddMemoryCache();
+        services.AddSingleton<AuthStateVersions>();
+        services.AddSingleton<AuthStateInvalidationInterceptor>();
+
+        services.AddDbContext<OdontiaDbContext>((sp, options) =>
         {
+            // Invalida la caché de autorización por solicitud ante cambios de usuarios, sesiones y membresías.
+            options.AddInterceptors(sp.GetRequiredService<AuthStateInvalidationInterceptor>());
             if (configureDb is not null)
             {
                 configureDb(options);
@@ -68,6 +76,11 @@ public static class DependencyInjection
         if (!string.IsNullOrWhiteSpace(keysPath)) dp.PersistKeysToFileSystem(new DirectoryInfo(Path.Combine(env.ContentRootPath, keysPath)));
 
         services.AddScoped<IJwtTokenService, JwtTokenService>();
+        services.AddSingleton<IOneTimeUseStore, InMemoryOneTimeUseStore>();
+        // Correos transaccionales fuera del ciclo de la solicitud (siempre activo, independiente de BackgroundJobs:Enabled).
+        services.AddSingleton<BackgroundEmailQueue>();
+        services.AddSingleton<IEmailQueue>(sp => sp.GetRequiredService<BackgroundEmailQueue>());
+        services.AddHostedService<BackgroundEmailSender>();
         services.AddScoped<IAuditWriter, AuditWriter>();
         services.AddScoped<IMessageDispatcher, MessageDispatcher>();
         services.AddScoped<IAgendaLock, AgendaLock>();

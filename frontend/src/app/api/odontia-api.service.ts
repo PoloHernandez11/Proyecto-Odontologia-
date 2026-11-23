@@ -3,7 +3,7 @@ import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import { API, Paginado, parametros } from '../core/api';
 import {
-  AccountStatementDto, AgendaDto, AppointmentDto, AppointmentStatus, ApplyConditionRequest, BudgetDto, ClinicalDashboardDto,
+  AccountStatementDto, AgendaDto, AuthenticatorSetupDto, AppointmentDto, AppointmentStatus, ApplyConditionRequest, BudgetDto, ClinicalDashboardDto,
   ClinicalEntryDto, ClinicalRecordDto, ExpenseDto, FinanceSummaryDto, RegisterExpenseRequest, ConsultorioDto, CreateAppointmentRequest, CreateClinicalEntryRequest, CreatePatientRequest,
   GabineteDto, HealthInsuranceDto, LabBoardDto, LabWorkDto, LabWorkStatus, LaboratoryDto, MemberDto, NotificationSettingsDto,
   OdontogramCatalogDto, OdontogramDto, PatientDto, PatientListItemDto, PatientStatus, PatientSummaryDto, PaymentDto,
@@ -147,6 +147,8 @@ export class OdontiaApi {
   cambiarContrasena(currentPassword: string, newPassword: string): Observable<unknown> {
     return this.http.post(`${API}/auth/change-password`, { currentPassword, newPassword });
   }
+  /** Genera una clave nueva para vincular una app autenticadora. Es POST porque cambia estado en el servidor. */
+  configurarDosFactores(): Observable<AuthenticatorSetupDto> { return this.http.post<AuthenticatorSetupDto>(`${API}/auth/2fa/setup`, null); }
 }
 
 export const ESTADOS_DE_TURNO: Record<AppointmentStatus, string> = {

@@ -2,14 +2,14 @@
   <main class="main-content">
     <header class="topbar">
       <div>
-        <h1>{{ saludo }}, {{ nombreUsuario() }}</h1>
-        <p>{{ fechaHoyTexto }} · {{ vista === 'clinica' ? 'Tu jornada clínica' : 'Vista de recepción' }}</p>
+        <h1>{{ saludo() }}, {{ nombreUsuario() }}</h1>
+        <p>{{ fechaHoyTexto() }} · {{ vista() === 'clinica' ? 'Tu jornada clínica' : 'Vista de recepción' }}</p>
       </div>
       <div class="topbar-actions">
         @if (tieneRecepcion && tieneClinica) {
           <div class="view-toggle" role="group" aria-label="Elegir tablero">
-            <button type="button" [class.selected]="vista === 'clinica'" (click)="cambiarVista('clinica')">Clínica</button>
-            <button type="button" [class.selected]="vista === 'recepcion'" (click)="cambiarVista('recepcion')">Recepción</button>
+            <button type="button" [class.selected]="vista() === 'clinica'" (click)="cambiarVista('clinica')">Clínica</button>
+            <button type="button" [class.selected]="vista() === 'recepcion'" (click)="cambiarVista('recepcion')">Recepción</button>
           </div>
         }
         <label class="search-box">
@@ -20,26 +20,26 @@
     </header>
 
     <section class="dashboard-content">
-      @if (mensaje) {
-        <p class="notice" role="status">{{ mensaje }}</p>
+      @if (mensaje()) {
+        <p class="notice" role="status">{{ mensaje() }}</p>
       }
-      @if (error) {
-        <p class="notice error" role="alert">{{ error }}</p>
+      @if (error()) {
+        <p class="notice error" role="alert">{{ error() }}</p>
       }
       @if (sinTablero) {
         <p class="notice">Tu rol no tiene un tablero de inicio. Usá el menú para ir a las secciones disponibles.</p>
       }
-      @if (cargando) {
+      @if (cargando()) {
         <p class="notice">Cargando el resumen del día…</p>
       }
 
       <!-- ── Recepción ─────────────────────────────────────────────────────── -->
-      @if (vista === 'recepcion' && recepcion; as r) {
+      @if (vista() === 'recepcion' && recepcion(); as r) {
         <section class="metrics-grid" aria-label="Resumen del día">
-          <article class="metric-card"><div class="metric-heading"><span>Turnos de hoy</span><span class="metric-icon" aria-hidden="true">▦</span></div><strong class="metric-value">{{ r.appointmentsToday }}</strong><p>{{ r.confirmedToday }} confirmados · {{ r.pendingConfirmationToday }} por confirmar</p></article>
+          <article class="metric-card"><div class="metric-heading"><span>Turnos de hoy</span><span class="metric-icon" aria-hidden="true">▦</span></div><strong class="metric-value">{{ r.appointmentsToday }}</strong><p>{{ r.confirmedToday | plural:'confirmado' }} · {{ r.pendingConfirmationToday }} por confirmar</p></article>
           <article class="metric-card"><div class="metric-heading"><span>En sala de espera</span><span class="metric-icon" aria-hidden="true">◷</span></div><strong class="metric-value">{{ r.inWaitingRoom }}</strong><p>Tiempo medio de espera: {{ r.averageWaitMinutes }} min</p></article>
           <article class="metric-card"><div class="metric-heading"><span>Confirmaciones pendientes</span><span class="metric-icon" aria-hidden="true">⌕</span></div><strong class="metric-value">{{ r.pendingConfirmationNext48h }}</strong><p>Turnos de las próximas 48 horas</p></article>
-          <article class="metric-card"><div class="metric-heading"><span>Tareas abiertas</span><span class="metric-icon" aria-hidden="true">☑</span></div><strong class="metric-value">{{ r.openTasks }}</strong><p>{{ r.tasksDueToday }} vencen hoy · {{ r.overdueTasks }} vencidas</p></article>
+          <article class="metric-card"><div class="metric-heading"><span>Tareas abiertas</span><span class="metric-icon" aria-hidden="true">☑</span></div><strong class="metric-value">{{ r.openTasks }}</strong><p>{{ r.tasksDueToday | plural:'vence':'vencen' }} hoy · {{ r.overdueTasks | plural:'vencida' }}</p></article>
         </section>
         <div class="dashboard-columns">
           <section class="panel appointments-panel">
@@ -50,7 +50,7 @@
             <table>
               <thead><tr><th>HORA</th><th>PACIENTE</th><th>PROFESIONAL</th><th>ESTADO</th></tr></thead>
               <tbody>
-                @for (turno of r.todayAgenda; track turno) {
+                @for (turno of r.todayAgenda; track turno.id) {
                   <tr>
                     <td class="appointment-time">{{ hora(turno.startUtc) }}</td>
                     <td><div class="patient-cell"><span class="patient-avatar">{{ iniciales(turno.patientName) }}</span><span><strong>{{ turno.patientName }}</strong><small>{{ turno.reason || 'Turno' }}</small></span></div></td>
@@ -67,9 +67,9 @@
         </section>
         <div class="right-column">
           <section class="panel waiting-panel">
-            <header class="panel-header"><h2>Sala de espera</h2><span class="small-counter">● {{ r.waitingRoom.length }} {{ r.waitingRoom.length === 1 ? 'paciente' : 'pacientes' }}</span></header>
+            <header class="panel-header"><h2>Sala de espera</h2><span class="small-counter">● {{ r.waitingRoom.length | plural:'paciente' }}</span></header>
             <div class="waiting-list">
-              @for (paciente of r.waitingRoom; track paciente) {
+              @for (paciente of r.waitingRoom; track paciente.appointmentId) {
                 <div class="waiting-person">
                   <span class="patient-avatar">{{ iniciales(paciente.patientName) }}</span>
                   <span class="waiting-information"><strong>{{ paciente.patientName }}</strong><small>{{ paciente.professional }}@if (paciente.gabinete) {
@@ -86,7 +86,7 @@
         <section class="panel tasks-panel">
           <header class="panel-header"><h2>Tareas pendientes</h2><a routerLink="/turnos-tareas">Ver todas</a></header>
           <div class="task-list">
-            @for (tarea of r.pendingTasks; track tarea) {
+            @for (tarea of r.pendingTasks; track tarea.id) {
               <label class="task-item">
                 <input type="checkbox" [disabled]="!puedeTareas" (change)="completarTarea(tarea)">
                 <span class="task-description">{{ tarea.title }}</span>
@@ -100,7 +100,7 @@
         </section>
         <section class="panel laboratory-panel">
           <header class="panel-header"><h2>Laboratorio · próximas entregas</h2><a routerLink="/laboratorio">Ver</a></header>
-          @for (trabajo of r.upcomingLabDeliveries; track trabajo) {
+          @for (trabajo of r.upcomingLabDeliveries; track trabajo.id) {
             <div class="laboratory-item"><span class="lab-icon" aria-hidden="true">⚗</span><span><strong>{{ trabajo.patientName }}</strong><small>{{ trabajo.workType }}@if (trabajo.toothCode) {
             · {{ trabajo.toothCode }}
             } · {{ trabajo.laboratory }}</small></span><span class="arrival-time">{{ trabajo.isOverdue ? 'Atrasado' : fecha(trabajo.estimatedDeliveryDate).slice(0, 5) }}</span></div>
@@ -114,12 +114,12 @@
   }
 
   <!-- ── Clínica ───────────────────────────────────────────────────────── -->
-  @if (vista === 'clinica' && clinica; as c) {
+  @if (vista() === 'clinica' && clinica(); as c) {
     <section class="metrics-grid" aria-label="Resumen del día">
-      <article class="metric-card"><div class="metric-heading"><span>Pacientes de hoy</span><span class="metric-icon" aria-hidden="true">▦</span></div><strong class="metric-value">{{ c.patientsToday }}</strong><p>{{ c.attendedToday }} atendidos · {{ c.remainingToday }} restantes</p></article>
+      <article class="metric-card"><div class="metric-heading"><span>Pacientes de hoy</span><span class="metric-icon" aria-hidden="true">▦</span></div><strong class="metric-value">{{ c.patientsToday }}</strong><p>{{ c.attendedToday | plural:'atendido' }} · {{ c.remainingToday | plural:'restante' }}</p></article>
       <article class="metric-card"><div class="metric-heading"><span>Próximo turno</span><span class="metric-icon" aria-hidden="true">◷</span></div><strong class="metric-value">{{ c.nextAppointment ? hora(c.nextAppointment.startUtc) : '—' }}</strong><p>{{ c.nextAppointment ? c.nextAppointment.patientName + ' · ' + (c.nextAppointment.reason || 'Turno') : 'No quedan turnos por hoy' }}</p></article>
-      <article class="metric-card"><div class="metric-heading"><span>Tratamientos en curso</span><span class="metric-icon" aria-hidden="true">⌕</span></div><strong class="metric-value">{{ c.treatmentsInProgress }}</strong><p>{{ c.treatmentsNeedingFollowUp }} requieren seguimiento</p></article>
-      <article class="metric-card"><div class="metric-heading"><span>Trabajos en laboratorio</span><span class="metric-icon" aria-hidden="true">☑</span></div><strong class="metric-value">{{ c.openLabWorks }}</strong><p>{{ c.labWorksReadyForPickup }} listos para retirar</p></article>
+      <article class="metric-card"><div class="metric-heading"><span>Tratamientos en curso</span><span class="metric-icon" aria-hidden="true">⌕</span></div><strong class="metric-value">{{ c.treatmentsInProgress }}</strong><p>{{ c.treatmentsNeedingFollowUp | plural:'requiere':'requieren' }} seguimiento</p></article>
+      <article class="metric-card"><div class="metric-heading"><span>Trabajos en laboratorio</span><span class="metric-icon" aria-hidden="true">☑</span></div><strong class="metric-value">{{ c.openLabWorks }}</strong><p>{{ c.labWorksReadyForPickup | plural:'listo':'listos' }} para retirar</p></article>
     </section>
     <div class="dashboard-columns">
       <section class="doctor-main">
@@ -150,7 +150,7 @@
         }
         <section class="panel doctor-appointments">
           <header class="panel-header"><h2>Mis turnos de hoy</h2><a routerLink="/agenda">▦ Ver agenda</a></header>
-          @for (turno of c.myAppointmentsToday; track turno) {
+          @for (turno of c.myAppointmentsToday; track turno.id) {
             <div class="doctor-appointment-row">
               <time>{{ hora(turno.startUtc) }}</time><span class="doctor-appointment-info"><strong>{{ turno.patientName }}</strong><small>{{ turno.reason || 'Turno' }}</small></span><span class="status" [ngClass]="clases[turno.status]">{{ estados[turno.status] }}</span>
               @if (veHistoria) {
@@ -166,8 +166,8 @@
       <div class="right-column">
         <section class="panel doctor-alerts">
           <header class="panel-header"><h2>Alertas clínicas</h2></header>
-          @for (paciente of c.medicalAlerts; track paciente) {
-            @for (alerta of paciente.alerts; track alerta) {
+          @for (paciente of c.medicalAlerts; track paciente.patientId) {
+            @for (alerta of paciente.alerts; track $index) {
               <div class="clinical-alert"><span class="alert-icon" [ngClass]="alerta.severity === 'Critical' ? 'alerta' : alerta.severity === 'Warning' ? 'aviso' : 'documento'">!</span><span><strong>{{ paciente.patientName }} · {{ alerta.title }}</strong>@if (alerta.details) {
               <small>{{ alerta.details }}</small>
             }</span></div>
@@ -180,14 +180,14 @@
       @if (veFinanzas) {
         <section class="panel doctor-finances">
           <header class="panel-header"><span><h2>Ingresos del mes</h2><small>Cobros registrados</small></span><a routerLink="/finanzas">▥ Ver</a></header>
-          <div class="finance-line"><span>Cobrado en el mes</span><strong>{{ pesos(ingresosDelMes) }}</strong></div>
-          <div class="finance-line"><span>Cantidad de cobros</span><strong>{{ pagosDelMes.length }}</strong></div>
+          <div class="finance-line"><span>Cobrado en el mes</span><strong>{{ pesos(ingresosDelMes()) }}</strong></div>
+          <div class="finance-line"><span>Cantidad de cobros</span><strong>{{ pagosDelMes().length }}</strong></div>
         </section>
       }
       @if (c.recentActivity.length) {
         <section class="panel doctor-alerts">
           <header class="panel-header"><h2>Actividad reciente</h2></header>
-          @for (actividad of c.recentActivity.slice(0, 5); track actividad) {
+          @for (actividad of c.recentActivity.slice(0, 5); track $index) {
             <div class="clinical-alert"><span class="alert-icon documento">·</span><span><strong>{{ actividad.description }}</strong><small>{{ fecha(actividad.atUtc) }} {{ hora(actividad.atUtc) }}@if (actividad.patientName) {
             · {{ actividad.patientName }}
           }</small></span></div>

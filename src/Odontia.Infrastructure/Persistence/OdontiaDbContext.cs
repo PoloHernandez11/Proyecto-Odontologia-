@@ -69,6 +69,9 @@ public class OdontiaDbContext(DbContextOptions<OdontiaDbContext> options, ITenan
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
     public DbSet<ConsultorioSequence> Sequences => Set<ConsultorioSequence>();
 
+    public async Task<IApplicationTransaction> BeginTransactionAsync(CancellationToken ct = default) =>
+        new EfApplicationTransaction(await Database.BeginTransactionAsync(ct));
+
     protected override void ConfigureConventions(ModelConfigurationBuilder b)
     {
         b.Properties<string>().HaveMaxLength(256);

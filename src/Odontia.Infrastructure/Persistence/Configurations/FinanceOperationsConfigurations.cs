@@ -23,6 +23,7 @@ internal sealed class TreatmentPlanConfiguration : IEntityTypeConfiguration<Trea
     public void Configure(EntityTypeBuilder<TreatmentPlan> b)
     {
         b.ToTable("TreatmentPlans");
+        b.Property(x => x.Version).IsConcurrencyToken();
         b.HasConsultorio();
         b.Property(x => x.Title).HasMaxLength(150).IsRequired();
         b.Property(x => x.Notes).LongText();
@@ -44,6 +45,7 @@ internal sealed class TreatmentPlanItemConfiguration : IEntityTypeConfiguration<
     public void Configure(EntityTypeBuilder<TreatmentPlanItem> b)
     {
         b.ToTable("TreatmentPlanItems");
+        b.Property(x => x.Version).IsConcurrencyToken();
         b.HasConsultorio();
         b.Property(x => x.ProcedureName).HasMaxLength(150).IsRequired();
         b.Property(x => x.Surfaces).HasMaxLength(7);
@@ -78,6 +80,7 @@ internal sealed class BudgetConfiguration : IEntityTypeConfiguration<Budget>
         b.Property(x => x.Notes).LongText();
         b.Property(x => x.StatusReason).HasMaxLength(500);
         b.Ignore(x => x.IsEditable);
+        b.Property(x => x.Version).IsConcurrencyToken();
         b.HasIndex(x => new { x.ConsultorioId, x.Number }).IsUnique();
         b.HasIndex(x => new { x.ConsultorioId, x.PatientId, x.Status });
         b.HasTenantReference<Budget, Patient>(nameof(Budget.PatientId));
@@ -125,6 +128,7 @@ internal sealed class PaymentConfiguration : IEntityTypeConfiguration<Payment>
         b.Property(x => x.Reference).HasMaxLength(100);
         b.Property(x => x.Notes).HasMaxLength(500);
         b.Property(x => x.VoidReason).HasMaxLength(500);
+        b.Property(x => x.Version).IsConcurrencyToken();
         b.HasTenantReference<Payment, Patient>(nameof(Payment.PatientId));
         b.HasTenantReference<Payment, Budget>(nameof(Payment.BudgetId), required: false);
         b.HasTenantReference<Payment, ConsultorioMember>(nameof(Payment.ReceivedByUserId), principalKey: nameof(ConsultorioMember.UserId));
@@ -139,8 +143,13 @@ internal sealed class AccountMovementConfiguration : IEntityTypeConfiguration<Ac
     {
         b.ToTable("AccountMovements");
         b.HasConsultorio();
-        b.Property(x => x.Description).HasMaxLength(250).IsRequired();
+        b.Property(x => x.Description).HasMaxLength(AccountMovement.DescriptionMaxLength).IsRequired();
         b.Ignore(x => x.SignedAmount);
+        // Defensa en profundidad (el dominio garantiza un único movimiento por pago y tipo, y que cada movimiento
+        // se revierte a lo sumo una vez). No se indexa (BudgetId, Type): los pagos imputados repiten BudgetId y tipo.
+        // Los NULL no colisionan en índices únicos (MySQL y SQLite).
+        b.HasIndex(x => new { x.PaymentId, x.Type }).IsUnique();
+        b.HasIndex(x => x.ReversesMovementId).IsUnique();
         b.HasTenantReference<AccountMovement, Patient>(nameof(AccountMovement.PatientId));
         b.HasTenantReference<AccountMovement, Budget>(nameof(AccountMovement.BudgetId), required: false);
         b.HasTenantReference<AccountMovement, Payment>(nameof(AccountMovement.PaymentId), required: false);
@@ -169,6 +178,7 @@ internal sealed class LabWorkConfiguration : IEntityTypeConfiguration<LabWork>
     public void Configure(EntityTypeBuilder<LabWork> b)
     {
         b.ToTable("LabWorks");
+        b.Property(x => x.Version).IsConcurrencyToken();
         b.HasConsultorio();
         b.Property(x => x.WorkType).HasMaxLength(120).IsRequired();
         b.Property(x => x.Description).HasMaxLength(1000);

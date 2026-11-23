@@ -12,14 +12,14 @@
   </header>
 
   <div class="od-content">
-    @if (pacienteId) {
-      <p class="od-feedback">Mostrando sólo la cuenta de <strong>{{ nombreDelPaciente || 'un paciente' }}</strong>. <a routerLink="/pagos" (click)="pacienteId = null; cargar()">Ver todos los pacientes</a></p>
+    @if (pacienteId()) {
+      <p class="od-feedback">Mostrando sólo la cuenta de <strong>{{ nombreDelPaciente() || 'un paciente' }}</strong>. <a routerLink="/pagos" (click)="pacienteId.set(null); cargar()">Ver todos los pacientes</a></p>
     }
-    @if (mensaje) {
-      <p class="od-feedback" role="status">{{ mensaje }}</p>
+    @if (mensaje()) {
+      <p class="od-feedback" role="status">{{ mensaje() }}</p>
     }
-    @if (error) {
-      <p class="od-feedback error" role="alert">{{ error }}</p>
+    @if (error()) {
+      <p class="od-feedback error" role="alert">{{ error() }}</p>
     }
 
     <section class="od-stats" aria-label="Resumen de cobros">
@@ -40,7 +40,7 @@
         <table class="od-table">
           <thead><tr><th>PACIENTE / CONCEPTO</th><th>FECHA</th><th class="num">TOTAL</th><th class="num">ABONADO</th><th class="num">SALDO</th><th>ESTADO</th><th>ACCIÓN</th></tr></thead>
           <tbody>
-            @for (presupuesto of presupuestosFiltrados; track presupuesto) {
+            @for (presupuesto of presupuestosFiltrados; track presupuesto.id) {
               <tr>
                 <td><strong>{{ presupuesto.patientName }}</strong><small>{{ descripcion(presupuesto) }} · N.º {{ presupuesto.number }}</small></td>
                 <td>{{ fecha(presupuesto.issueDate) }}</td>
@@ -59,10 +59,10 @@
                 </td>
               </tr>
             }
-            @if (!cargando && presupuestosFiltrados.length === 0) {
-              <tr><td colspan="7" class="empty">{{ presupuestos.length === 0 ? 'Todavía no hay conceptos de cobro registrados.' : 'No hay conceptos con esos filtros.' }}</td></tr>
+            @if (!cargando() && presupuestosFiltrados.length === 0) {
+              <tr><td colspan="7" class="empty">{{ presupuestos().length === 0 ? 'Todavía no hay conceptos de cobro registrados.' : 'No hay conceptos con esos filtros.' }}</td></tr>
             }
-            @if (cargando) {
+            @if (cargando()) {
               <tr><td colspan="7" class="empty">Cargando…</td></tr>
             }
           </tbody>
@@ -72,8 +72,8 @@
 
     <section class="od-panel">
       <div class="od-panel-heading">
-        <div><h2>Pagos registrados</h2><small>{{ pagosFiltrados.length }} movimientos</small></div>
-        <select aria-label="Filtrar por método" class="inline-select" [(ngModel)]="filtroMetodo"><option value="Todos">Método: todos</option>@for (metodo of listaDeMetodos; track metodo) {
+        <div><h2>Pagos registrados</h2><small>{{ pagosFiltrados.length | plural:'movimiento' }}</small></div>
+        <select aria-label="Filtrar por método" class="inline-select" [(ngModel)]="filtroMetodo"><option value="Todos">Método: todos</option>@for (metodo of listaDeMetodos; track metodo[0]) {
         <option [value]="metodo[0]">{{ metodo[1] }}</option>
       }</select>
     </div>
@@ -83,7 +83,7 @@
         <th>ACCIÓN</th>
       }</tr></thead>
       <tbody>
-        @for (pago of pagosFiltrados; track pago) {
+        @for (pago of pagosFiltrados; track pago.id) {
           <tr>
             <td>{{ fecha(pago.paidAtUtc) }}</td>
             <td><strong>{{ pago.patientName }}</strong>@if (pago.budgetNumber) {
@@ -114,12 +114,12 @@
 </div>
 </main>
 
-@if (mostrarConcepto) {
-  <div class="od-backdrop" (click)="mostrarConcepto = false">
-    <section class="od-modal" role="dialog" aria-modal="true" aria-labelledby="titulo-concepto" (click)="$event.stopPropagation()">
-      <header><div><h2 id="titulo-concepto">Nuevo concepto de cobro</h2><p>Se registra como un presupuesto aprobado, listo para cobrar.</p></div><button type="button" class="od-close" aria-label="Cerrar" (click)="mostrarConcepto = false">×</button></header>
+@if (mostrarConcepto()) {
+  <div class="od-backdrop" (click)="mostrarConcepto.set(false)">
+    <section class="od-modal" role="dialog" appDialog (cerrar)="mostrarConcepto.set(false)" aria-modal="true" aria-labelledby="titulo-concepto" (click)="$event.stopPropagation()">
+      <header><div><h2 id="titulo-concepto">Nuevo concepto de cobro</h2><p>Se registra como un presupuesto aprobado, listo para cobrar.</p></div><button type="button" class="od-close" aria-label="Cerrar" (click)="mostrarConcepto.set(false)">×</button></header>
       <form class="od-form" [formGroup]="formularioConcepto" (ngSubmit)="guardarConcepto()">
-        <label>Paciente<select formControlName="pacienteId"><option value="">Seleccionar paciente</option>@for (paciente of pacientes; track paciente) {
+        <label>Paciente<select formControlName="pacienteId"><option value="">Seleccionar paciente</option>@for (paciente of pacientes(); track paciente.id) {
         <option [value]="paciente.id">{{ paciente.lastName }}, {{ paciente.firstName }} · DNI {{ paciente.documentNumber }}</option>
       }</select>@if (formularioConcepto.controls.pacienteId.touched && formularioConcepto.controls.pacienteId.invalid) {
       <small>Seleccioná un paciente.</small>
@@ -130,21 +130,21 @@
     <label>Importe total ($)<input type="number" min="1" step="0.01" formControlName="importe" placeholder="0">@if (formularioConcepto.controls.importe.touched && formularioConcepto.controls.importe.invalid) {
       <small>Ingresá un importe mayor a cero.</small>
     }</label>
-    @if (errorFormulario) {
-      <p class="od-feedback error" role="alert">{{ errorFormulario }}</p>
+    @if (errorFormulario()) {
+      <p class="od-feedback error" role="alert">{{ errorFormulario() }}</p>
     }
-    <footer><button type="button" class="od-button secondary" (click)="mostrarConcepto = false">Cancelar</button><button type="submit" class="od-button" [disabled]="guardando">{{ guardando ? 'Guardando…' : 'Registrar concepto' }}</button></footer>
+    <footer><button type="button" class="od-button secondary" (click)="mostrarConcepto.set(false)">Cancelar</button><button type="submit" class="od-button" [disabled]="guardando()">{{ guardando() ? 'Guardando…' : 'Registrar concepto' }}</button></footer>
   </form>
 </section>
 </div>
 }
 
-@if (mostrarCobro) {
-  <div class="od-backdrop" (click)="mostrarCobro = false">
-    <section class="od-modal" role="dialog" aria-modal="true" aria-labelledby="titulo-cobro" (click)="$event.stopPropagation()">
-      <header><div><h2 id="titulo-cobro">Registrar cobro</h2><p>El pago se imputa al concepto elegido y actualiza su saldo.</p></div><button type="button" class="od-close" aria-label="Cerrar" (click)="mostrarCobro = false">×</button></header>
+@if (mostrarCobro()) {
+  <div class="od-backdrop" (click)="mostrarCobro.set(false)">
+    <section class="od-modal" role="dialog" appDialog (cerrar)="mostrarCobro.set(false)" aria-modal="true" aria-labelledby="titulo-cobro" (click)="$event.stopPropagation()">
+      <header><div><h2 id="titulo-cobro">Registrar cobro</h2><p>El pago se imputa al concepto elegido y actualiza su saldo.</p></div><button type="button" class="od-close" aria-label="Cerrar" (click)="mostrarCobro.set(false)">×</button></header>
       <form class="od-form" [formGroup]="formularioCobro" (ngSubmit)="registrarPago()">
-        <label>Concepto a cobrar<select formControlName="presupuestoId" (change)="alElegirPresupuesto()"><option value="">Seleccionar concepto</option>@for (presupuesto of cobrables; track presupuesto) {
+        <label>Concepto a cobrar<select formControlName="presupuestoId" (change)="alElegirPresupuesto()"><option value="">Seleccionar concepto</option>@for (presupuesto of cobrables; track presupuesto.id) {
         <option [value]="presupuesto.id">{{ presupuesto.patientName }} · {{ descripcion(presupuesto) }} · saldo {{ pesos(presupuesto.outstanding) }}</option>
       }</select>@if (formularioCobro.controls.presupuestoId.touched && formularioCobro.controls.presupuestoId.invalid) {
       <small>Seleccioná el concepto.</small>
@@ -153,7 +153,7 @@
       <label>Importe ($)<input type="number" min="0.01" step="0.01" formControlName="importe">@if (formularioCobro.controls.importe.touched && formularioCobro.controls.importe.invalid) {
         <small>Ingresá un importe mayor a cero.</small>
       }</label>
-      <label>Método de pago<select formControlName="metodo">@for (metodo of listaDeMetodos; track metodo) {
+      <label>Método de pago<select formControlName="metodo">@for (metodo of listaDeMetodos; track metodo[0]) {
         <option [value]="metodo[0]">{{ metodo[1] }}</option>
       }</select></label>
     </div>
@@ -162,25 +162,25 @@
     }
     <label>N.º de comprobante (opcional)<input type="text" formControlName="comprobante" placeholder="Ej. número de transferencia"></label>
     <label>Observaciones (opcional)<textarea rows="2" formControlName="observaciones"></textarea></label>
-    @if (errorFormulario) {
-      <p class="od-feedback error" role="alert">{{ errorFormulario }}</p>
+    @if (errorFormulario()) {
+      <p class="od-feedback error" role="alert">{{ errorFormulario() }}</p>
     }
-    <footer><button type="button" class="od-button secondary" (click)="mostrarCobro = false">Cancelar</button><button type="submit" class="od-button" [disabled]="guardando">{{ guardando ? 'Guardando…' : 'Registrar cobro' }}</button></footer>
+    <footer><button type="button" class="od-button secondary" (click)="mostrarCobro.set(false)">Cancelar</button><button type="submit" class="od-button" [disabled]="guardando()">{{ guardando() ? 'Guardando…' : 'Registrar cobro' }}</button></footer>
   </form>
 </section>
 </div>
 }
 
-@if (pagoPorAnular; as pago) {
-  <div class="od-backdrop" (click)="pagoPorAnular = null">
-    <section class="od-modal" role="dialog" aria-modal="true" aria-labelledby="titulo-anular" (click)="$event.stopPropagation()">
-      <header><div><h2 id="titulo-anular">Anular el recibo N.º {{ pago.receiptNumber }}</h2><p>{{ pago.patientName }} · {{ pesos(pago.amount) }}. El pago queda en el historial como anulado y el saldo vuelve a estar pendiente.</p></div><button type="button" class="od-close" aria-label="Cerrar" (click)="pagoPorAnular = null">×</button></header>
+@if (pagoPorAnular(); as pago) {
+  <div class="od-backdrop" (click)="pagoPorAnular.set(null)">
+    <section class="od-modal" role="dialog" appDialog (cerrar)="pagoPorAnular.set(null)" aria-modal="true" aria-labelledby="titulo-anular" (click)="$event.stopPropagation()">
+      <header><div><h2 id="titulo-anular">Anular el recibo N.º {{ pago.receiptNumber }}</h2><p>{{ pago.patientName }} · {{ pesos(pago.amount) }}. El pago queda en el historial como anulado y el saldo vuelve a estar pendiente.</p></div><button type="button" class="od-close" aria-label="Cerrar" (click)="pagoPorAnular.set(null)">×</button></header>
       <div class="od-form">
         <label>Motivo de la anulación<input type="text" maxlength="500" [(ngModel)]="motivoAnulacion" placeholder="Ej. Importe cargado por error"></label>
-        @if (errorFormulario) {
-          <p class="od-feedback error" role="alert">{{ errorFormulario }}</p>
+        @if (errorFormulario()) {
+          <p class="od-feedback error" role="alert">{{ errorFormulario() }}</p>
         }
-        <footer><button type="button" class="od-button secondary" (click)="pagoPorAnular = null">Volver</button><button type="button" class="od-button danger" [disabled]="guardando" (click)="anular()">Anular pago</button></footer>
+        <footer><button type="button" class="od-button secondary" (click)="pagoPorAnular.set(null)">Volver</button><button type="button" class="od-button danger" [disabled]="guardando()" (click)="anular()">Anular pago</button></footer>
       </div>
     </section>
   </div>

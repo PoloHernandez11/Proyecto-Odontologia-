@@ -50,18 +50,18 @@
         <p>Ingresá con el correo y la contraseña de tu cuenta.</p>
       </header>
 
-      @if (pideCodigo) {
-        <form (ngSubmit)="verificarCodigo()" novalidate>
+      @if (pideCodigo()) {
+        <form [formGroup]="formularioCodigo" (ngSubmit)="verificarCodigo()" novalidate>
           <div class="form-field">
             <label for="codigo">Código de verificación</label>
             <input id="codigo" type="text" inputmode="numeric" maxlength="6" autocomplete="one-time-code" placeholder="000000" [formControl]="codigo">
           </div>
-          <button class="submit-button" type="submit" [disabled]="enviando">{{ enviando ? "Verificando…" : "Verificar e ingresar" }}</button>
+          <button class="submit-button" type="submit" [disabled]="enviando()">{{ enviando() ? "Verificando…" : "Verificar e ingresar" }}</button>
           <div class="form-options"><span></span><button type="button" class="forgot-link" (click)="volverAlInicio()">Volver</button></div>
         </form>
       }
 
-      @if (!pideCodigo) {
+      @if (!pideCodigo()) {
         <form [formGroup]="formularioLogin" (ngSubmit)="ingresar()" novalidate>
           <div class="form-field">
             <label for="correo">Correo electrónico</label>
@@ -84,7 +84,7 @@
             <div class="password-input">
               <input
                 id="contrasena"
-                [type]="mostrarContrasena ? 'text' : 'password'"
+                [type]="mostrarContrasena() ? 'text' : 'password'"
                 formControlName="contrasena"
                 placeholder="••••••••••"
                 autocomplete="current-password">
@@ -92,8 +92,8 @@
                 class="password-toggle"
                 type="button"
                 (click)="cambiarVisibilidadContrasena()"
-                [attr.aria-label]="mostrarContrasena ? 'Ocultar contraseña' : 'Mostrar contraseña'">
-                {{ mostrarContrasena ? 'Ocultar' : 'Ver' }}
+                [attr.aria-label]="mostrarContrasena() ? 'Ocultar contraseña' : 'Mostrar contraseña'">
+                {{ mostrarContrasena() ? 'Ocultar' : 'Ver' }}
               </button>
             </div>
             @if (formularioLogin.controls.contrasena.touched && formularioLogin.controls.contrasena.invalid) {
@@ -110,22 +110,22 @@
               ¿Olvidaste tu contraseña?
             </button>
           </div>
-          <button class="submit-button" type="submit" [disabled]="enviando">{{ enviando ? "Ingresando…" : "Ingresar" }}</button>
+          <button class="submit-button" type="submit" [disabled]="enviando()">{{ enviando() ? "Ingresando…" : "Ingresar" }}</button>
         </form>
       }
 
-      @if (mensaje) {
+      @if (mensaje()) {
         <div class="message-box" role="status">
           <span class="message-icon" aria-hidden="true">ⓘ</span>
-          <p>{{ mensaje }}</p>
+          <p>{{ mensaje() }}</p>
         </div>
       }
 
-      @if (!pideCodigo) {
+      @if (!pideCodigo()) {
         <p class="register-link">¿Tu consultorio todavía no usa Odentix? <a routerLink="/registro">Crear una cuenta</a></p>
       }
 
-      @if (!mensaje) {
+      @if (!mensaje()) {
         <div class="information-box">
           <span class="information-icon" aria-hidden="true">♢</span>
           <p>

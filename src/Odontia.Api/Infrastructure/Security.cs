@@ -2,8 +2,6 @@ using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.IdentityModel.JsonWebTokens;
 using Odontia.Application.Abstractions;
-using Odontia.Infrastructure.Security;
-using Odontia.Infrastructure.Services;
 
 namespace Odontia.Api.Infrastructure;
 
@@ -36,38 +34,53 @@ internal sealed class PermissionAuthorizationHandler(ITenantContext tenant) : Au
 
 /// <summary>
 /// Resuelve el contexto de la solicitud en el servidor: valida que el token no haya sido invalidado
-/// (cambio de credenciales) y que el usuario siga siendo miembro activo del consultorio del token.
+/// (cambio de credenciales), que la sesión (sid) no haya sido revocada y que el usuario siga siendo miembro activo
+/// del consultorio del token. Las tres verificaciones usan una caché corta invalidada ante cambios (ver MembershipResolver).
 /// El consultorio NUNCA se toma de parámetros enviados por el cliente.
 /// </summary>
 internal sealed class TenantResolutionMiddleware(RequestDelegate next)
 {
-    public async Task InvokeAsync(HttpContext http, ITenantContextInitializer initializer, IMembershipResolver memberships)
+    public async Task InvokeAsync(HttpContext http, ITenantContextInitializer initializer, IMembershipResolver memberships,
+        IJwtTokenService tokens)
     {
         var user = http.User;
         // En endpoints públicos (login, refresh, etc.) un access token vencido o invalidado no debe bloquear la operación.
         var anonymousEndpoint = http.GetEndpoint()?.Metadata.GetMetadata<IAllowAnonymous>() is not null;
-        if (user.Identity?.IsAuthenticated == true && JwtTokenService.GetUserId(user) is { } userId)
+        if (user.Identity?.IsAuthenticated == true && tokens.GetUserId(user) is { } userId)
         {
             var stamp = await memberships.GetSecurityStampAsync(userId, http.RequestAborted);
-            if (stamp is null || JwtTokenService.Stamp(stamp) != user.FindFirstValue(OdontiaClaims.SecurityStamp))
+            if (!tokens.MatchesSecurityStamp(user, stamp))
             {
                 if (anonymousEndpoint) { await next(http); return; }
                 await WriteProblemAsync(http, StatusCodes.Status401Unauthorized, "session_invalidated", "La sesión ya no es válida. Inicie sesión nuevamente.");
                 return;
             }
-            initializer.InitializeUser(userId, http.Connection.RemoteIpAddress?.ToString());
-
-            if (Guid.TryParse(user.FindFirstValue(OdontiaClaims.Consultorio), out var consultorioId))
+            ResolvedMembership? membership = null;
+            var hasConsultorio = Guid.TryParse(user.FindFirstValue(OdontiaClaims.Consultorio), out var consultorioId);
+            if (hasConsultorio)
             {
-                var membership = await memberships.ResolveAsync(userId, consultorioId, http.RequestAborted);
+                // La membresía se evalúa antes que la sesión: un miembro desactivado recibe 403 membership_inactive.
+                membership = await memberships.ResolveAsync(userId, consultorioId, http.RequestAborted);
                 if (membership is null)
                 {
                     if (anonymousEndpoint) { await next(http); return; }
                     await WriteProblemAsync(http, StatusCodes.Status403Forbidden, "membership_inactive", "No tiene acceso activo a este consultorio.");
                     return;
                 }
-                initializer.InitializeTenant(consultorioId, membership.MemberId, membership.IsProfessional, membership.Permissions);
             }
+
+            // Logout / revocación de sesión: el access token deja de valer de inmediato, no al vencer (QA API-09).
+            if (!Guid.TryParse(user.FindFirstValue(OdontiaClaims.Session), out var sessionId)
+                || !await memberships.IsSessionActiveAsync(userId, sessionId, http.RequestAborted))
+            {
+                if (anonymousEndpoint) { await next(http); return; }
+                await WriteProblemAsync(http, StatusCodes.Status401Unauthorized, "session_invalidated", "La sesión ya no es válida. Inicie sesión nuevamente.");
+                return;
+            }
+
+            initializer.InitializeUser(userId, http.Connection.RemoteIpAddress?.ToString());
+            if (membership is not null)
+                initializer.InitializeTenant(consultorioId, membership.MemberId, membership.IsProfessional, membership.Permissions);
         }
         await next(http);
     }

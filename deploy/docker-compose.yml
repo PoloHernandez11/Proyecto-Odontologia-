@@ -56,7 +56,8 @@ services:
       ConnectionStrings__Default: server=odontia-mysql;port=3306;database=odontia;user=odontia_app;password=${MYSQL_PASSWORD:?Falta MYSQL_PASSWORD en .env}
       Jwt__SigningKey: ${JWT_SIGNING_KEY:?Falta JWT_SIGNING_KEY en .env}
       Frontend__BaseUrl: https://${DOMINIO:?Falta DOMINIO en .env}
-      Auth__AllowPublicRegistration: ${PERMITIR_REGISTRO:-true}
+      # Registro público de consultorios cerrado salvo que el .env diga PERMITIR_REGISTRO=true.
+      Auth__AllowPublicRegistration: ${PERMITIR_REGISTRO:-false}
       Database__ApplyMigrationsOnStartup: "true"
       DataProtection__KeysPath: /data/keys
       Storage__Local__RootPath: /data/documents
@@ -69,7 +70,9 @@ services:
       Email__Smtp__UserName: ${SMTP_USUARIO:?Falta SMTP_USUARIO en .env}
       Email__Smtp__Password: ${SMTP_CLAVE:?Falta SMTP_CLAVE en .env}
       ReverseProxy__Enabled: "true"
-      ReverseProxy__KnownNetworks__0: 172.18.0.0/16
+      # Solo se confía en X-Forwarded-* que vengan del contenedor de Caddy (resuelto por DNS de Docker y
+      # re-resuelto si cambia su IP), no en toda la red compartida con los otros proyectos.
+      ReverseProxy__KnownProxyHosts__0: miaula-web-1
       Swagger__Enabled: "false"
       RateLimiting__AuthPermitPerMinute: "20"
     volumes:

@@ -91,6 +91,8 @@ public class LabWork : TenantEntity
     public decimal? Cost { get; private set; }
     public string? Notes { get; private set; }
     public Guid? TreatmentPlanItemId { get; private set; }
+    /// <summary>Token de concurrencia optimista (cambios de estado y ediciones simultáneas responden 409).</summary>
+    public Guid Version { get; private set; } = Guid.NewGuid();
     public IReadOnlyCollection<LabWorkStatusChange> Changes => _changes;
 
     public Patient? Patient { get; private set; }
@@ -109,23 +111,32 @@ public class LabWork : TenantEntity
     {
         if (Status is LabWorkStatus.Placed or LabWorkStatus.Cancelled)
             throw new DomainException("El trabajo está cerrado.", "lab_work_closed");
+        if (AppointmentId == appointmentId) return;
         AppointmentId = appointmentId;
+        Touch();
     }
 
     public void Update(string workType, IReadOnlyCollection<int> toothCodes, string? description, DateOnly? estimatedDeliveryDate, decimal? cost, string? notes)
     {
         if (Status is LabWorkStatus.Placed or LabWorkStatus.Cancelled)
             throw new DomainException("El trabajo está cerrado.", "lab_work_closed");
-        WorkType = Guard.Required(workType, "Tipo de trabajo", 120);
+        // Se valida todo antes de modificar el trabajo (sin mutaciones parciales).
+        var type = Guard.Required(workType, "Tipo de trabajo", 120);
         var teeth = toothCodes.Distinct().ToList();
         if (teeth.Count > MaxTeeth) throw new DomainException($"Un trabajo puede abarcar como máximo {MaxTeeth} piezas.", "too_many_teeth");
         foreach (var t in teeth) Fdi.Get(t);
+        var desc = Guard.Optional(description, "Descripción", 1000);
+        decimal? validCost = cost is null ? null : Guard.Money(cost.Value, "Costo");
+        var validNotes = Guard.Optional(notes, "Observaciones", 1000);
+
+        WorkType = type;
         ToothCodes = teeth;
         ToothCode = teeth.Count > 0 ? teeth[0] : null;
-        Description = Guard.Optional(description, "Descripción", 1000);
+        Description = desc;
         EstimatedDeliveryDate = estimatedDeliveryDate;
-        Cost = cost is null ? null : Guard.Money(cost.Value, "Costo");
-        Notes = Guard.Optional(notes, "Observaciones", 1000);
+        Cost = validCost;
+        Notes = validNotes;
+        Touch();
     }
 
     public void ChangeStatus(LabWorkStatus target, DateOnly date, string? note, Guid userId, DateTime nowUtc)
@@ -133,6 +144,13 @@ public class LabWork : TenantEntity
         if (Status == target) return;
         if (!CanTransition(Status, target))
             throw new DomainException($"No se puede pasar un trabajo de '{Status}' a '{target}'.", "invalid_status_transition");
+        // Validaciones antes de cualquier mutación (nota y fechas).
+        var validNote = Guard.Optional(note, "Nota", 500);
+        if (target == LabWorkStatus.Received && SentDate is not null && date < SentDate)
+            throw new DomainException("La fecha de recepción no puede ser anterior al envío.", "invalid_date");
+        if (target == LabWorkStatus.Placed && ActualDeliveryDate is not null && date < ActualDeliveryDate)
+            throw new DomainException("La fecha de colocación no puede ser anterior a la recepción.", "invalid_date");
+
         switch (target)
         {
             case LabWorkStatus.Sent:
@@ -140,17 +158,18 @@ public class LabWork : TenantEntity
                 if (Status == LabWorkStatus.Received) ActualDeliveryDate = null; // reenvío por ajustes
                 break;
             case LabWorkStatus.Received:
-                if (SentDate is not null && date < SentDate) throw new DomainException("La fecha de recepción no puede ser anterior al envío.", "invalid_date");
                 ActualDeliveryDate = date;
                 break;
             case LabWorkStatus.Placed:
-                if (ActualDeliveryDate is not null && date < ActualDeliveryDate) throw new DomainException("La fecha de colocación no puede ser anterior a la recepción.", "invalid_date");
                 PlacementDate = date;
                 break;
         }
-        _changes.Add(new LabWorkStatusChange(ConsultorioId, Id, Status, target, Guard.Optional(note, "Nota", 500), userId, nowUtc));
+        _changes.Add(new LabWorkStatusChange(ConsultorioId, Id, Status, target, validNote, userId, nowUtc));
         Status = target;
+        Touch();
     }
+
+    private void Touch() => Version = Guid.NewGuid();
 }
 
 public class LabWorkStatusChange : TenantEntity

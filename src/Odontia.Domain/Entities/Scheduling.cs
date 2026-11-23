@@ -151,17 +151,19 @@ public class Appointment : TenantEntity
 
     public void SetDetails(string? reason, string? notes)
     {
-        Reason = Guard.Optional(reason, "Motivo", 250);
-        AdministrativeNotes = Guard.Optional(notes, "Observaciones", 1000);
+        var r = Guard.Optional(reason, "Motivo", 250);
+        var n = Guard.Optional(notes, "Observaciones", 1000);
+        Reason = r;
+        AdministrativeNotes = n;
         Touch();
     }
 
     public void Reassign(Guid professionalUserId, Guid? gabineteId, DateTime startUtc, DateTime endUtc, bool isOverbooking)
     {
         EnsureEditable();
+        SetTime(startUtc, endUtc); // valida antes de reasignar
         ProfessionalUserId = professionalUserId;
         GabineteId = gabineteId;
-        SetTime(startUtc, endUtc);
         IsOverbooking = isOverbooking;
         ReminderQueuedAtUtc = null;
         Touch();
@@ -189,8 +191,9 @@ public class Appointment : TenantEntity
             case AppointmentStatus.InProgress: StartedAtUtc = nowUtc; ArrivedAtUtc ??= nowUtc; break;
             case AppointmentStatus.Attended: AttendedAtUtc = nowUtc; break;
             case AppointmentStatus.Cancelled:
+                var cancellationReason = Guard.Optional(reason, "Motivo de cancelación", 250); // validar antes de mutar
                 CancelledAtUtc = nowUtc;
-                CancellationReason = Guard.Optional(reason, "Motivo de cancelación", 250);
+                CancellationReason = cancellationReason;
                 break;
             case AppointmentStatus.NoShow:
                 if (StartUtc > nowUtc)
@@ -216,6 +219,9 @@ public class Appointment : TenantEntity
     public int RescheduleCount { get; private set; }
 
     public void MarkReminderQueued(DateTime nowUtc) => ReminderQueuedAtUtc = nowUtc;
+
+    /// <summary>Libera la marca de recordatorio (p. ej. si ningún canal pudo enviarlo) para reintentar en otro ciclo.</summary>
+    public void ClearReminderQueued() => ReminderQueuedAtUtc = null;
 
     private void EnsureEditable()
     {

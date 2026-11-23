@@ -1,4 +1,6 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Odontia.Application.Abstractions;
 
 namespace Odontia.Application.Common;
@@ -11,8 +13,10 @@ public interface IConsultorioClock
     DateTime UtcNow { get; }
 }
 
-internal sealed class ConsultorioClock(IApplicationDbContext db, ITenantContext tenant, TimeProvider clock) : IConsultorioClock
+internal sealed class ConsultorioClock(IApplicationDbContext db, ITenantContext tenant, TimeProvider clock,
+    ILogger<ConsultorioClock>? logger = null) : IConsultorioClock
 {
+    private readonly ILogger _logger = logger ?? NullLogger<ConsultorioClock>.Instance;
     private TimeZoneInfo? _tz;
 
     public DateTime UtcNow => clock.GetUtcNow().UtcDateTime;
@@ -20,8 +24,19 @@ internal sealed class ConsultorioClock(IApplicationDbContext db, ITenantContext 
     public async Task<TimeZoneInfo> GetTimeZoneAsync(CancellationToken ct)
     {
         if (_tz is not null) return _tz;
-        var id = await db.Consultorios.Where(c => c.Id == tenant.ConsultorioId).Select(c => c.TimeZoneId).FirstAsync(ct);
-        _tz = TimeZoneInfo.TryFindSystemTimeZoneById(id, out var tz) ? tz : TimeZoneInfo.Utc;
+        // Se resuelve fuera de la consulta: sin consultorio activo la ForbiddenAccessException (403) llega tal cual,
+        // en lugar de quedar envuelta por EF en una InvalidOperationException (500).
+        var cid = tenant.ConsultorioId;
+        var id = await db.Consultorios.Where(c => c.Id == cid).Select(c => c.TimeZoneId).FirstAsync(ct);
+        if (TimeZoneInfo.TryFindSystemTimeZoneById(id, out var tz))
+        {
+            _tz = tz;
+        }
+        else
+        {
+            _logger.LogWarning("Zona horaria '{TimeZoneId}' del consultorio {ConsultorioId} no reconocida; se usa UTC.", id, cid);
+            _tz = TimeZoneInfo.Utc;
+        }
         return _tz;
     }
 

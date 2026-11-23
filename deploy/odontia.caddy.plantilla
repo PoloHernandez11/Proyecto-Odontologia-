@@ -3,7 +3,18 @@
 __DOMINIO__ {
 	encode gzip
 
-	@api path /api/* /health/*
+	# /health/ready (estado de la base) no se publica: lo usa solo el healthcheck dentro del contenedor.
+	# /health/live queda accesible para monitoreo externo. Este bloque va primero: Caddy evalúa los
+	# "handle" con matchers con nombre en el orden escrito y ejecuta solo el primero que coincide.
+	@salud_privada {
+		path /health/*
+		not path /health/live
+	}
+	handle @salud_privada {
+		respond 404
+	}
+
+	@api path /api/* /health/live
 	handle @api {
 		reverse_proxy odontia-api:8080
 	}

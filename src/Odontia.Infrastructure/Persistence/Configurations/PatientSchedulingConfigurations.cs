@@ -23,6 +23,7 @@ internal sealed class PatientConfiguration : IEntityTypeConfiguration<Patient>
     public void Configure(EntityTypeBuilder<Patient> b)
     {
         b.ToTable("Patients");
+        b.Property(x => x.Version).IsConcurrencyToken();
         b.HasConsultorio();
         b.Property(x => x.FirstName).HasMaxLength(80).IsRequired();
         b.Property(x => x.LastName).HasMaxLength(80).IsRequired();
@@ -58,6 +59,7 @@ internal sealed class MedicalHistoryConfiguration : IEntityTypeConfiguration<Med
     public void Configure(EntityTypeBuilder<MedicalHistory> b)
     {
         b.ToTable("MedicalHistories");
+        b.Property(x => x.Version).IsConcurrencyToken();
         b.HasConsultorio();
         b.HasIndex(x => x.PatientId).IsUnique();
         b.Property(x => x.Allergies).HasMaxLength(500);

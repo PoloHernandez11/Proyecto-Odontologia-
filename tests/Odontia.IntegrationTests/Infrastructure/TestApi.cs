@@ -4,6 +4,8 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using Odontia.Domain.Authorization;
 
 namespace Odontia.IntegrationTests.Infrastructure;
@@ -58,6 +60,21 @@ public sealed class TestApi(HttpClient http, OdontiaFactory factory)
         req.Headers.Add("Cookie", $"odontia_rt={refreshToken}; odontia_csrf=replay");
         req.Headers.Add("X-CSRF-Token", "replay");
         return await http.SendAsync(req);
+    }
+
+    /// <summary>
+    /// Simula que pasó el tiempo desde las rotaciones de refresh token de este usuario (fuera de la ventana de gracia
+    /// Auth:RefreshReuseGraceSeconds), para probar la detección de reuso sin esperar.
+    /// </summary>
+    public async Task AgeRotatedRefreshTokensAsync(TimeSpan by)
+    {
+        using var scope = Factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<Odontia.Infrastructure.Persistence.OdontiaDbContext>();
+        var uid = UserId;
+        var seconds = -by.TotalSeconds;
+        var rows = await db.RefreshTokens.Where(t => t.UserId == uid && t.ReplacedByTokenId != null && t.RevokedAtUtc != null)
+            .ExecuteUpdateAsync(s => s.SetProperty(t => t.RevokedAtUtc, t => (DateTime?)t.RevokedAtUtc!.Value.AddSeconds(seconds)));
+        Assert.True(rows > 0, "No había refresh tokens rotados que envejecer.");
     }
 
     public async Task LoginAsync(string email, string password)

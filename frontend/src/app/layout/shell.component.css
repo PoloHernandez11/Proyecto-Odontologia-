@@ -9,10 +9,10 @@
 .brand-icon svg { width: 23px; height: 23px; fill: none; stroke: #fff; stroke-width: 1.6; stroke-linejoin: round; }
 .brand strong, .brand small, .user-information strong, .user-information small { display: block; }
 .brand strong { font-size: 18px; line-height: 21px; }
-.brand small { color: #7d8f96; font-size: 12px; margin-top: 2px; }
+.brand small { color: var(--od-text-muted); font-size: 12px; margin-top: 2px; }
 
 .main-navigation { margin-top: 37px; }
-.navigation-heading { margin: 22px 12px 10px; color: #7d8f96; font-size: 11px; font-weight: 700; letter-spacing: .06em; }
+.navigation-heading { margin: 22px 12px 10px; color: var(--od-text-muted); font-size: 12px; font-weight: 700; letter-spacing: .06em; }
 .navigation-heading:first-child { margin-top: 0; }
 .navigation-link { min-height: 43px; display: flex; align-items: center; gap: 13px; padding: 0 12px; margin: 3px 0; border-radius: 9px; color: #5c7078; text-decoration: none; font-size: 14px; font-weight: 550; }
 .navigation-link:hover, .navigation-link.active { color: #105c6c; background: #eaf3f5; }
@@ -25,10 +25,13 @@
 .user-avatar { display: grid; flex: 0 0 auto; place-items: center; width: 39px; height: 39px; border-radius: 50%; background: #d6eaee; color: #105c6c; font-size: 12px; font-weight: 700; }
 .user-information { min-width: 0; flex: 1; }
 .user-information strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; color: #26383e; }
-.user-information small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #7d8f96; font-size: 11px; margin-top: 3px; }
+.user-information small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--od-text-muted); font-size: 11px; margin-top: 3px; }
 .logout-button { display: grid; place-items: center; width: 34px; height: 34px; flex: 0 0 34px; padding: 0; border: 0; border-radius: 8px; background: transparent; color: #5c7078; cursor: pointer; }
 .logout-button:hover { background: #eaf3f5; color: #105c6c; }
 .logout-button svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.nav-more { display: none; place-items: center; width: 34px; height: 42px; flex: 0 0 34px; margin-left: -6px; padding: 0; border: 1px solid #dce4e7; border-radius: 9px; background: #fff; color: #105c6c; cursor: pointer; }
+.nav-more svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.nav-more:focus-visible { outline: 2px solid #105c6c; outline-offset: 2px; }
 
 @media (max-width: 1200px) {
   .sidebar { width: 230px; flex-basis: 230px; }
@@ -50,4 +53,11 @@
   .main-navigation { display: flex; flex: 1; min-width: 0; gap: 4px; margin: 0; overflow-x: auto; }
   .navigation-link { width: 42px; min-width: 42px; height: 42px; min-height: 42px; margin: 0; }
   .sidebar > .user-card { margin: 0; padding: 0; }
+  /* Las secciones que no entran quedan a los costados: se difuminan los bordes y aparece la flecha "Ver más secciones". */
+  .main-navigation { scroll-snap-type: x proximity; scrollbar-width: thin; }
+  .navigation-link { scroll-snap-align: start; }
+  .main-navigation.hay-mas { -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 40px), transparent); mask-image: linear-gradient(to right, #000 calc(100% - 40px), transparent); }
+  .main-navigation.hay-antes { -webkit-mask-image: linear-gradient(to right, transparent, #000 32px); mask-image: linear-gradient(to right, transparent, #000 32px); }
+  .main-navigation.hay-antes.hay-mas { -webkit-mask-image: linear-gradient(to right, transparent, #000 32px, #000 calc(100% - 40px), transparent); mask-image: linear-gradient(to right, transparent, #000 32px, #000 calc(100% - 40px), transparent); }
+  .nav-more { display: grid; }
 }

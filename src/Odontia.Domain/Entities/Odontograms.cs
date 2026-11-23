@@ -151,6 +151,11 @@ public class Odontogram : TenantEntity, ISensitiveData
     }
 
     public Guid PatientId { get; private set; }
+    /// <summary>
+    /// Token de concurrencia optimista del agregado: cada cambio de hallazgos o notas lo renueva, de modo que
+    /// dos cargas simultáneas sobre el mismo odontograma no se validen contra un estado vencido (la segunda recibe 409).
+    /// </summary>
+    public Guid Version { get; private set; } = Guid.NewGuid();
     public IReadOnlyCollection<ToothFinding> Findings => _findings;
     public IReadOnlyCollection<OdontogramHistoryEntry> History => _history;
     public IReadOnlyCollection<ToothNote> Notes => _notes;
@@ -234,6 +239,7 @@ public class Odontogram : TenantEntity, ISensitiveData
         }
 
         _findings.Add(finding);
+        Touch();
         AddHistory(finding, OdontogramChangeType.Added, professionalUserId, nowUtc, notes);
         return finding;
     }
@@ -244,6 +250,7 @@ public class Odontogram : TenantEntity, ISensitiveData
         var f = GetCurrent(findingId);
         f.Close(professionalUserId, nowUtc, Guard.Optional(reason, "Motivo", 250) ?? "Resuelto", null);
         AddHistory(f, OdontogramChangeType.Resolved, professionalUserId, nowUtc, reason);
+        Touch();
     }
 
     /// <summary>Retira un hallazgo cargado por error. No se elimina físicamente: queda trazado.</summary>
@@ -253,6 +260,7 @@ public class Odontogram : TenantEntity, ISensitiveData
         var r = Guard.Required(reason, "Motivo", 250);
         f.Close(professionalUserId, nowUtc, $"Retirado: {r}", null);
         AddHistory(f, OdontogramChangeType.Removed, professionalUserId, nowUtc, r);
+        Touch();
     }
 
     public ToothNote AddNote(int toothCode, string text, Guid professionalUserId, DateTime nowUtc)
@@ -262,8 +270,11 @@ public class Odontogram : TenantEntity, ISensitiveData
         _notes.Add(note);
         _history.Add(new OdontogramHistoryEntry(ConsultorioId, Id, PatientId, toothCode, null, null, null,
             OdontogramChangeType.NoteAdded, null, note.Text, professionalUserId, nowUtc));
+        Touch();
         return note;
     }
+
+    private void Touch() => Version = Guid.NewGuid();
 
     private ToothFinding GetCurrent(Guid findingId) =>
         _findings.FirstOrDefault(x => x.Id == findingId && x.IsCurrent)

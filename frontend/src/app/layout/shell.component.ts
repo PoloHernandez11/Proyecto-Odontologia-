@@ -1,4 +1,4 @@
-import { Component, computed, inject, ChangeDetectionStrategy } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, ElementRef, afterNextRender, computed, inject, signal, viewChild } from '@angular/core';
 import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { iniciales } from '../core/api';
 import { AuthService } from '../core/auth.service';
@@ -36,7 +36,7 @@ const MENU: GrupoMenu[] = [
   standalone: true,
   imports: [RouterOutlet, RouterLink, RouterLinkActive],
   templateUrl: './shell.component.html',
-  changeDetection: ChangeDetectionStrategy.Eager,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './shell.component.css'
 })
 export class ShellComponent {
@@ -49,11 +49,33 @@ export class ShellComponent {
   readonly nombre = this.auth.nombre;
   readonly iniciales = computed(() => iniciales(this.auth.nombre()));
   readonly detalle = computed(() => [this.auth.roles().join(' · '), this.auth.consultorio()].filter(Boolean).join(' — '));
-  saliendo = false;
+  readonly saliendo = signal(false);
+
+  // En el teléfono el menú es una fila desplazable: se indica si quedan secciones a los costados.
+  private readonly navegacion = viewChild.required<ElementRef<HTMLElement>>('navegacion');
+  readonly hayAntes = signal(false);
+  readonly hayMas = signal(false);
+
+  constructor() {
+    const alCambiarTamano = () => this.medirDesplazamiento();
+    afterNextRender(() => { this.medirDesplazamiento(); window.addEventListener('resize', alCambiarTamano, { passive: true }); });
+    inject(DestroyRef).onDestroy(() => window.removeEventListener('resize', alCambiarTamano));
+  }
+
+  medirDesplazamiento(): void {
+    const nav = this.navegacion().nativeElement;
+    this.hayAntes.set(nav.scrollLeft > 4);
+    this.hayMas.set(nav.scrollWidth - nav.clientWidth - nav.scrollLeft > 4);
+  }
+
+  verMasSecciones(): void {
+    const nav = this.navegacion().nativeElement;
+    nav.scrollBy({ left: Math.max(120, nav.clientWidth * 0.8), behavior: 'smooth' });
+  }
 
   salir(): void {
-    if (this.saliendo) return;
-    this.saliendo = true;
-    this.auth.cerrarSesion().subscribe(() => { this.saliendo = false; this.router.navigate(['/login']); });
+    if (this.saliendo()) return;
+    this.saliendo.set(true);
+    this.auth.cerrarSesion().subscribe(() => { this.saliendo.set(false); this.router.navigate(['/login']); });
   }
 }
