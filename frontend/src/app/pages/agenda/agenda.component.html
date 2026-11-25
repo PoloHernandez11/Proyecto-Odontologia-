@@ -67,7 +67,7 @@
             <div class="now-line" [style.top.px]="linea"></div>
           }
         </div>
-        @if (!cargando() && turnosActivos().length === 0) {
+        @if (!cargando() && turnosFiltrados().length === 0) {
           <p class="empty">No hay turnos agendados para este día.</p>
         }
         <p class="touch-hint">En pantallas táctiles, mantené presionado un turno para ver su detalle.</p>
@@ -103,7 +103,21 @@
       <div class="selected-content">
         <div class="patient-heading"><span class="avatar large">{{ iniciales(turno.patientName) }}</span><span><strong>{{ turno.patientName }}</strong><small><a routerLink="/pacientes" [queryParams]="{ buscar: turno.patientName }">Ver ficha del paciente</a></small></span></div>
         <p>◷ {{ fecha(turno.startUtc) }} · {{ hora(turno.startUtc) }} a {{ hora(turno.endUtc) }} ({{ turno.durationMinutes }} min)</p>
-        <p>▤ {{ turno.reason || 'Sin motivo indicado' }}</p>
+        @if (editandoMotivo()) {
+          <form class="cancel-form reason-form" (ngSubmit)="guardarMotivo()">
+            <label for="motivo-turno">Motivo de consulta <span class="required" aria-hidden="true">*</span></label>
+            <input id="motivo-turno" type="text" maxlength="250" aria-required="true" [formControl]="motivoEditado" placeholder="Ej. Control general"
+              [attr.aria-invalid]="motivoEditado.touched && motivoEditado.invalid" [attr.aria-describedby]="motivoEditado.touched && motivoEditado.invalid ? 'motivo-turno-error' : null"/>
+            @if (motivoEditado.touched && motivoEditado.invalid) {
+              <small id="motivo-turno-error" class="field-error">Indicá el motivo de consulta (hasta 250 caracteres).</small>
+            }
+            <div class="action-buttons"><button type="submit" [disabled]="guardandoMotivo()">{{ guardandoMotivo() ? 'Guardando…' : 'Guardar' }}</button><button type="button" class="cancel neutral" (click)="cerrarEdicionMotivo()">Cancelar</button></div>
+          </form>
+        } @else {
+          <p class="reason-line">▤ {{ turno.reason || 'Sin motivo indicado' }}@if (puedeEditarMotivo() && !cancelando()) {
+            <button type="button" class="link-button" [disabled]="guardandoMotivo()" (click)="iniciarEdicionMotivo()" aria-label="Editar motivo del turno">Editar motivo</button>
+          }</p>
+        }
         <p>♙ {{ turno.professionalName }}@if (turno.gabineteName) {
           · {{ turno.gabineteName }}
         }</p>
@@ -117,22 +131,23 @@
             }</ul>
           </div>
         }
-        @if (!cancelando()) {
+        @if (!cancelando() && !editandoMotivo()) {
           <div class="action-buttons">
             @for (accion of accionesDisponibles(); track accion.accion) {
               <button type="button" (click)="ejecutar(accion)">{{ accion.titulo }}</button>
             }
             @if (puedeCancelar()) {
-              <button type="button" class="cancel" (click)="cancelando.set(true)">× Cancelar turno</button>
+              <button type="button" class="cancel" (click)="cancelando.set(true)">× Eliminar turno</button>
             }
             @if (vista() !== 'dia') {
               <button type="button" class="cancel neutral" (click)="verDia(turno)">Ver ese día</button>
             }
           </div>
-        } @else {
+        } @else if (cancelando()) {
           <div class="cancel-form">
-            <label>Motivo de la cancelación (opcional)<input type="text" maxlength="250" [ngModel]="motivoCancelacion()" (ngModelChange)="motivoCancelacion.set($event)" placeholder="Ej. El paciente avisó que no puede venir"></label>
-            <div class="action-buttons"><button type="button" class="cancel" (click)="confirmarCancelacion()">Confirmar cancelación</button><button type="button" class="cancel neutral" (click)="cancelando.set(false)">Volver</button></div>
+            <p class="confirm-text">El turno se va a quitar de la agenda.</p>
+            <label>Motivo (opcional)<input type="text" maxlength="250" [ngModel]="motivoCancelacion()" (ngModelChange)="motivoCancelacion.set($event)" placeholder="Ej. El paciente avisó que no puede venir"></label>
+            <div class="action-buttons"><button type="button" class="cancel" (click)="confirmarCancelacion()">Eliminar turno</button><button type="button" class="cancel neutral" (click)="cancelando.set(false)">Volver</button></div>
           </div>
         }
       </div>
@@ -146,9 +161,8 @@
   <p>Confirmados <strong>{{ r.confirmados }}</strong></p>
   <p>Pendientes de confirmar <strong>{{ r.pendientes }}</strong></p>
   <p>Atendidos <strong>{{ r.atendidos }}</strong></p>
-  <p>Cancelados <strong>{{ r.cancelados }}</strong></p>
 </section>
-<section class="side-panel"><header><h2>Estados del turno</h2></header><div class="status-list"><span class="status confirmado">● Confirmado</span><span class="status pendiente">● Pendiente</span><span class="status en-sala">● En sala / en atención</span><span class="status atendido">● Atendido</span><span class="status cancelado">● Cancelado / ausente</span></div></section>
+<section class="side-panel"><header><h2>Estados del turno</h2></header><div class="status-list"><span class="status confirmado">● Confirmado</span><span class="status pendiente">● Pendiente</span><span class="status en-sala">● En sala / en atención</span><span class="status atendido">● Atendido</span><span class="status ausente">● Ausente</span></div></section>
 </aside>
 </div>
 </main>

@@ -33,8 +33,58 @@
       }
     </section>
   }
-  <div class="section-heading"><div><h2>Registro de consultas</h2><p>Consultas, evoluciones y tratamientos realizados. Los registros no se borran: quedan en el historial.</p></div>@if (puedeEscribir) {
-  <button type="button" class="primary" (click)="mostrarFormulario.set(!mostrarFormulario())">＋ Nueva consulta</button>
+  @if (veCuenta) {
+    <section class="account-card" aria-labelledby="titulo-cuenta">
+      <div class="section-heading"><div><h2 id="titulo-cuenta">Pagos y saldo</h2><p>Cuenta corriente del paciente: cargos, pagos y saldo pendiente.</p></div>@if (puedeCobrar) {
+      <div class="account-actions"><button type="button" class="secondary" (click)="abrirCargo()">Registrar cargo</button><button type="button" class="primary" (click)="abrirPago()">Registrar pago</button></div>
+    }</div>
+    @if (mensajeCuenta()) {
+      <p class="feedback" role="status">{{ mensajeCuenta() }}</p>
+    }
+    @if (errorCuenta()) {
+      <p class="feedback error-feedback" role="alert">{{ errorCuenta() }}</p>
+    }
+    @if (cuenta(); as c) {
+      <div class="account-totals">
+        <div class="balance" [class.debt]="c.balance > 0" [class.credit]="c.balance < 0"><span>{{ c.balance < 0 ? 'A favor' : 'Saldo pendiente' }}</span><strong>{{ pesos(c.balance < 0 ? -c.balance : c.balance) }}</strong></div>
+        <div><span>Total cargado</span><strong>{{ pesos(c.totalCharges) }}</strong></div>
+        <div><span>Total pagado</span><strong>{{ pesos(c.totalCredits) }}</strong></div>
+      </div>
+      <div class="od-table-scroll">
+        <table class="od-table movements">
+          <thead><tr><th>Fecha</th><th>Concepto</th><th class="num">Cargo</th><th class="num">Pago</th><th class="num">Saldo</th>@if (puedeAnularCargo) {
+          <th><span class="visually-hidden">Acciones</span></th>
+        }</tr></thead>
+        <tbody>
+          @for (movimiento of movimientos(); track movimiento.id) {
+            <tr [class.voided]="movimiento.reversedByMovementId">
+              <td>{{ fecha(movimiento.occurredAtUtc) }}</td>
+              <td>{{ movimiento.description }}<small>{{ tiposDeMovimiento[movimiento.type] }}@if (movimiento.reversedByMovementId) {
+              · <b class="voided-tag">Anulado</b>
+            }</small></td>
+            <td class="num">{{ movimiento.direction === 'Debit' ? pesos(movimiento.amount) : '' }}</td>
+            <td class="num">{{ movimiento.direction === 'Credit' ? pesos(movimiento.amount) : '' }}</td>
+            <td class="num">{{ pesos(movimiento.runningBalance) }}</td>
+            @if (puedeAnularCargo) {
+              <td class="num">@if (esAnulable(movimiento)) {
+                <button type="button" class="od-button danger small" (click)="pedirAnulacion(movimiento)">Anular</button>
+              }</td>
+            }
+          </tr>
+        }
+        @if (movimientos().length === 0) {
+          <tr><td class="empty" [attr.colspan]="puedeAnularCargo ? 6 : 5">Todavía no hay movimientos en la cuenta del paciente.</td></tr>
+        }
+      </tbody>
+    </table>
+  </div>
+} @else if (cargandoCuenta()) {
+  <p class="muted">Cargando la cuenta del paciente…</p>
+}
+</section>
+}
+<div class="section-heading"><div><h2>Registro de consultas</h2><p>Consultas, evoluciones y tratamientos realizados. Los registros no se borran: quedan en el historial.</p></div>@if (puedeEscribir) {
+<button type="button" class="primary" (click)="abrirFormulario()">＋ Nueva consulta</button>
 }</div>
 @if (mensaje()) {
   <p class="feedback" role="status">{{ mensaje() }}</p>
@@ -45,41 +95,49 @@
 @if (mostrarFormulario()) {
   <form class="record-form" [formGroup]="formulario" (ngSubmit)="guardarRegistro()">
     <h3>Registrar consulta</h3>
-    <label>Tipo de registro<select formControlName="tipo">@for (tipo of tiposDisponibles; track tipo[0]) {
-      <option [value]="tipo[0]">{{ tipo[1] }}</option>
-    }</select></label>
-    <label>Motivo de consulta<input formControlName="motivo" placeholder="Ej. Dolor al masticar"></label>@if (formulario.controls.motivo.touched && formulario.controls.motivo.invalid) {
-    <small>Ingresá el motivo de consulta (mínimo 3 caracteres).</small>
+    <label>Fecha<input type="date" formControlName="fecha" [max]="hoy"></label>@if (formulario.controls.fecha.touched && formulario.controls.fecha.invalid) {
+    <small>Elegí la fecha de la consulta: hoy o un día anterior.</small>
   }
-  <label>Diagnóstico<input formControlName="diagnostico" placeholder="Diagnóstico del profesional"></label>
-  <label>Tratamiento realizado<input formControlName="tratamiento" placeholder="Ej. Limpieza, endodoncia..."></label>
-  <label>Piezas dentales (opcional)<input formControlName="piezas" inputmode="numeric" placeholder="Numeración FDI separada por comas. Ej. 36, 37"></label>@if (formulario.controls.piezas.touched && formulario.controls.piezas.invalid) {
-  <small>Usá números FDI de dos dígitos separados por comas.</small>
+  <label>Tipo de registro<select formControlName="tipo">@for (tipo of tiposDisponibles; track tipo[0]) {
+    <option [value]="tipo[0]">{{ tipo[1] }}</option>
+  }</select></label>
+  <label>Motivo de consulta<input formControlName="motivo" placeholder="Ej. Dolor al masticar"></label>@if (formulario.controls.motivo.touched && formulario.controls.motivo.invalid) {
+  <small>Ingresá el motivo de consulta (mínimo 3 caracteres).</small>
+}
+<label>Diagnóstico<input formControlName="diagnostico" placeholder="Diagnóstico del profesional"></label>
+<label>Tratamiento realizado<input formControlName="tratamiento" placeholder="Ej. Limpieza, endodoncia..."></label>
+<label>Piezas dentales (opcional)<input formControlName="piezas" inputmode="numeric" placeholder="Numeración FDI separada por comas. Ej. 36, 37"></label>@if (formulario.controls.piezas.touched && formulario.controls.piezas.invalid) {
+<small>Usá números FDI de dos dígitos separados por comas.</small>
 }
 <label>Indicaciones y observaciones<textarea rows="3" formControlName="observaciones" placeholder="Indicaciones y observaciones adicionales"></textarea></label>
 <div class="form-actions"><button type="button" class="secondary" (click)="mostrarFormulario.set(false)">Cancelar</button><button class="primary" type="submit" [disabled]="guardando()">{{ guardando() ? 'Guardando…' : 'Guardar consulta' }}</button></div>
 </form>
 }
 <section class="records">
-  @for (registro of registros(); track registro.id) {
-    <article class="record-card" [class.voided]="registro.isVoided">
-      <div class="record-date">{{ fecha(registro.occurredAtUtc) }}</div>
-      <div class="record-body">
-        <div class="record-meta"><strong>{{ registro.title }}</strong><span>{{ tipos[registro.type] }} · {{ registro.professionalName }}</span></div>
-        @if (registro.description) {
-          <p class="multiline">{{ registro.description }}</p>
-        }
-        @if (registro.teeth.length) {
-          <p><b>Piezas:</b> {{ registro.teeth.join(', ') }}</p>
-        }
-        @if (registro.indications) {
-          <p><b>Indicaciones:</b> {{ registro.indications }}</p>
-        }
-        @if (registro.isVoided) {
-          <p class="muted"><b>Registro anulado:</b> {{ registro.voidReason }}</p>
-        }
-      </div>
-    </article>
+  @for (dia of registrosPorDia(); track dia.fecha) {
+    <section class="record-day" [attr.aria-label]="dia.titulo">
+      <h3 class="day-heading">{{ dia.titulo }}</h3>
+      @for (registro of dia.registros; track registro.id) {
+        <article class="record-card" [class.voided]="registro.isVoided">
+          <div class="record-date">{{ hora(registro.occurredAtUtc) }}</div>
+          <div class="record-body">
+            <div class="record-meta"><strong>{{ registro.title }}</strong><span>{{ tipos[registro.type] }} · {{ registro.professionalName }}</span></div>
+            @if (registro.description) {
+              <p class="multiline">{{ registro.description }}</p>
+            }
+            @if (registro.teeth.length) {
+              <p><b>Piezas:</b> {{ registro.teeth.join(', ') }}</p>
+            }
+            @if (registro.indications) {
+              <p><b>Indicaciones:</b> {{ registro.indications }}</p>
+            }
+            @if (registro.isVoided) {
+              <p class="muted"><b>Registro anulado:</b> {{ registro.voidReason }}</p>
+            }
+          </div>
+        </article>
+      }
+    </section>
   }
   @if (registros().length === 0) {
     <div class="empty">Todavía no hay consultas registradas para este paciente.</div>
@@ -87,6 +145,74 @@
 </section>
 </main>
 </div>
+
+@if (mostrarCargo()) {
+  <div class="od-backdrop" (click)="mostrarCargo.set(false)">
+    <section class="od-modal" role="dialog" appDialog (cerrar)="mostrarCargo.set(false)" aria-modal="true" aria-labelledby="titulo-cargo" (click)="$event.stopPropagation()">
+      <header><div><h2 id="titulo-cargo">Registrar cargo</h2><p>Suma el importe a la deuda de {{ p.firstName }} {{ p.lastName }}.</p></div><button type="button" class="od-close" aria-label="Cerrar" (click)="mostrarCargo.set(false)">×</button></header>
+      <form class="od-form" [formGroup]="formularioCargo" (ngSubmit)="registrarCargo()">
+        <label>Concepto<input type="text" maxlength="250" formControlName="descripcion" placeholder="Ej. Consulta de urgencia">@if (formularioCargo.controls.descripcion.touched && formularioCargo.controls.descripcion.invalid) {
+          <small>Describí el concepto del cargo.</small>
+        }</label>
+        <div class="od-form-row">
+          <label>Monto ($)<input type="number" min="0.01" step="0.01" formControlName="importe" placeholder="0">@if (formularioCargo.controls.importe.touched && formularioCargo.controls.importe.invalid) {
+            <small>Ingresá un monto mayor a cero, con hasta dos decimales.</small>
+          }</label>
+          <label>Fecha (opcional)<input type="date" formControlName="fecha" [max]="hoy">@if (formularioCargo.controls.fecha.touched && formularioCargo.controls.fecha.invalid) {
+            <small>La fecha no puede ser posterior a hoy.</small>
+          }</label>
+        </div>
+        @if (errorFormulario()) {
+          <p class="od-feedback error" role="alert">{{ errorFormulario() }}</p>
+        }
+        <footer><button type="button" class="od-button secondary" (click)="mostrarCargo.set(false)">Cancelar</button><button type="submit" class="od-button" [disabled]="guardandoCuenta()">{{ guardandoCuenta() ? 'Guardando…' : 'Registrar cargo' }}</button></footer>
+      </form>
+    </section>
+  </div>
+}
+
+@if (mostrarPago()) {
+  <div class="od-backdrop" (click)="mostrarPago.set(false)">
+    <section class="od-modal" role="dialog" appDialog (cerrar)="mostrarPago.set(false)" aria-modal="true" aria-labelledby="titulo-pago" (click)="$event.stopPropagation()">
+      <header><div><h2 id="titulo-pago">Registrar pago</h2><p>El pago se descuenta del saldo pendiente de {{ p.firstName }} {{ p.lastName }}.</p></div><button type="button" class="od-close" aria-label="Cerrar" (click)="mostrarPago.set(false)">×</button></header>
+      <form class="od-form" [formGroup]="formularioPago" (ngSubmit)="registrarPago()">
+        @if (cuenta(); as c) {
+          <p class="od-note">{{ textoDeSaldo(c.balance) }}</p>
+        }
+        <div class="od-form-row">
+          <label>Monto ($)<input type="number" min="0.01" step="0.01" formControlName="importe" placeholder="0">@if (formularioPago.controls.importe.touched && formularioPago.controls.importe.invalid) {
+            <small>Ingresá un monto mayor a cero, con hasta dos decimales.</small>
+          }</label>
+          <label>Medio de pago<select formControlName="metodo">@for (metodo of listaDeMetodos; track metodo[0]) {
+            <option [value]="metodo[0]">{{ metodo[1] }}</option>
+          }</select></label>
+        </div>
+        <label>Fecha (opcional)<input type="date" formControlName="fecha" [max]="hoy">@if (formularioPago.controls.fecha.touched && formularioPago.controls.fecha.invalid) {
+          <small>La fecha no puede ser posterior a hoy.</small>
+        }</label>
+        @if (errorFormulario()) {
+          <p class="od-feedback error" role="alert">{{ errorFormulario() }}</p>
+        }
+        <footer><button type="button" class="od-button secondary" (click)="mostrarPago.set(false)">Cancelar</button><button type="submit" class="od-button" [disabled]="guardandoCuenta()">{{ guardandoCuenta() ? 'Guardando…' : 'Registrar pago' }}</button></footer>
+      </form>
+    </section>
+  </div>
+}
+
+@if (cargoPorAnular(); as cargo) {
+  <div class="od-backdrop" (click)="cargoPorAnular.set(null)">
+    <section class="od-modal" role="dialog" appDialog (cerrar)="cargoPorAnular.set(null)" aria-modal="true" aria-labelledby="titulo-anular-cargo" (click)="$event.stopPropagation()">
+      <header><div><h2 id="titulo-anular-cargo">Anular cargo</h2><p>{{ cargo.description }} · {{ pesos(cargo.amount) }}. El cargo queda en el historial como anulado y se descuenta del saldo.</p></div><button type="button" class="od-close" aria-label="Cerrar" (click)="cargoPorAnular.set(null)">×</button></header>
+      <div class="od-form">
+        <label>Motivo de la anulación<input type="text" maxlength="500" [formControl]="motivoAnulacion" placeholder="Ej. Cargo registrado por error"></label>
+        @if (errorFormulario()) {
+          <p class="od-feedback error" role="alert">{{ errorFormulario() }}</p>
+        }
+        <footer><button type="button" class="od-button secondary" (click)="cargoPorAnular.set(null)">Volver</button><button type="button" class="od-button danger" [disabled]="guardandoCuenta()" (click)="anularCargo()">Anular cargo</button></footer>
+      </div>
+    </section>
+  </div>
+}
 }
 @if (cargando()) {
   <main class="not-found"><p>Cargando la historia clínica…</p></main>

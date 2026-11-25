@@ -100,6 +100,10 @@ public enum MovementType
     BudgetChargeReversal = 4,
     /// <summary>Ajuste manual (débito o crédito).</summary>
     Adjustment = 5,
+    /// <summary>Cargo manual registrado por el consultorio: concepto + importe (débito).</summary>
+    ManualCharge = 6,
+    /// <summary>Contraasiento por anulación de un cargo manual (crédito).</summary>
+    ManualChargeReversal = 7,
 }
 
 public enum MovementDirection { Debit = 1, Credit = 2 }
@@ -188,5 +192,6 @@ public enum AuditAction
     PaymentVoided = 50,
     BudgetStatusChanged = 51,
     ExpenseVoided = 52,
+    AccountChargeVoided = 53,
     AccessDenied = 90,
 }

@@ -75,6 +75,9 @@ export class OdontogramaComponent {
   // Registrar en el odontograma exige el permiso y además ser profesional del consultorio.
   get puedeEscribir(): boolean { return this.auth.tiene('odontogram.write') && this.auth.esProfesional(); }
   get veHistoria(): boolean { return this.auth.tiene('clinical.read'); }
+  /** El odontograma se abre siempre en modo lectura; quien puede escribir pasa a edición con "Editar odontograma". */
+  readonly editando = signal(false);
+  get enEdicion(): boolean { return this.editando() && this.puedeEscribir; }
   readonly paciente = signal<PatientDto | null>(null);
   readonly catalogo = signal<OdontogramCatalogDto | null>(null);
   private readonly estados = signal(new Map<number, ToothStateDto>());
@@ -210,10 +213,23 @@ export class OdontogramaComponent {
     else if (condicion.scope === 'Surface' && this.caraElegida() === PIEZA_COMPLETA) this.caraElegida.set(this.carasDeLaPieza[0] ?? PIEZA_COMPLETA);
   }
 
+  // ── Modo de edición ────────────────────────────────────────────────────────
+  iniciarEdicion(): void {
+    if (!this.puedeEscribir) return;
+    this.mensaje.set('');
+    this.editando.set(true);
+  }
+  /** Vuelve al modo lectura y descarta lo que se estaba escribiendo sin guardar. */
+  terminarEdicion(): void {
+    this.editando.set(false);
+    this.notaDelHallazgo.set('');
+    this.notaNueva.set('');
+  }
+
   // ── Cambios ────────────────────────────────────────────────────────────────
   agregarHallazgo(): void {
     const pieza = this.piezaSeleccionada();
-    if (!pieza || !this.condicionElegida()) return;
+    if (!this.enEdicion || !pieza || !this.condicionElegida()) return;
     this.guardando.set(true);
     this.error.set('');
     this.api.aplicarHallazgos(this.pacienteId, [{
@@ -228,6 +244,7 @@ export class OdontogramaComponent {
   }
 
   quitarHallazgo(hallazgo: FindingDto): void {
+    if (!this.enEdicion) return;
     this.guardando.set(true);
     this.error.set('');
     this.api.quitarHallazgo(this.pacienteId, hallazgo.id, 'Corrección del registro').subscribe({
@@ -239,7 +256,7 @@ export class OdontogramaComponent {
   agregarNota(): void {
     const texto = this.notaNueva().trim();
     const pieza = this.piezaSeleccionada();
-    if (!pieza || !texto) return;
+    if (!this.enEdicion || !pieza || !texto) return;
     this.guardando.set(true);
     this.api.notaDePieza(this.pacienteId, pieza, texto).subscribe({
       next: () => {

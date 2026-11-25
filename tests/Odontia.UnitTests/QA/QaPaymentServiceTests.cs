@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Odontia.Application.Common;
 using Odontia.Application.Features.Finance;
 using Odontia.Domain.Authorization;
+using Odontia.Domain.Common;
 using Odontia.Domain.Entities;
 using Odontia.Domain.Enums;
 using Odontia.Infrastructure.Persistence;
@@ -152,6 +153,113 @@ public sealed class QaPaymentServiceTests : IDisposable
         Assert.Equal(100.25m, st.TotalCredits);
         Assert.Equal(150.50m, st.Balance);
         Assert.Equal([250.75m, 150.50m], st.Movements.Select(m => m.RunningBalance));
+    }
+
+    // ---------------- Cargos manuales ----------------
+
+    private static RegisterAccountChargeRequest Charge(decimal amount, DateTimeOffset? at = null) => new("Consulta de urgencia", amount, at);
+
+    [Fact]
+    public async Task Manual_charge_raises_balance_and_payment_reduces_it()
+    {
+        var (svc, db) = Service();
+        await using var _ = db;
+        var st = await svc.RegisterChargeAsync(_qa.PatientId, Charge(800m), CancellationToken.None);
+        Assert.Equal(800m, st.Balance);
+        var row = Assert.Single(st.Movements);
+        Assert.Equal(MovementType.ManualCharge, row.Type);
+        Assert.Equal(MovementDirection.Debit, row.Direction);
+        Assert.Null(row.ReversedByMovementId);
+        Assert.Empty(st.Budgets);
+
+        await svc.RegisterAsync(Pay(300m), CancellationToken.None);
+        st = await svc.GetStatementAsync(_qa.PatientId, CancellationToken.None);
+        Assert.Equal(500m, st.Balance);
+        Assert.Equal(800m, st.TotalCharges);
+        Assert.Equal(300m, st.TotalCredits);
+    }
+
+    [Fact]
+    public async Task Voiding_manual_charge_creates_linked_credit_and_cannot_repeat()
+    {
+        var (svc, db) = Service();
+        await using var _ = db;
+        var chargeId = (await svc.RegisterChargeAsync(_qa.PatientId, Charge(800m), CancellationToken.None)).Movements.Single().Id;
+
+        var st = await svc.VoidChargeAsync(_qa.PatientId, chargeId, new VoidAccountChargeRequest("Cargado por error"), CancellationToken.None);
+        Assert.Equal(0m, st.Balance);
+        var reversal = st.Movements.Single(m => m.Type == MovementType.ManualChargeReversal);
+        Assert.Equal(MovementDirection.Credit, reversal.Direction);
+        Assert.Equal(800m, reversal.Amount);
+        Assert.Equal(chargeId, reversal.ReversesMovementId);
+        Assert.Equal(reversal.Id, st.Movements.Single(m => m.Id == chargeId).ReversedByMovementId);
+        Assert.Contains("Cargado por error", reversal.Description);
+
+        var ex = await Assert.ThrowsAsync<BusinessRuleException>(() =>
+            svc.VoidChargeAsync(_qa.PatientId, chargeId, new VoidAccountChargeRequest("x"), CancellationToken.None));
+        Assert.Equal("charge_already_voided", ex.Code);
+        Assert.Equal(1, await db.AccountMovements.CountAsync(m => m.Type == MovementType.ManualChargeReversal));
+    }
+
+    [Fact]
+    public async Task Only_manual_charges_of_the_patient_can_be_voided()
+    {
+        var (svc, db) = Service();
+        await using var _ = db;
+        await svc.RegisterAsync(Pay(10m), CancellationToken.None);
+        var paymentMovement = (await db.AccountMovements.SingleAsync()).Id;
+        var ex = await Assert.ThrowsAsync<BusinessRuleException>(() =>
+            svc.VoidChargeAsync(_qa.PatientId, paymentMovement, new VoidAccountChargeRequest("x"), CancellationToken.None));
+        Assert.Equal("movement_not_manual_charge", ex.Code);
+
+        var chargeId = (await svc.RegisterChargeAsync(_qa.PatientId, Charge(5m), CancellationToken.None)).Movements.Single(m => m.Type == MovementType.ManualCharge).Id;
+        await Assert.ThrowsAsync<NotFoundException>(() =>
+            svc.VoidChargeAsync(Guid.NewGuid(), chargeId, new VoidAccountChargeRequest("x"), CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task Manual_charge_validates_date_patient_and_permissions()
+    {
+        var (svc, db) = Service();
+        await using var _ = db;
+        var now = _time.GetUtcNow();
+        await svc.RegisterChargeAsync(_qa.PatientId, Charge(10m, now.AddMinutes(5)), CancellationToken.None);
+        await Assert.ThrowsAsync<RequestValidationException>(() => svc.RegisterChargeAsync(_qa.PatientId, Charge(10m, now.AddMinutes(6)), CancellationToken.None));
+        await Assert.ThrowsAsync<NotFoundException>(() => svc.RegisterChargeAsync(Guid.NewGuid(), Charge(10m), CancellationToken.None));
+
+        var (readOnly, db2) = Service(Permissions.FinanceRead);
+        await using var __ = db2;
+        await Assert.ThrowsAsync<ForbiddenAccessException>(() => readOnly.RegisterChargeAsync(_qa.PatientId, Charge(10m), CancellationToken.None));
+        await Assert.ThrowsAsync<ForbiddenAccessException>(() =>
+            readOnly.VoidChargeAsync(_qa.PatientId, Guid.NewGuid(), new VoidAccountChargeRequest("x"), CancellationToken.None));
+    }
+
+    [Fact]
+    public void Charge_validators_enforce_amount_and_description_limits()
+    {
+        var v = new Odontia.Application.Validation.RegisterAccountChargeRequestValidator();
+        Assert.True(v.Validate(new RegisterAccountChargeRequest("Consulta", 0.01m, null)).IsValid);
+        Assert.False(v.Validate(new RegisterAccountChargeRequest("Consulta", 0m, null)).IsValid);
+        Assert.False(v.Validate(new RegisterAccountChargeRequest("Consulta", 1.005m, null)).IsValid);
+        Assert.False(v.Validate(new RegisterAccountChargeRequest("", 10m, null)).IsValid);
+        Assert.True(v.Validate(new RegisterAccountChargeRequest(new string('x', AccountMovement.DescriptionMaxLength), 10m, null)).IsValid);
+        Assert.False(v.Validate(new RegisterAccountChargeRequest(new string('x', AccountMovement.DescriptionMaxLength + 1), 10m, null)).IsValid);
+        var vv = new Odontia.Application.Validation.VoidAccountChargeRequestValidator();
+        Assert.False(vv.Validate(new VoidAccountChargeRequest("")).IsValid);
+        Assert.False(vv.Validate(new VoidAccountChargeRequest(new string('m', 501))).IsValid);
+    }
+
+    [Fact]
+    public void Only_manual_charge_movements_can_be_reversed_in_domain()
+    {
+        var at = _time.GetUtcNow().UtcDateTime;
+        var charge = AccountMovement.ManualCharge(_qa.ConsultorioId, _qa.PatientId, 50m, at, "Consulta");
+        var reversal = charge.ReverseManualCharge(new string('m', 500), at);
+        Assert.Equal(-50m, reversal.SignedAmount);
+        Assert.Equal(charge.Id, reversal.ReversesMovementId);
+        Assert.True(reversal.Description.Length <= AccountMovement.DescriptionMaxLength);
+        var payment = new AccountMovement(_qa.ConsultorioId, _qa.PatientId, MovementType.Payment, MovementDirection.Credit, 50m, at, "Pago", null, null, null);
+        Assert.Equal("movement_not_manual_charge", Assert.Throws<DomainException>(() => payment.ReverseManualCharge("x", at)).Code);
     }
 
     [Fact] // QA-01 (corregido): la descripción del contraasiento se ajusta a 250; el motivo completo queda en Payment.VoidReason.

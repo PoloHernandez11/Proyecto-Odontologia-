@@ -9,7 +9,18 @@
         <a [routerLink]="['/historia-clinica', p.id]">Historia clínica</a>
         }<a class="selected" [routerLink]="['/odontograma', p.id]">Odontograma</a></nav>
         <section class="chart-card">
-          <div class="chart-title"><div><h2>Odontograma</h2><p>Seleccioná una pieza dental (o una de sus caras) para consultar o modificar su estado.</p></div><span class="fdi">Sistema FDI</span></div>
+          <div class="chart-title"><div><h2>Odontograma</h2><p>{{ enEdicion ? 'Seleccioná una pieza dental (o una de sus caras) para modificar su estado.' : 'Seleccioná una pieza dental para ver su estado.' }}</p></div>
+            <div class="chart-actions"><span class="fdi">Sistema FDI</span>@if (puedeEscribir) {
+              @if (enEdicion) {
+                <button type="button" class="edit-toggle done" aria-pressed="true" (click)="terminarEdicion()">Terminar edición</button>
+              } @else {
+                <button type="button" class="edit-toggle" aria-pressed="false" (click)="iniciarEdicion()">Editar odontograma</button>
+              }
+            }</div>
+          </div>
+          @if (enEdicion) {
+            <p class="edit-banner">Modo edición: lo que registres se guarda en el odontograma del paciente.</p>
+          }
           @for (fila of filas; track fila.titulo; let indice = $index) {
             @if (indice === 1 || indice === 3) {
               <div class="midline"></div>
@@ -99,7 +110,7 @@
                 <small>{{ fecha(hallazgo.recordedAtUtc) }} · {{ hallazgo.recordedBy }}@if (hallazgo.notes) {
                   · {{ hallazgo.notes }}
                 }</small></span>
-                @if (puedeEscribir) {
+                @if (enEdicion) {
                   <button type="button" class="remove" [disabled]="guardando()" (click)="quitarHallazgo(hallazgo)">Quitar</button>
                 }
               </li>
@@ -109,7 +120,7 @@
           <p class="hint-inline">Pieza sana: no tiene hallazgos registrados.</p>
         }
       </div>
-      @if (puedeEscribir) {
+      @if (enEdicion) {
         <div class="detail-block">
           <h4>Registrar un hallazgo</h4>
           <div class="finding-form">
@@ -135,13 +146,13 @@
       @if (!notasDeLaPieza.length) {
         <p class="hint-inline">Sin observaciones.</p>
       }
-      @if (puedeEscribir) {
+      @if (enEdicion) {
         <div class="note-form"><input aria-label="Nueva observación" [(ngModel)]="notaNueva" maxlength="1000" placeholder="Agregar una observación"><button class="save" type="button" [disabled]="guardando() || !notaNueva().trim()" (click)="agregarNota()">Agregar</button></div>
       }
     </div>
   </section>
 } @else {
-  <p class="hint">Elegí una pieza del odontograma para ver o editar su estado.</p>
+  <p class="hint">{{ enEdicion ? 'Elegí una pieza para editar su estado.' : 'Elegí una pieza para ver su estado.' }}</p>
 }
 </main>
 </div>

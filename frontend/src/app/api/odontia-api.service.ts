@@ -7,9 +7,9 @@ import {
   ClinicalEntryDto, ClinicalRecordDto, ExpenseDto, FinanceSummaryDto, RegisterExpenseRequest, ConsultorioDto, CreateAppointmentRequest, CreateClinicalEntryRequest, CreatePatientRequest,
   GabineteDto, HealthInsuranceDto, LabBoardDto, LabWorkDto, LabWorkStatus, LaboratoryDto, MemberDto, NotificationSettingsDto,
   OdontogramCatalogDto, OdontogramDto, PatientDto, PatientListItemDto, PatientStatus, PatientSummaryDto, PaymentDto,
-  ProfessionalDto, ProfileDto, ReceptionDashboardDto, RegisterPaymentRequest, SaveBudgetRequest, SaveLabWorkRequest,
-  SavePatientRequest, SaveTaskRequest, TaskDto, TaskItemStatus, ToothNoteDto, UpdateConsultorioRequest, UpdateProfessionalProfileRequest, UpdateProfileRequest,
-  WorkingHoursDto, WorkingHoursSlotRequest
+  ProfessionalDto, ProfileDto, ReceptionDashboardDto, RegisterAccountChargeRequest, RegisterPaymentRequest, SaveBudgetRequest, SaveLabWorkRequest,
+  SavePatientRequest, SaveTaskRequest, TaskDto, TaskItemStatus, ToothNoteDto, UpdateAppointmentRequest, UpdateConsultorioRequest, UpdateProfessionalProfileRequest, UpdateProfileRequest,
+  VoidAccountChargeRequest, WorkingHoursDto, WorkingHoursSlotRequest
 } from './schema';
 
 type Filtro = Record<string, string | number | boolean | null | undefined>;
@@ -61,6 +61,8 @@ export class OdontiaApi {
   }
   turno(id: string): Observable<AppointmentDto> { return this.http.get<AppointmentDto>(`${API}/appointments/${id}`); }
   crearTurno(solicitud: CreateAppointmentRequest): Observable<AppointmentDto> { return this.http.post<AppointmentDto>(`${API}/appointments`, solicitud); }
+  /** Edita paciente, motivo y notas administrativas de un turno pendiente o confirmado. `version` es la del turno leído (concurrencia optimista). */
+  actualizarTurno(id: string, solicitud: UpdateAppointmentRequest): Observable<AppointmentDto> { return this.http.put<AppointmentDto>(`${API}/appointments/${id}`, solicitud); }
   accionTurno(id: string, accion: AccionTurno): Observable<AppointmentDto> { return this.http.post<AppointmentDto>(`${API}/appointments/${id}/${accion}`, null); }
   cancelarTurno(id: string, reason: string | null): Observable<AppointmentDto> { return this.http.post<AppointmentDto>(`${API}/appointments/${id}/cancel`, { reason }); }
 
@@ -113,6 +115,14 @@ export class OdontiaApi {
   registrarPago(solicitud: RegisterPaymentRequest): Observable<PaymentDto> { return this.http.post<PaymentDto>(`${API}/payments`, solicitud); }
   anularPago(id: string, reason: string): Observable<PaymentDto> { return this.http.post<PaymentDto>(`${API}/payments/${id}/void`, { reason }); }
   cuentaCorriente(pacienteId: string): Observable<AccountStatementDto> { return this.http.get<AccountStatementDto>(`${API}/patients/${pacienteId}/account`); }
+  /** Cargo manual en la cuenta corriente del paciente (sube el saldo). Devuelve el estado de cuenta actualizado. */
+  registrarCargo(pacienteId: string, solicitud: RegisterAccountChargeRequest): Observable<AccountStatementDto> {
+    return this.http.post<AccountStatementDto>(`${API}/patients/${pacienteId}/account/charges`, solicitud);
+  }
+  /** Anula un cargo manual con un contramovimiento; devuelve el estado de cuenta actualizado. */
+  anularCargo(pacienteId: string, movimientoId: string, solicitud: VoidAccountChargeRequest): Observable<AccountStatementDto> {
+    return this.http.post<AccountStatementDto>(`${API}/patients/${pacienteId}/account/charges/${movimientoId}/void`, solicitud);
+  }
   presupuestos(filtro: Filtro = {}): Observable<Paginado<BudgetDto>> {
     return this.http.get<Paginado<BudgetDto>>(`${API}/budgets`, { params: parametros({ pageSize: 100, ...filtro }) });
   }

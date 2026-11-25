@@ -37,4 +37,18 @@ public sealed class PaymentsController(IPaymentService service) : ApiControllerB
     /// <summary>Cuenta corriente del paciente con movimientos, saldo acumulado y saldos por presupuesto.</summary>
     [HttpGet("patients/{patientId:guid}/account"), HasPermission(P.FinanceRead)]
     public Task<AccountStatementDto> Account(Guid patientId, CancellationToken ct) => service.GetStatementAsync(patientId, ct);
+
+    /// <summary>Registra un cargo manual (concepto + importe) en la cuenta del paciente. Devuelve la cuenta corriente actualizada.</summary>
+    [HttpPost("patients/{patientId:guid}/account/charges"), HasPermission(P.PaymentsWrite)]
+    [ProducesResponseType<AccountStatementDto>(StatusCodes.Status201Created)]
+    public async Task<IActionResult> RegisterCharge(Guid patientId, RegisterAccountChargeRequest request, CancellationToken ct)
+    {
+        var statement = await service.RegisterChargeAsync(patientId, request, ct);
+        return CreatedAtAction(nameof(Account), new { patientId, version = "1" }, statement);
+    }
+
+    /// <summary>Anula un cargo manual con motivo: genera contraasiento (crédito); el cargo no se elimina. Devuelve la cuenta actualizada.</summary>
+    [HttpPost("patients/{patientId:guid}/account/charges/{movementId:guid}/void"), HasPermission(P.PaymentsVoid)]
+    public Task<AccountStatementDto> VoidCharge(Guid patientId, Guid movementId, VoidAccountChargeRequest request, CancellationToken ct) =>
+        service.VoidChargeAsync(patientId, movementId, request, ct);
 }

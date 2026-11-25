@@ -319,6 +319,23 @@ public class AccountMovement : TenantEntity
     public Guid? ReversesMovementId { get; private set; }
 
     public decimal SignedAmount => Direction == MovementDirection.Debit ? Amount : -Amount;
+
+    /// <summary>Cargo manual (concepto + importe) que el consultorio registra en la cuenta del paciente; los pagos lo reducen.</summary>
+    public static AccountMovement ManualCharge(Guid consultorioId, Guid patientId, decimal amount, DateTime occurredAtUtc, string description) =>
+        new(consultorioId, patientId, MovementType.ManualCharge, MovementDirection.Debit, amount, occurredAtUtc, description, null, null, null);
+
+    /// <summary>
+    /// Contraasiento de un cargo manual: el cargo no se elimina; se registra un crédito por el mismo importe que lo referencia.
+    /// Que no se revierta dos veces lo verifica el servicio y, como defensa, el índice único sobre ReversesMovementId.
+    /// </summary>
+    public AccountMovement ReverseManualCharge(string reason, DateTime nowUtc)
+    {
+        if (Type != MovementType.ManualCharge)
+            throw new DomainException("Sólo pueden anularse cargos manuales.", "movement_not_manual_charge");
+        var text = Guard.Required(reason, "Motivo de anulación", 500);
+        return new AccountMovement(ConsultorioId, PatientId, MovementType.ManualChargeReversal, MovementDirection.Credit, Amount, nowUtc,
+            FitDescription($"Anulación cargo \"{Description}\": {text}"), null, null, Id);
+    }
 }
 
 /// <summary>Cálculos de cuenta corriente (puros, testeables).</summary>

@@ -19,6 +19,8 @@ export interface AccountMovementDto {
   description: string;
   budgetId?: string | null;
   paymentId?: string | null;
+  reversesMovementId?: string | null;
+  reversedByMovementId?: string | null;
 }
 
 export interface AccountStatementDto {
@@ -902,7 +904,7 @@ export interface MonthDayItemDto {
 
 export type MovementDirection = "Debit" | "Credit";
 
-export type MovementType = "BudgetCharge" | "Payment" | "PaymentReversal" | "BudgetChargeReversal" | "Adjustment";
+export type MovementType = "BudgetCharge" | "Payment" | "PaymentReversal" | "BudgetChargeReversal" | "Adjustment" | "ManualCharge" | "ManualChargeReversal";
 
 export interface NonWorkingDayRequest {
   date: string;
@@ -1264,6 +1266,12 @@ export interface RecordConsentAcceptanceRequest {
 
 export interface RecoveryCodesDto {
   recoveryCodes: string[];
+}
+
+export interface RegisterAccountChargeRequest {
+  description: string;
+  amount: number;
+  occurredAt?: string | null;
 }
 
 export interface RegisterExpenseRequest {
@@ -1717,6 +1725,10 @@ export interface UpdateTreatmentPlanRequest {
 
 export interface UpdatedCountDto {
   updated: number;
+}
+
+export interface VoidAccountChargeRequest {
+  reason: string;
 }
 
 export interface VoidClinicalEntryRequest {

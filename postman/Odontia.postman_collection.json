@@ -116,6 +116,10 @@
       "value": ""
     },
     {
+      "key": "chargeId",
+      "value": ""
+    },
+    {
       "key": "conditionId",
       "value": ""
     },
@@ -7075,6 +7079,209 @@
               "query": []
             },
             "description": "Anulación controlada con motivo: genera contraasiento; el pago no se elimina.\n\nPermiso: payments.void",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"Otra vez\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const expected = pm.variables.get(\"expectedStatus\") ? JSON.parse(pm.variables.get(\"expectedStatus\")) : [409,422];",
+                  "pm.test(\"Status \" + expected.join(\"/\") + \" (caso negativo intencional)\", () => pm.expect(pm.response.code, pm.response.text().slice(0, 300)).to.be.oneOf(expected));",
+                  "pm.test(\"ProblemDetails\", () => { const p = pm.response.json(); pm.expect(p.status).to.eql(pm.response.code); pm.expect(p.title).to.be.a(\"string\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /patients/{patientId}/account/charges (importe 0)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/patients/{{patientId}}/account/charges",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "patients",
+                "{{patientId}}",
+                "account",
+                "charges"
+              ],
+              "query": []
+            },
+            "description": "Registra un cargo manual (concepto + importe) en la cuenta del paciente. Devuelve la cuenta corriente actualizada.\n\nPermiso: payments.write",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"description\": \"Consulta\",\n  \"amount\": 0\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const expected = pm.variables.get(\"expectedStatus\") ? JSON.parse(pm.variables.get(\"expectedStatus\")) : [400];",
+                  "pm.test(\"Status \" + expected.join(\"/\") + \" (caso negativo intencional)\", () => pm.expect(pm.response.code, pm.response.text().slice(0, 300)).to.be.oneOf(expected));",
+                  "pm.test(\"ProblemDetails\", () => { const p = pm.response.json(); pm.expect(p.status).to.eql(pm.response.code); pm.expect(p.title).to.be.a(\"string\"); });",
+                  "pm.test(\"code = validation_error\", () => pm.expect(pm.response.json().code).to.eql(\"validation_error\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /patients/{patientId}/account/charges",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/patients/{{patientId}}/account/charges",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "patients",
+                "{{patientId}}",
+                "account",
+                "charges"
+              ],
+              "query": []
+            },
+            "description": "Registra un cargo manual (concepto + importe) en la cuenta del paciente. Devuelve la cuenta corriente actualizada.\n\nPermiso: payments.write",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"description\": \"Consulta de urgencia\",\n  \"amount\": 5000\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const expected = pm.variables.get(\"expectedStatus\") ? JSON.parse(pm.variables.get(\"expectedStatus\")) : [201];",
+                  "pm.test(\"Status \" + expected.join(\"/\"), () => pm.expect(pm.response.code, pm.response.text().slice(0, 300)).to.be.oneOf(expected));",
+                  "let j = null;",
+                  "pm.test(\"Respuesta JSON\", () => { j = pm.response.json(); pm.expect(j).to.not.eql(null); });",
+                  "pm.test(\"Forma AccountStatementDto\", () => { pm.expect(j).to.be.an(\"object\"); pm.expect(j).to.include.all.keys([\"patientId\",\"totalCharges\",\"totalCredits\",\"balance\",\"movements\",\"budgets\"]); });",
+                  "if (pm.response.code < 300) { const v = (() => { try { return j.movements.filter(m => m.type === \"ManualCharge\" && !m.reversedByMovementId).pop().id; } catch (e) { return undefined; } })(); pm.test(\"Captura chargeId\", () => pm.expect(v, \"chargeId\").to.not.be.oneOf([undefined, null])); pm.collectionVariables.set(\"chargeId\", v); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /patients/{patientId}/account/charges/{movementId}/void",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/patients/{{patientId}}/account/charges/{{chargeId}}/void",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "patients",
+                "{{patientId}}",
+                "account",
+                "charges",
+                "{{chargeId}}",
+                "void"
+              ],
+              "query": []
+            },
+            "description": "Anula un cargo manual con motivo: genera contraasiento (crédito); el cargo no se elimina. Devuelve la cuenta actualizada.\n\nPermiso: payments.void",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"Cargado por error\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const expected = pm.variables.get(\"expectedStatus\") ? JSON.parse(pm.variables.get(\"expectedStatus\")) : [200];",
+                  "pm.test(\"Status \" + expected.join(\"/\"), () => pm.expect(pm.response.code, pm.response.text().slice(0, 300)).to.be.oneOf(expected));",
+                  "let j = null;",
+                  "pm.test(\"Respuesta JSON\", () => { j = pm.response.json(); pm.expect(j).to.not.eql(null); });",
+                  "pm.test(\"Forma AccountStatementDto\", () => { pm.expect(j).to.be.an(\"object\"); pm.expect(j).to.include.all.keys([\"patientId\",\"totalCharges\",\"totalCredits\",\"balance\",\"movements\",\"budgets\"]); });",
+                  "pm.test(\"Contraasiento\", () => pm.expect(j.movements.some(m => m.type === \"ManualChargeReversal\" && m.reversesMovementId === pm.collectionVariables.get(\"chargeId\"))).to.be.true);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /patients/{patientId}/account/charges/{movementId}/void (ya anulado)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/patients/{{patientId}}/account/charges/{{chargeId}}/void",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "patients",
+                "{{patientId}}",
+                "account",
+                "charges",
+                "{{chargeId}}",
+                "void"
+              ],
+              "query": []
+            },
+            "description": "Anula un cargo manual con motivo: genera contraasiento (crédito); el cargo no se elimina. Devuelve la cuenta actualizada.\n\nPermiso: payments.void",
             "body": {
               "mode": "raw",
               "raw": "{\n  \"reason\": \"Otra vez\"\n}",

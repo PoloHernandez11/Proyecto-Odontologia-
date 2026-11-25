@@ -1,7 +1,7 @@
 # Endpoints de la API Odontia v1
 
 > Generado automáticamente a partir del documento OpenAPI (`docs/openapi.v1.json`).
-> Total: **173 operaciones**. Base: `/api/v1`. Errores: ProblemDetails (ver `docs/FRONTEND_INTEGRATION.md`).
+> Total: **175 operaciones**. Base: `/api/v1`. Errores: ProblemDetails (ver `docs/FRONTEND_INTEGRATION.md`).
 
 Códigos comunes en todas las operaciones autenticadas: `401` (sin sesión o sesión invalidada), `403` (sin permiso / sin consultorio activo), `400` (validación), `404` (no existe **o pertenece a otro consultorio**), `409` (conflicto/concurrencia), `422` (regla de negocio), `429` (rate limit).
 
@@ -267,6 +267,8 @@ npx newman run postman/Odontia.postman_collection.json -e postman/Odontia.local.
 | Método | Ruta | operationId | Descripción | Parámetros | Cuerpo | Respuesta | Permiso |
 |---|---|---|---|---|---|---|---|
 | GET | `/patients/{patientId}/account` | `paymentsAccount` | Cuenta corriente del paciente con movimientos, saldo acumulado y saldos por presupuesto. | patientId (ruta) | — | 200 `AccountStatementDto` | `finance.read` |
+| POST | `/patients/{patientId}/account/charges` | `paymentsRegisterCharge` | Registra un cargo manual (concepto + importe) en la cuenta del paciente. Devuelve la cuenta corriente actualizada. | patientId (ruta) | `RegisterAccountChargeRequest` | 201 `AccountStatementDto` | `payments.write` |
+| POST | `/patients/{patientId}/account/charges/{movementId}/void` | `paymentsVoidCharge` | Anula un cargo manual con motivo: genera contraasiento (crédito); el cargo no se elimina. Devuelve la cuenta actualizada. | patientId (ruta), movementId (ruta) | `VoidAccountChargeRequest` | 200 `AccountStatementDto` | `payments.void` |
 | GET | `/payments` | `paymentsSearch` | — | PatientId, From, To, Method, IncludeVoided, Page, PageSize, Sort | — | 200 `PagedResultOfPaymentDto` | `finance.read` |
 | POST | `/payments` | `paymentsRegister` | Registra un pago (opcionalmente imputado a un presupuesto aprobado, sin exceder su saldo). | — | `RegisterPaymentRequest` | 201 `PaymentDto` | `payments.write` |
 | GET | `/payments/{id}` | `paymentsGet` | — | id (ruta) | — | 200 `PaymentDto` | `finance.read` |

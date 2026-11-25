@@ -50,8 +50,17 @@ public sealed class PaymentQuery : PageQuery
     public bool IncludeVoided { get; set; } = true;
 }
 
+/// <summary>Cargo manual en la cuenta del paciente (concepto + importe). OccurredAt opcional (por defecto, ahora); no puede ser futura.</summary>
+public sealed record RegisterAccountChargeRequest(string Description, decimal Amount, DateTimeOffset? OccurredAt);
+
+public sealed record VoidAccountChargeRequest(string Reason);
+
+/// <summary>
+/// Movimiento de la cuenta corriente. ReversesMovementId: movimiento que este contraasiento revierte.
+/// ReversedByMovementId: contraasiento que revirtió este movimiento (null = vigente; un cargo manual vigente puede anularse).
+/// </summary>
 public sealed record AccountMovementDto(Guid Id, DateTime OccurredAtUtc, MovementType Type, MovementDirection Direction, decimal Amount,
-    decimal RunningBalance, string Description, Guid? BudgetId, Guid? PaymentId);
+    decimal RunningBalance, string Description, Guid? BudgetId, Guid? PaymentId, Guid? ReversesMovementId, Guid? ReversedByMovementId);
 
 /// <summary>Cuenta corriente calculada en el servidor. Balance &gt; 0 = saldo deudor; &lt; 0 = saldo a favor.</summary>
 public sealed record AccountStatementDto(Guid PatientId, decimal TotalCharges, decimal TotalCredits, decimal Balance,
@@ -80,6 +89,8 @@ public interface IPaymentService
     Task<PaymentDto> RegisterAsync(RegisterPaymentRequest request, CancellationToken ct);
     Task<PaymentDto> VoidAsync(Guid id, VoidPaymentRequest request, CancellationToken ct);
     Task<AccountStatementDto> GetStatementAsync(Guid patientId, CancellationToken ct);
+    Task<AccountStatementDto> RegisterChargeAsync(Guid patientId, RegisterAccountChargeRequest request, CancellationToken ct);
+    Task<AccountStatementDto> VoidChargeAsync(Guid patientId, Guid movementId, VoidAccountChargeRequest request, CancellationToken ct);
 }
 
 internal sealed class BudgetService(IApplicationDbContext db, ITenantContext tenant, IConsultorioClock clock, ISequenceGenerator sequences,
@@ -365,18 +376,59 @@ internal sealed class PaymentService(IApplicationDbContext db, ITenantContext te
         return await GetAsync(id, ct);
     }
 
+    /// <summary>Cargo manual (débito) en la cuenta del paciente; los pagos posteriores lo reducen. Devuelve la cuenta actualizada.</summary>
+    public async Task<AccountStatementDto> RegisterChargeAsync(Guid patientId, RegisterAccountChargeRequest r, CancellationToken ct)
+    {
+        tenant.Require(Permissions.PaymentsWrite);
+        if (!await db.Patients.AnyAsync(p => p.Id == patientId, ct)) throw new NotFoundException("El paciente no existe.");
+        var now = clock.UtcNow;
+        var occurredAt = r.OccurredAt?.UtcDateTime ?? now;
+        if (occurredAt > now.AddMinutes(5)) throw new RequestValidationException("occurredAt", "La fecha del cargo no puede ser futura.");
+
+        var charge = AccountMovement.ManualCharge(tenant.ConsultorioId, patientId, r.Amount, occurredAt, r.Description);
+        db.AccountMovements.Add(charge);
+        // El alta queda auditada por el registro automático de auditoría del contexto (AuditAction.Created).
+        await db.SaveChangesAsync(ct);
+        return await GetStatementAsync(patientId, ct);
+    }
+
+    /// <summary>Anulación de un cargo manual con motivo: se registra el contraasiento (crédito); el cargo no se elimina.</summary>
+    public async Task<AccountStatementDto> VoidChargeAsync(Guid patientId, Guid movementId, VoidAccountChargeRequest r, CancellationToken ct)
+    {
+        tenant.Require(Permissions.PaymentsVoid);
+        var charge = await db.AccountMovements.FirstOrDefaultAsync(m => m.Id == movementId && m.PatientId == patientId, ct)
+                     ?? throw new NotFoundException("El movimiento no existe.");
+        if (charge.Type != MovementType.ManualCharge)
+            throw new BusinessRuleException("Sólo pueden anularse cargos manuales.", "movement_not_manual_charge");
+        if (await db.AccountMovements.AnyAsync(m => m.ReversesMovementId == charge.Id, ct))
+            throw new BusinessRuleException("El cargo ya fue anulado.", "charge_already_voided");
+
+        db.AccountMovements.Add(charge.ReverseManualCharge(r.Reason, clock.UtcNow));
+        try { await db.SaveChangesAsync(ct); }
+        catch (DbUpdateException)
+        {
+            // Índice único sobre ReversesMovementId: otra anulación simultánea ganó la carrera.
+            throw new ConflictException("El cargo ya fue anulado por otra operación. Actualice la cuenta.", "charge_already_voided");
+        }
+        audit.Write(AuditAction.AccountChargeVoided, nameof(AccountMovement), charge.Id.ToString(),
+            $"Cargo \"{charge.Description}\" ({charge.Amount:N2}): {r.Reason.Trim()}");
+        return await GetStatementAsync(patientId, ct);
+    }
+
     public async Task<AccountStatementDto> GetStatementAsync(Guid patientId, CancellationToken ct)
     {
         tenant.Require(Permissions.FinanceRead);
         if (!await db.Patients.AnyAsync(p => p.Id == patientId, ct)) throw new NotFoundException("El paciente no existe.");
         var movements = await db.AccountMovements.AsNoTracking().Where(m => m.PatientId == patientId)
             .OrderBy(m => m.OccurredAtUtc).ThenBy(m => m.CreatedAtUtc).ToListAsync(ct);
+        var reversedBy = movements.Where(m => m.ReversesMovementId != null).ToDictionary(m => m.ReversesMovementId!.Value, m => m.Id);
         decimal running = 0;
         var rows = new List<AccountMovementDto>();
         foreach (var m in movements)
         {
             running += m.SignedAmount;
-            rows.Add(new AccountMovementDto(m.Id, m.OccurredAtUtc, m.Type, m.Direction, m.Amount, running, m.Description, m.BudgetId, m.PaymentId));
+            rows.Add(new AccountMovementDto(m.Id, m.OccurredAtUtc, m.Type, m.Direction, m.Amount, running, m.Description, m.BudgetId, m.PaymentId,
+                m.ReversesMovementId, reversedBy.TryGetValue(m.Id, out var rid) ? rid : null));
         }
         var budgets = await db.Budgets.AsNoTracking().Where(b => b.PatientId == patientId && b.Status == BudgetStatus.Approved).ToListAsync(ct);
         var payments = await db.Payments.AsNoTracking().Where(p => p.PatientId == patientId).ToListAsync(ct);

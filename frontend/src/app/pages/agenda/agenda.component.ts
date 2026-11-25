@@ -5,7 +5,7 @@ import { FormControl, FormGroup, FormsModule, ReactiveFormsModule, Validators } 
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { Subject, debounceTime, of, switchMap } from 'rxjs';
 import { AccionTurno, ESTADOS_DE_TURNO, OdontiaApi } from '../../api/odontia-api.service';
-import { AgendaAppointmentDto, AgendaLabWorkDto, AppointmentStatus, LabWorkStatus, GabineteDto, PatientListItemDto, ProfessionalDto, ScheduleBlockDto } from '../../api/schema';
+import { AgendaAppointmentDto, AgendaLabWorkDto, AppointmentDto, AppointmentStatus, LabWorkStatus, GabineteDto, PatientListItemDto, ProfessionalDto, ScheduleBlockDto } from '../../api/schema';
 import { esConflictoDeConcurrencia, fechaCorta, fechaIso, iniciales, mensajeDeError } from '../../core/api';
 import { AuthService } from '../../core/auth.service';
 import { diaDeCalendario, fechaEnZona, horaEnZona, instanteEnZona, minutosEnZona, partesEnZona, zonaDelNavegador, zonaValida } from '../../core/zona-horaria';
@@ -38,8 +38,11 @@ const ACCIONES: Partial<Record<AppointmentStatus, Accion[]>> = {
 
 const CLASE_DE_ESTADO: Record<AppointmentStatus, string> = {
   Pending: 'pendiente', Confirmed: 'confirmado', Arrived: 'en-sala', InWaitingRoom: 'en-sala', InProgress: 'en-sala',
-  Attended: 'atendido', Cancelled: 'cancelado', NoShow: 'cancelado'
+  Attended: 'atendido', Cancelled: 'cancelado', NoShow: 'ausente'
 };
+
+/** Sólo los turnos pendientes o confirmados admiten editar el motivo (el backend rechaza el resto con appointment_not_editable). */
+const ESTADOS_EDITABLES: AppointmentStatus[] = ['Pending', 'Confirmed'];
 
 function piezasDe(trabajo: AgendaLabWorkDto): string {
   const piezas = trabajo.toothCodes ?? [];
@@ -95,9 +98,16 @@ export class AgendaComponent {
   readonly mensaje = signal('');
   readonly error = signal('');
 
-  // Cancelación con motivo
+  // Eliminación con motivo opcional (el backend lo registra como turno cancelado y deja de mostrarse en la agenda)
   readonly cancelando = signal(false);
   readonly motivoCancelacion = signal('');
+
+  // Edición del motivo de consulta
+  readonly editandoMotivo = signal(false);
+  readonly guardandoMotivo = signal(false);
+  /** Turno leído al empezar a editar: aporta la versión y los datos que el PUT mantiene sin cambios. */
+  private turnoEnEdicion: AppointmentDto | null = null;
+  readonly motivoEditado = new FormControl('', { nonNullable: true, validators: [Validators.required, Validators.maxLength(250)] });
 
   // Alta de turno
   readonly mostrarFormulario = signal(false);
@@ -202,7 +212,8 @@ export class AgendaComponent {
           if (this.adoptarZona(agenda.timeZoneId)) return; // la fecha de "hoy" cambió con la zona: se recargó
           this.cargando.set(false);
           if (limpiarError) this.error.set('');
-          const turnos = [...agenda.appointments].sort((a, b) => a.startUtc.localeCompare(b.startUtc));
+          // Los turnos eliminados (cancelados) no se muestran en ninguna vista; los ausentes sí.
+          const turnos = agenda.appointments.filter(turno => turno.status !== 'Cancelled').sort((a, b) => a.startUtc.localeCompare(b.startUtc));
           this.turnos.set(turnos);
           this.bloqueos.set(agenda.blocks);
           this.turnoEnDetalle.set(null);
@@ -261,7 +272,6 @@ export class AgendaComponent {
     if (!texto) return turnos;
     return turnos.filter(turno => turno.patientName.toLowerCase().includes(texto) || (turno.patientPhone ?? '').includes(texto));
   });
-  readonly turnosActivos = computed(() => this.turnosFiltrados().filter(turno => turno.status !== 'Cancelled'));
 
   readonly columnas = computed(() => {
     const elegido = this.profesionalSeleccionado();
@@ -273,7 +283,7 @@ export class AgendaComponent {
   readonly horas = computed(() => {
     const zona = this.zona();
     let desde = 8, hasta = 20;
-    for (const turno of this.turnosActivos()) {
+    for (const turno of this.turnosFiltrados()) {
       const inicio = partesEnZona(turno.startUtc, zona), fin = partesEnZona(turno.endUtc, zona);
       desde = Math.min(desde, inicio.hora);
       hasta = Math.max(hasta, fin.hora + (fin.minuto > 0 ? 1 : 0));
@@ -300,7 +310,7 @@ export class AgendaComponent {
   /** Turnos y bloqueos agrupados por profesional, con su posición ya calculada (una vez por cambio de datos). */
   readonly columnasDelDia = computed<ColumnaDelDia[]>(() => {
     if (this.vista() !== 'dia') return [];
-    const turnos = this.turnosActivos();
+    const turnos = this.turnosFiltrados();
     const bloqueos = this.bloqueos().filter(bloqueo => bloqueo.kind !== 'ExtraAvailability');
     return this.columnas().map(profesional => ({
       profesional,
@@ -325,10 +335,8 @@ export class AgendaComponent {
     const conteo: Partial<Record<AppointmentStatus, number>> = {};
     for (const turno of this.turnos()) conteo[turno.status] = (conteo[turno.status] ?? 0) + 1;
     const de = (estado: AppointmentStatus) => conteo[estado] ?? 0;
-    return {
-      agendados: this.turnos().length - de('Cancelled'), confirmados: de('Confirmed'), pendientes: de('Pending'),
-      atendidos: de('Attended'), cancelados: de('Cancelled')
-    };
+    // turnos() ya no incluye los eliminados (cancelados): no cuentan como agendados.
+    return { agendados: this.turnos().length, confirmados: de('Confirmed'), pendientes: de('Pending'), atendidos: de('Attended') };
   });
 
   readonly accionesDisponibles = computed<Accion[]>(() => {
@@ -338,6 +346,10 @@ export class AgendaComponent {
   readonly puedeCancelar = computed(() => {
     const turno = this.turnoSeleccionado();
     return this.puedeEscribir && !!turno && ['Pending', 'Confirmed', 'Arrived', 'InWaitingRoom'].includes(turno.status);
+  });
+  readonly puedeEditarMotivo = computed(() => {
+    const turno = this.turnoSeleccionado();
+    return this.puedeEscribir && !!turno && ESTADOS_EDITABLES.includes(turno.status);
   });
 
   hora(instante: string): string { return horaEnZona(instante, this.zona()); }
@@ -404,12 +416,13 @@ export class AgendaComponent {
     this.mensaje.set('');
     this.cancelando.set(false);
     this.motivoCancelacion.set('');
+    this.cerrarEdicionMotivo();
   }
 
   private alFallarAccion(error: unknown, porDefecto: string): void {
     this.mensaje.set('');
     this.error.set(mensajeDeError(error, porDefecto));
-    if (esConflictoDeConcurrencia(error)) { this.cancelando.set(false); this.cargar(false); }
+    if (esConflictoDeConcurrencia(error)) { this.cancelando.set(false); this.cerrarEdicionMotivo(); this.cargar(false); }
   }
 
   ejecutar(accion: Accion): void {
@@ -425,8 +438,60 @@ export class AgendaComponent {
     const seleccionado = this.turnoSeleccionado();
     if (!seleccionado) return;
     this.api.cancelarTurno(seleccionado.id, this.motivoCancelacion().trim() || null).subscribe({
-      next: turno => { this.error.set(''); this.cancelando.set(false); this.mensaje.set(`Se canceló el turno de ${turno.patientName}.`); this.cargar(); },
-      error: error => this.alFallarAccion(error, 'No se pudo cancelar el turno.')
+      next: turno => { this.error.set(''); this.cancelando.set(false); this.mensaje.set(`Se eliminó el turno de ${turno.patientName}.`); this.cargar(); },
+      error: error => this.alFallarAccion(error, 'No se pudo eliminar el turno.')
+    });
+  }
+
+  // ── Edición del motivo de consulta ─────────────────────────────────────────
+  /** Lee el turno completo (versión y notas administrativas, que la agenda no trae) y abre el campo de edición. */
+  iniciarEdicionMotivo(): void {
+    const seleccionado = this.turnoSeleccionado();
+    if (!seleccionado || !this.puedeEditarMotivo()) return;
+    this.guardandoMotivo.set(true);
+    this.mensaje.set('');
+    this.api.turno(seleccionado.id).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: turno => {
+        this.guardandoMotivo.set(false);
+        if (!ESTADOS_EDITABLES.includes(turno.status)) {
+          // Cambió de estado desde que se cargó la agenda: se muestra el estado vigente.
+          this.error.set('El turno cambió de estado y ya no se puede editar su motivo.');
+          this.cargar(false);
+          return;
+        }
+        this.error.set('');
+        this.turnoEnEdicion = turno;
+        this.motivoEditado.reset(turno.reason ?? '');
+        this.editandoMotivo.set(true);
+      },
+      error: error => { this.guardandoMotivo.set(false); this.alFallarAccion(error, 'No se pudo abrir el turno para editarlo.'); }
+    });
+  }
+
+  cerrarEdicionMotivo(): void {
+    this.editandoMotivo.set(false);
+    this.turnoEnEdicion = null;
+  }
+
+  /** PUT del turno: cambia sólo el motivo; paciente y notas administrativas se envían tal como estaban. */
+  guardarMotivo(): void {
+    const turno = this.turnoEnEdicion;
+    if (!turno || this.guardandoMotivo()) return;
+    const motivo = this.motivoEditado.value.trim();
+    if (!motivo) this.motivoEditado.setValue('');
+    if (this.motivoEditado.invalid) { this.motivoEditado.markAsTouched(); return; }
+    this.guardandoMotivo.set(true);
+    this.api.actualizarTurno(turno.id, {
+      patientId: turno.patientId, reason: motivo, administrativeNotes: turno.administrativeNotes ?? null, version: turno.version
+    }).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: () => {
+        this.guardandoMotivo.set(false);
+        this.cerrarEdicionMotivo();
+        this.error.set('');
+        this.mensaje.set('Se actualizó el motivo del turno.');
+        this.cargar();
+      },
+      error: error => { this.guardandoMotivo.set(false); this.alFallarAccion(error, 'No se pudo actualizar el motivo del turno.'); }
     });
   }
 

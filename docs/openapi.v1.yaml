@@ -8411,6 +8411,168 @@ paths:
         - Bearer: [ ]
       x-permissions:
         - finance.read
+  '/api/v1/patients/{patientId}/account/charges':
+    post:
+      tags:
+        - Payments
+      summary: Registra un cargo manual (concepto + importe) en la cuenta del paciente. Devuelve la cuenta corriente actualizada.
+      description: '**Permisos requeridos:** `payments.write`'
+      operationId: paymentsRegisterCharge
+      parameters:
+        - name: patientId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterAccountChargeRequest'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/RegisterAccountChargeRequest'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/RegisterAccountChargeRequest'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AccountStatementDto'
+        '400':
+          description: 'Datos inválidos (`validation_error`, con `errors` por campo).'
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ApiProblem'
+        '401':
+          description: 'No autenticado o sesión invalidada (`unauthorized`, `session_invalidated`).'
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ApiProblem'
+        '403':
+          description: 'Sin permiso o sin consultorio activo (`forbidden`, `membership_inactive`).'
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ApiProblem'
+        '404':
+          description: No existe o pertenece a otro consultorio (`not_found`).
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ApiProblem'
+        '409':
+          description: 'Conflicto: duplicado, horario ocupado o versión desactualizada (`slot_taken`, `concurrency_conflict`, …).'
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ApiProblem'
+        '422':
+          description: Regla de negocio incumplida (el `detail` es apto para mostrar al usuario).
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ApiProblem'
+        '429':
+          description: Demasiadas solicitudes (`rate_limited`).
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ApiProblem'
+      security:
+        - Bearer: [ ]
+      x-permissions:
+        - payments.write
+  '/api/v1/patients/{patientId}/account/charges/{movementId}/void':
+    post:
+      tags:
+        - Payments
+      summary: 'Anula un cargo manual con motivo: genera contraasiento (crédito); el cargo no se elimina. Devuelve la cuenta actualizada.'
+      description: '**Permisos requeridos:** `payments.void`'
+      operationId: paymentsVoidCharge
+      parameters:
+        - name: patientId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: movementId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VoidAccountChargeRequest'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/VoidAccountChargeRequest'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/VoidAccountChargeRequest'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AccountStatementDto'
+        '400':
+          description: 'Datos inválidos (`validation_error`, con `errors` por campo).'
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ApiProblem'
+        '401':
+          description: 'No autenticado o sesión invalidada (`unauthorized`, `session_invalidated`).'
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ApiProblem'
+        '403':
+          description: 'Sin permiso o sin consultorio activo (`forbidden`, `membership_inactive`).'
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ApiProblem'
+        '404':
+          description: No existe o pertenece a otro consultorio (`not_found`).
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ApiProblem'
+        '409':
+          description: 'Conflicto: duplicado, horario ocupado o versión desactualizada (`slot_taken`, `concurrency_conflict`, …).'
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ApiProblem'
+        '422':
+          description: Regla de negocio incumplida (el `detail` es apto para mostrar al usuario).
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ApiProblem'
+        '429':
+          description: Demasiadas solicitudes (`rate_limited`).
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ApiProblem'
+      security:
+        - Bearer: [ ]
+      x-permissions:
+        - payments.void
   /api/v1/procedures:
     get:
       tags:
@@ -10616,6 +10778,14 @@ components:
           type: string
           format: uuid
           nullable: true
+        reversesMovementId:
+          type: string
+          format: uuid
+          nullable: true
+        reversedByMovementId:
+          type: string
+          format: uuid
+          nullable: true
       additionalProperties: false
     AccountStatementDto:
       type: object
@@ -12759,6 +12929,8 @@ components:
         - PaymentReversal
         - BudgetChargeReversal
         - Adjustment
+        - ManualCharge
+        - ManualChargeReversal
       type: string
     NonWorkingDayRequest:
       type: object
@@ -13693,6 +13865,19 @@ components:
           type: array
           items:
             type: string
+      additionalProperties: false
+    RegisterAccountChargeRequest:
+      type: object
+      properties:
+        description:
+          type: string
+        amount:
+          type: number
+          format: double
+        occurredAt:
+          type: string
+          format: date-time
+          nullable: true
       additionalProperties: false
     RegisterExpenseRequest:
       type: object
@@ -14773,6 +14958,12 @@ components:
         updated:
           type: integer
           format: int32
+      additionalProperties: false
+    VoidAccountChargeRequest:
+      type: object
+      properties:
+        reason:
+          type: string
       additionalProperties: false
     VoidClinicalEntryRequest:
       type: object

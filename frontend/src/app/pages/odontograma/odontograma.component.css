@@ -53,3 +53,10 @@
 .mini-symbol{width:16px;height:16px;flex:0 0 16px;overflow:visible}
 .mini-symbol .symbol text{font-size:19px}
 .legend-note{color:var(--od-text-muted);font-style:italic}
+
+/* Modo lectura / edición: el odontograma se abre en lectura y se edita con "Editar odontograma" */
+.chart-actions{display:flex;align-items:center;gap:12px;flex-wrap:wrap;justify-content:flex-end}
+.edit-toggle{background:#167f86;color:#fff;border:1px solid #167f86;border-radius:8px;padding:9px 14px;font:inherit;font-size:13px;font-weight:700;cursor:pointer}
+.edit-toggle.done{background:#fff;color:#167f86}
+.edit-toggle:focus-visible{outline:2px solid #16858b;outline-offset:2px}
+.edit-banner{margin:14px 0 0;padding:9px 12px;border-radius:8px;background:#e1f3f2;color:#116d73;font-size:13px}
