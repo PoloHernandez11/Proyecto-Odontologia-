@@ -104,7 +104,7 @@ la supresión puede estar limitada por la obligación legal de conservar la hist
 - [ ] `Storage__Local__RootPath` en un volumen privado con backup cifrado, o implementar `IFileStorage` sobre S3/Azure Blob privado.
 - [ ] `Cors__AllowedOrigins` con el dominio real del frontend; cookies `Secure=true` y `SameSite` según el despliegue.
 - [ ] HTTPS terminado en el proxy con HSTS; `ReverseProxy__Enabled=true` y `KnownProxies` (IP fijas) o `KnownNetworks` (redes CIDR, p. ej. la red de Docker del proxy) configurados.
-- [ ] `Auth__AllowPublicRegistration=false` salvo que el alta pública de consultorios sea deseada.
+- [ ] `Auth__AllowPublicRegistration`: `true` (por defecto) permite el alta pública de consultorios; `false` si solo se entra por invitación.
 - [ ] Proveedor de correo real (`Email__Provider=Smtp`); SPF/DKIM/DMARC en el dominio remitente.
 - [ ] `Swagger__Enabled=false` (o protegido) en producción.
 - [ ] Aplicar migraciones con el script idempotente revisado; backups automáticos de MySQL con prueba de restauración.

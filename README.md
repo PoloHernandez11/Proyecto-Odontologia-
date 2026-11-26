@@ -97,7 +97,7 @@ dotnet user-secrets set "Jwt:SigningKey" "<cadena aleatoria de 32+ caracteres>" 
 | `DataProtection__KeysPath` | Sí (prod) | Carpeta persistente para las claves de Data Protection |
 | `Storage__Local__RootPath` | Recomendada | Carpeta privada de documentos |
 | `Email__Provider`, `Email__Smtp__*` | Para enviar correos | `Smtp` + credenciales del proveedor |
-| `Auth__AllowPublicRegistration` | No | Alta pública de consultorios (por defecto `false` en producción) |
+| `Auth__AllowPublicRegistration` | No | Alta pública de consultorios (por defecto `true`; `false` = solo por invitación) |
 
 ## Migraciones
 

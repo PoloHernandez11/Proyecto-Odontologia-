@@ -56,8 +56,8 @@ services:
       ConnectionStrings__Default: server=odontia-mysql;port=3306;database=odontia;user=odontia_app;password=${MYSQL_PASSWORD:?Falta MYSQL_PASSWORD en .env}
       Jwt__SigningKey: ${JWT_SIGNING_KEY:?Falta JWT_SIGNING_KEY en .env}
       Frontend__BaseUrl: https://${DOMINIO:?Falta DOMINIO en .env}
-      # Registro público de consultorios cerrado salvo que el .env diga PERMITIR_REGISTRO=true.
-      Auth__AllowPublicRegistration: ${PERMITIR_REGISTRO:-false}
+      # Registro público de consultorios abierto salvo que el .env diga PERMITIR_REGISTRO=false.
+      Auth__AllowPublicRegistration: ${PERMITIR_REGISTRO:-true}
       Database__ApplyMigrationsOnStartup: "true"
       DataProtection__KeysPath: /data/keys
       Storage__Local__RootPath: /data/documents

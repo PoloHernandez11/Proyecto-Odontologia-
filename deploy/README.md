@@ -7,7 +7,7 @@ Odontia corre en el servidor compartido (Oracle Linux ARM, usuario `opc`) junto 
 - Ningún contenedor publica puertos. El Caddy de miaula (`miaula-web-1`) termina TLS e importa `~/sitios-caddy/odontia.caddy`: `/api/*` y `/health/live` van a la API; el resto de `/health/*` (incluido `/health/ready`) responde 404 desde afuera; todo lo demás va al frontend. El healthcheck de la imagen de la API consulta `/health/ready` dentro del propio contenedor (solo mira el código 200), así que no depende de Caddy.
 - La API solo acepta cabeceras `X-Forwarded-*` que vengan del contenedor `miaula-web-1` (`ReverseProxy__KnownProxyHosts__0` en `docker-compose.yml`). La IP se resuelve con el DNS de Docker y se vuelve a resolver cada 60 s o cuando llega una IP desconocida (si Caddy se recrea con otra IP). Si la resolución falla, se descartan esas cabeceras (se registra un aviso) y la API ve la IP de Caddy en vez de la del cliente: afecta al rate limiting y a la IP de auditoría, no a la disponibilidad. Los demás contenedores de `miaula_default` ya no pueden falsear la IP del cliente.
 - El frontend (nginx) envía `Content-Security-Policy` estricta (`script-src 'self'`, sin scripts en línea), `X-Content-Type-Options`, `Referrer-Policy`, `Permissions-Policy`, `X-Frame-Options` y HSTS; caché de un año para recursos con hash y `no-cache` para `index.html`. Para que la CSP no rompa los estilos, `frontend/angular.json` desactiva `optimization.styles.inlineCritical` (el CSS crítico en línea usa un `<script>` en línea). Si se agregan recursos de otro origen hay que sumarlos a la CSP en `nginx.conf`.
-- El registro público de consultorios está cerrado por defecto (`PERMITIR_REGISTRO=false`; si la variable falta, también queda cerrado).
+- El registro público de consultorios está abierto (`PERMITIR_REGISTRO=true`; si la variable falta, también queda abierto). Para cerrarlo, poner `PERMITIR_REGISTRO=false`.
 - Datos persistentes: volúmenes `odontia_mysql-datos` (base) y `odontia_api-datos` (`/data`: claves de Data Protection y documentos).
 
 Archivos: `docker-compose.yml`, `Dockerfile.api`, `Dockerfile.web`, `nginx.conf`, `odontia.caddy.plantilla`, `.env.example`, `actualizar-servidor.sh`.
@@ -48,18 +48,17 @@ cd ~/odontia/deploy && bash actualizar-servidor.sh
 
 La API aplica las migraciones al iniciar y no se revierten solas. Por eso `actualizar-servidor.sh`, si `odontia-mysql` está corriendo, hace primero un respaldo de la base en `~/respaldos/odontia-db-AAAA-MM-DD-HHMMSS-pre-actualizacion.sql.gz` (mismo `mysqldump` que en "Respaldo"; la contraseña se lee dentro del contenedor). Verifica que el archivo sea un gzip válido, que contenga tablas y que el volcado esté completo; si algo falla, borra el archivo parcial y **aborta sin tocar los contenedores**. Se conservan los últimos 10 respaldos automáticos (`RESPALDOS_A_CONSERVAR` en el script); los respaldos manuales con otro nombre no se borran. Los documentos (`/data`) no entran en este respaldo automático: respaldarlos a mano (ver abajo) antes de cambios importantes.
 
-## Habilitar el registro de un consultorio nuevo
+## Registro público de consultorios
 
-El registro público está cerrado por defecto. Para dar de alta un consultorio:
+El registro público está abierto: cualquiera puede dar de alta un consultorio desde `https://<dominio>/registro`.
+Un `.env` creado con una versión anterior puede tener `PERMITIR_REGISTRO=false`; en ese caso, abrirlo con:
 
 ```bash
 cd ~/odontia/deploy
 sed -i 's/^PERMITIR_REGISTRO=.*/PERMITIR_REGISTRO=true/' .env && bash actualizar-servidor.sh
-# registrar el consultorio desde https://<dominio>/ y enseguida volver a cerrarlo:
-sed -i 's/^PERMITIR_REGISTRO=.*/PERMITIR_REGISTRO=false/' .env && bash actualizar-servidor.sh
 ```
 
-Si el `.env` no tiene la línea `PERMITIR_REGISTRO`, agregarla (`echo PERMITIR_REGISTRO=true >> .env`).
+Para cerrarlo (solo se entra por invitación), usar el mismo comando con `PERMITIR_REGISTRO=false`.
 
 ## Logs y estado
 

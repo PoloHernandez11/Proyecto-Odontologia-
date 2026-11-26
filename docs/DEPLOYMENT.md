@@ -73,8 +73,9 @@ El paso a paso está en [`deploy/README.md`](../deploy/README.md): subir el cód
 1. Entrar a https://odentix.duckdns.org, elegir **Crear una cuenta** y registrar el consultorio.
 2. Abrir el correo de confirmación y seguir el enlace.
 3. Iniciar sesión. Desde ahí se puede invitar al resto del equipo.
-4. Con el consultorio ya creado, cerrar el registro público: en `deploy/.env` poner `PERMITIR_REGISTRO=false` y volver a ejecutar
-   `bash actualizar-servidor.sh` desde `~/odontia/deploy`.
+
+El registro público queda abierto para que otros consultorios puedan crear su cuenta. Para cerrarlo: en `deploy/.env` poner
+`PERMITIR_REGISTRO=false` y volver a ejecutar `bash actualizar-servidor.sh` desde `~/odontia/deploy`.
 
 ## Alternativa sin servidor propio: Vercel + MonsterASP.NET
 
